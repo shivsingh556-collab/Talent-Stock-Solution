@@ -1,0 +1,6 @@
+{
+  "scripts": {
+    "start": "python3 -m http.server 4173",
+    "build": "node -e \"const fs=require('fs'); ['index.html','styles.css','script.js','assets/logo.svg'].forEach(f=>{if(!fs.existsSync(f)) throw new Error(f+' missing')}); console.log('Static site files verified.');\""
+  }
+}
