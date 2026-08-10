@@ -5,15 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Talent Buddy | TSS Resume Intelligence</title>
   <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="ui-overrides.css" />
 </head>
 <body>
   <div id="toast" class="toast"></div>
   <div class="app-shell">
     <aside class="sidebar">
-      <div class="brand">
-        <div class="logo-mark">↗</div>
-        <div class="brand-copy"><h1>TSS</h1><p>RESUME<br>INTELLIGENCE</p></div>
-      </div>
+      <div class="brand"><div class="logo-mark">↗</div><div class="brand-copy"><h1>TSS</h1><p>RESUME<br>INTELLIGENCE</p></div></div>
       <nav id="nav">
         <button class="nav-item active" data-view="dashboard"><span>⌘</span>Dashboard</button>
         <button class="nav-item" data-view="requirements"><span>▣</span>Job Profiles</button>
@@ -21,47 +19,30 @@
         <button class="nav-item" data-view="candidates"><span>◎</span>Candidates</button>
         <button class="nav-item" data-view="history"><span>▤</span>Candidate History</button>
       </nav>
-      <div class="side-card compact-side-card">
-        <span class="eyebrow">ACTIVE REQUIREMENTS</span>
-        <div id="activeRequirementMini"></div>
-      </div>
-      <div class="user-box"><div class="avatar">SS</div><div><strong>Recruiter</strong><small>Talent Partner</small></div><span class="chevron">⌄</span></div>
+      <div class="side-card compact-side-card"><span class="eyebrow">ACTIVE REQUIREMENTS</span><div id="activeRequirementMini"></div></div>
+      <div class="user-box"><div class="avatar">TS</div><div><strong>Recruiter</strong><small>Talent Partner</small></div><span class="chevron">⌄</span></div>
     </aside>
 
     <main>
       <header class="topbar glass-topbar">
         <div><span class="eyebrow">RECRUITMENT INTELLIGENCE</span><h2 id="pageTitle">Recruitment Dashboard</h2><p class="welcome">Welcome back. Here’s what’s happening today.</p></div>
-        <div class="top-actions-wrap">
-          <div class="global-search"><span>⌕</span><input placeholder="Search candidates, jobs, skills..." /></div>
-          <button class="icon-circle">◉</button>
-          <div class="top-user">SS</div>
-          <div class="top-actions"><button class="btn ghost" id="exportBtn">Export Excel</button><button class="btn primary" data-open-screening>+ New Screening</button></div>
-        </div>
+        <div class="top-actions-wrap"><div class="global-search"><span>⌕</span><input placeholder="Search candidates, jobs, skills..." /></div><button class="icon-circle">◉</button><div class="top-user">TS</div><div class="top-actions"><button class="btn ghost" id="exportBtn">Export Excel</button><button class="btn primary" data-open-screening>+ New Screening</button></div></div>
       </header>
 
       <section id="dashboard" class="view active option5-dashboard">
         <div class="dashboard-row hero-row">
-          <div class="panel ai-insight-card">
-            <div class="panel-head split"><div><span class="eyebrow">✦ AI INSIGHT</span><h3>Candidate Intelligence</h3></div><span class="badge green">LIVE</span></div>
-            <div class="ai-insight-body"><div><div class="big-ai-number">12 candidates<br><span>worth reviewing</span></div><p>High-potential profiles are identified from your active requirements and stored CV library.</p><button class="btn primary" data-open-screening>Review Candidates</button></div><div class="match-donut"><div class="donut-ring"><strong>87%</strong><small>Avg. Match</small></div><span>↑ 12% vs last 7 days</span></div></div>
-          </div>
-          <div class="panel pipeline-card">
-            <div class="panel-head split"><div><span class="eyebrow">PIPELINE</span><h3>Recruitment Pipeline</h3></div><span class="date-chip">This Week</span></div>
-            <div class="funnel-wrap"><div class="funnel-bars"><i style="width:100%"></i><i style="width:78%"></i><i style="width:58%"></i><i style="width:39%"></i><i style="width:23%"></i></div><div class="funnel-labels"><div><span>Sourced</span><strong>1,427</strong></div><div><span>Screened</span><strong>623</strong></div><div><span>Shortlisted</span><strong>312</strong></div><div><span>Interview</span><strong>86</strong></div><div><span>Offer</span><strong>28</strong></div></div></div>
-          </div>
+          <div class="panel ai-insight-card"><div class="panel-head split"><div><span class="eyebrow">✦ AI INSIGHT</span><h3>Candidate Intelligence</h3></div><span class="badge green">LIVE</span></div><div class="ai-insight-body"><div><div class="big-ai-number">12 candidates<br><span>worth reviewing</span></div><p>High-potential profiles are identified from active requirements and the stored CV library.</p><button class="btn primary" data-open-screening>Review Candidates</button></div><div class="match-donut"><div class="donut-ring"><strong>87%</strong><small>Avg. Match</small></div><span>↑ 12% vs last 7 days</span></div></div></div>
+          <div class="panel pipeline-card"><div class="panel-head split"><div><span class="eyebrow">PIPELINE</span><h3>Recruitment Pipeline</h3></div><span class="date-chip">This Week</span></div><div class="funnel-wrap"><div class="funnel-bars"><i style="width:100%"></i><i style="width:78%"></i><i style="width:58%"></i><i style="width:39%"></i><i style="width:23%"></i></div><div class="funnel-labels"><div><span>Sourced</span><strong>1,427</strong></div><div><span>Screened</span><strong>623</strong></div><div><span>Shortlisted</span><strong>312</strong></div><div><span>Interview</span><strong>86</strong></div><div><span>Offer</span><strong>28</strong></div></div></div></div>
         </div>
-
         <div class="stat-grid" id="statGrid"></div>
-
         <div class="dashboard-row middle-row three-col">
-          <div class="panel"><div class="panel-head split"><div><span class="eyebrow">TODAY</span><h3>Today’s Interviews</h3></div><span class="badge green">● Live</span></div><div class="interview-list"><div><strong>10:00 AM</strong><span>Alex Johnson<br><small>Senior Backend Engineer</small></span><em>Technical</em></div><div><strong>11:00 AM</strong><span>Priya Nair<br><small>Product Manager</small></span><em>Panel</em></div><div><strong>2:00 PM</strong><span>Michael Chen<br><small>Data Scientist</small></span><em>Technical</em></div><div><strong>3:30 PM</strong><span>Sara Lopez<br><small>UX Designer</small></span><em>HR</em></div></div></div>
+          <div class="panel"><div class="panel-head split"><div><span class="eyebrow">TODAY</span><h3>Today’s Interviews</h3></div><span class="badge green">● Live</span></div><div class="interview-list"><div><strong>10:00 AM</strong><span>Interview slot<br><small>Candidate pending</small></span><em>Technical</em></div><div><strong>11:00 AM</strong><span>Interview slot<br><small>Candidate pending</small></span><em>Panel</em></div><div><strong>2:00 PM</strong><span>Interview slot<br><small>Candidate pending</small></span><em>Technical</em></div><div><strong>3:30 PM</strong><span>Interview slot<br><small>Candidate pending</small></span><em>HR</em></div></div></div>
           <div class="panel"><div class="panel-head"><span class="eyebrow">REQUIREMENT HEALTH</span><h3>Requirement Health</h3></div><div id="requirementsByClient" class="health-grid"></div></div>
-          <div class="panel"><div class="panel-head split"><div><span class="eyebrow">TEAM</span><h3>Recruiter Workload</h3></div><span class="date-chip">This Week</span></div><div class="workload-chart"><div><i style="height:78%"></i><small>Sarah</small></div><div><i style="height:63%"></i><small>John</small></div><div><i style="height:92%"></i><small>Emily</small></div><div><i style="height:48%"></i><small>Mark</small></div><div><i style="height:71%"></i><small>Lisa</small></div></div></div>
+          <div class="panel"><div class="panel-head split"><div><span class="eyebrow">TEAM</span><h3>Recruiter Workload</h3></div><span class="date-chip">This Week</span></div><div class="workload-chart"><div><i style="height:78%"></i><small>R1</small></div><div><i style="height:63%"></i><small>R2</small></div><div><i style="height:92%"></i><small>R3</small></div><div><i style="height:48%"></i><small>R4</small></div><div><i style="height:71%"></i><small>R5</small></div></div></div>
         </div>
-
         <div class="dashboard-row bottom-row">
           <div class="panel active-jobs-panel"><div class="panel-head split"><div><span class="eyebrow">OPEN ROLES</span><h3>Active Job Profiles</h3></div><button class="text-link nav-shortcut" data-target="requirements">View all →</button></div><div class="mini-job-table"><div class="mini-job-head"><span>Job Title</span><span>Client</span><span>Location</span><span>Openings</span><span>Status</span></div><div id="activeJobsPreview"></div></div><div id="recentActivity" class="hidden-support"></div></div>
-          <div class="panel assistant-panel"><div class="panel-head split"><div><span class="eyebrow">✦ TSS HELP ASSISTANT</span><h3>Talent Buddy</h3></div><span>⋮</span></div><div class="assistant-body"><div class="bot-face">◉</div><div><strong>Hi Recruiter 👋</strong><p>I can help you with screening, scheduling, reports and matching stored CVs.</p></div></div><div class="quick-actions"><button data-open-screening>Show top candidates</button><button class="nav-shortcut" data-target="requirements">Job profiles</button><button id="assistantExport">Generate report</button></div><div class="assistant-input">Ask anything... <span>→</span></div><div id="alerts" class="hidden-support"></div><div id="matchDistribution" class="hidden-support"></div></div>
+          <div class="panel assistant-panel"><div class="panel-head split"><div><span class="eyebrow">✦ TSS HELP ASSISTANT</span><h3>Talent Buddy</h3></div><span>⋮</span></div><div class="assistant-body"><div class="bot-face">◉</div><div><strong>Hi Recruiter 👋</strong><p>Screen CVs, find old matches, manage requirements and prepare submissions.</p></div></div><div class="quick-actions"><button data-open-screening>Show top candidates</button><button class="nav-shortcut" data-target="requirements">Job profiles</button><button id="assistantExport">Generate report</button></div><div class="assistant-input">Ask anything... <span>→</span></div><div id="alerts" class="hidden-support"></div><div id="matchDistribution" class="hidden-support"></div></div>
         </div>
       </section>
 
@@ -76,12 +57,16 @@
 
   <dialog id="requirementDialog"><form method="dialog" id="requirementForm"><div class="dialog-head"><div><span class="eyebrow">NEW / EDIT REQUIREMENT</span><h3>Job Profile & JD Input</h3></div><button class="icon-btn" value="cancel">×</button></div><input type="hidden" id="reqId" /><div class="form-grid"><div><label>Client Name</label><input id="reqClient" required /></div><div><label>Job Title</label><input id="reqTitle" required /></div><div><label>Location</label><input id="reqLocation" /></div><div><label>Experience</label><input id="reqExperience" placeholder="5+ years" /></div><div><label>Industry</label><input id="reqIndustry" placeholder="IT / BFSI / Retail" /></div><div><label>Status</label><select id="reqStatus"><option>Active</option><option>On Hold</option><option>Closed</option></select></div></div><div class="jd-actions"><label class="file-btn">Upload JD<input id="jdFile" type="file" accept=".txt,.pdf,.doc,.docx" /></label><button type="button" class="btn ghost" id="generateSkillsBtn">Generate Suggested Skills</button></div><label>Paste JD Text</label><textarea id="reqJdText" rows="8" placeholder="Paste complete JD here..."></textarea><label>Enter Skills Manually</label><input id="reqSkills" placeholder="Java, Spring Boot, SQL, AWS" /><div id="suggestedSkills" class="skill-cloud"></div><div class="form-grid"><div><label>Preferred Skills</label><input id="reqPreferred" placeholder="Docker, Kubernetes" /></div><div><label>Qualification</label><input id="reqQualification" placeholder="B.E./B.Tech/MCA" /></div></div><label>Roles & Responsibilities</label><textarea id="reqResponsibilities" rows="5"></textarea><div class="dialog-actions"><button value="cancel" class="btn ghost">Cancel</button><button type="button" class="btn primary" id="saveRequirementBtn">Save Requirement</button></div></form></dialog>
 
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="backend/config.js"></script>
+  <script src="backend/supabase-client.js"></script>
   <script src="app.js"></script>
   <script src="master-data.js"></script>
+  <script src="enhancements.js"></script>
   <script>
     document.querySelectorAll('.nav-shortcut').forEach(b=>b.addEventListener('click',()=>{const t=b.dataset.target;const n=document.querySelector(`.nav-item[data-view="${t}"]`);if(n)n.click()}));
-    const a=document.getElementById('assistantExport'); if(a) a.onclick=()=>document.getElementById('exportBtn')?.click();
-    setTimeout(()=>{const src=document.getElementById('activeRequirementMini');const dst=document.getElementById('activeJobsPreview');if(src&&dst){const rows=[...src.querySelectorAll('.mini-client')].slice(0,5);dst.innerHTML=rows.map((r,i)=>{const s=r.querySelector('small')?.textContent||'';const c=r.querySelector('strong')?.textContent||'';const title=s.split(',')[0]||'Active Requirement';return `<div class="mini-job-row"><span>${title}</span><span>${c.replace(/·.*/,'')}</span><span>India</span><span>${i%3+1}</span><span><b class="status-dot"></b>Active</span></div>`}).join('')}}},500);
+    const a=document.getElementById('assistantExport');if(a)a.onclick=()=>document.getElementById('exportBtn')?.click();
+    setTimeout(()=>{const src=document.getElementById('activeRequirementMini'),dst=document.getElementById('activeJobsPreview');if(src&&dst){const rows=[...src.querySelectorAll('.mini-client')].slice(0,5);dst.innerHTML=rows.map((r,i)=>{const s=r.querySelector('small')?.textContent||'',c=r.querySelector('strong')?.textContent||'',title=s.split(',')[0]||'Active Requirement';return `<div class="mini-job-row"><span>${title}</span><span>${c.replace(/·.*/,'')}</span><span>India</span><span>${i%3+1}</span><span><b class="status-dot"></b>Active</span></div>`}).join('')}},500);
   </script>
 </body>
 </html>
