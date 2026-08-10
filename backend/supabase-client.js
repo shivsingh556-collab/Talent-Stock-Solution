@@ -1,6 +1,4 @@
 // Talent Buddy Supabase client wrapper.
-// This file is intentionally inactive until window.TSS_SUPABASE_CONFIG is provided.
-
 (function(){
   const cfg = window.TSS_SUPABASE_CONFIG || {};
   const hasConfig = Boolean(cfg.url && cfg.anonKey && window.supabase?.createClient);
@@ -37,12 +35,77 @@
     return data || [];
   }
 
+  // Seeds/updates the browser master into Supabase after an authenticated TSS user signs in.
+  // profile_key is the true unique identifier because the uploaded workbook contains a duplicate visible TSS040.
+  async function syncMasterRequirements(requirements=[]){
+    if(!client || !Array.isArray(requirements) || !requirements.length) return {synced:0, skipped:0};
+    const user = await currentUser();
+    if(!user) return {synced:0, skipped:requirements.length, reason:'not_signed_in'};
+
+    const { data:existingClients, error:clientReadError } = await client.from('clients').select('id,name');
+    if(clientReadError) throw clientReadError;
+    const clientMap = new Map((existingClients||[]).map(c=>[String(c.name).toLowerCase(),c.id]));
+
+    for(const name of [...new Set(requirements.map(r=>String(r.client||'').trim()).filter(Boolean))]){
+      const key=name.toLowerCase();
+      if(clientMap.has(key)) continue;
+      const { data, error } = await client.from('clients').insert({name,created_by:user.id}).select('id,name').single();
+      if(error){
+        // Another session may have inserted the same client; re-read it instead of failing the whole sync.
+        const { data:again } = await client.from('clients').select('id,name').eq('name',name).maybeSingle();
+        if(!again) throw error;
+        clientMap.set(key,again.id);
+      } else clientMap.set(key,data.id);
+    }
+
+    const { data:existingReqs, error:reqReadError } = await client.from('requirements').select('id,profile_key,tss_id');
+    if(reqReadError) throw reqReadError;
+    const reqMap = new Map((existingReqs||[]).map(r=>[r.profile_key||r.tss_id,r]));
+    let synced=0, skipped=0;
+
+    for(const r of requirements){
+      if(r.status && r.status!=='Active'){ skipped++; continue; }
+      const profileKey=r.profileKey || r.id;
+      const clientId=clientMap.get(String(r.client||'').toLowerCase());
+      if(!profileKey || !clientId){ skipped++; continue; }
+      const payload={
+        profile_key:profileKey,
+        tss_id:r.requirementId || r.id,
+        client_id:clientId,
+        job_title:r.title || 'Untitled Requirement',
+        location:r.location || null,
+        experience_text:r.experience || null,
+        salary_range:r.salaryRange || null,
+        industry:r.industry || null,
+        qualification:r.qualification || null,
+        responsibilities:r.responsibilities || null,
+        jd_text:r.jdText || null,
+        status:'Active',
+        mandatory_skills:Array.isArray(r.skills)?r.skills:[],
+        preferred_skills:Array.isArray(r.preferred)?r.preferred:[],
+        ai_suggested_skills:r.aiSuggested && Array.isArray(r.skills)?r.skills:[],
+        ai_skills_approved:!r.aiSuggested,
+        updated_by:user.id
+      };
+      const existing=reqMap.get(profileKey);
+      if(existing){
+        const { error }=await client.from('requirements').update(payload).eq('id',existing.id);
+        // Requirement may have been created by another recruiter; RLS can block updates. Read access still works, so skip safely.
+        if(error){ skipped++; continue; }
+      } else {
+        const { data, error }=await client.from('requirements').insert({...payload,created_by:user.id}).select('id,profile_key,tss_id').single();
+        if(error) throw error;
+        reqMap.set(profileKey,data);
+      }
+      synced++;
+    }
+    return {synced,skipped};
+  }
+
   async function createOrUpdateCandidate(candidate){
     if(!client) throw new Error('Supabase is not configured');
     const user = await currentUser();
     if(!user) throw new Error('Not signed in');
-
-    // duplicate detection: email first, then phone
     let existing = null;
     if(candidate.email){
       const { data } = await client.from('candidates').select('*').ilike('email',candidate.email).maybeSingle();
@@ -52,9 +115,7 @@
       const { data } = await client.from('candidates').select('*').eq('phone',candidate.phone).maybeSingle();
       existing = data;
     }
-
     if(existing) return { duplicate:true, candidate:existing };
-
     const payload = {
       candidate_name:candidate.name,
       email:candidate.email || null,
@@ -139,6 +200,7 @@
     signIn,
     signOut,
     getActiveRequirements,
+    syncMasterRequirements,
     createOrUpdateCandidate,
     uploadResume,
     saveScreening,
