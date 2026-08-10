@@ -77,4 +77,11 @@
   }
   if(typeof saveDB==='function') saveDB();
   else localStorage.setItem('tss_talent_buddy_v1',JSON.stringify(db));
+
+  // If Supabase auth is active, persist the same master to the database too.
+  if(window.TSSBackend?.enabled && typeof window.TSSBackend.syncMasterRequirements==='function'){
+    window.TSSBackend.syncMasterRequirements(db.requirements)
+      .then(r=>console.info('TSS Supabase requirement sync',r))
+      .catch(err=>console.warn('TSS Supabase requirement sync skipped',err?.message||err));
+  }
 })();
