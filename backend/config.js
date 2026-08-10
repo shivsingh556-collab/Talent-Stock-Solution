@@ -1,8 +1,7 @@
 // Talent Buddy Supabase runtime configuration.
-// Fill these from Supabase Project Settings > API, then redeploy.
 window.TSS_SUPABASE_CONFIG = window.TSS_SUPABASE_CONFIG || {
-  url: '',
-  anonKey: ''
+  url: 'https://wbclpjdjhlsuspojtner.supabase.co',
+  anonKey: 'sb_publishable_qx9Xf31udLMuRWmqNAjBFQ_I7woPxap'
 };
 
 // Load the latest 46-profile master after the core application scripts finish.
