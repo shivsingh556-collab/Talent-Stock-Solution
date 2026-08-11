@@ -4,7 +4,7 @@ window.TSS_SUPABASE_CONFIG = window.TSS_SUPABASE_CONFIG || {
   anonKey: 'sb_publishable_qx9Xf31udLMuRWmqNAjBFQ_I7woPxap'
 };
 
-// Load production brand + polish + 46-profile sync after the core application scripts finish.
+// Load production brand + parsing + backend wiring after the core application scripts finish.
 window.addEventListener('load', () => {
   const css = document.createElement('link');
   css.rel = 'stylesheet';
@@ -25,6 +25,7 @@ window.addEventListener('load', () => {
     .then(() => loadScript('todo-exact.js','tssExactTodo'))
     .then(() => loadScript('profile-sync-46.js','tssProfileSync'))
     .then(() => loadScript('document-parser.js','tssDocumentParser'))
+    .then(() => loadScript('candidate-enrichment.js','tssCandidateEnrichment'))
     .then(() => loadScript('production.js','tssProduction'))
     .then(() => loadScript('interview-sync.js','tssInterviewSync'))
     .catch(err => console.warn('TSS production layer load issue', err));
