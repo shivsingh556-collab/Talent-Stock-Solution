@@ -23,6 +23,7 @@ window.addEventListener('load', () => {
 
   loadScript('brand-assets.js','tssBrandAssets')
     .then(() => loadScript('profile-sync-46.js','tssProfileSync'))
+    .then(() => loadScript('document-parser.js','tssDocumentParser'))
     .then(() => loadScript('production.js','tssProduction'))
     .catch(err => console.warn('TSS production layer load issue', err));
 });
