@@ -28,5 +28,6 @@ window.addEventListener('load', () => {
     .then(() => loadScript('candidate-enrichment.js','tssCandidateEnrichment'))
     .then(() => loadScript('production.js','tssProduction'))
     .then(() => loadScript('interview-sync.js','tssInterviewSync'))
+    .then(() => loadScript('experience-delete-patch.js','tssExperienceDelete'))
     .catch(err => console.warn('TSS production layer load issue', err));
 });
