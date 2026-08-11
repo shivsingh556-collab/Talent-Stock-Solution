@@ -25,5 +25,6 @@ window.addEventListener('load', () => {
     .then(() => loadScript('profile-sync-46.js','tssProfileSync'))
     .then(() => loadScript('document-parser.js','tssDocumentParser'))
     .then(() => loadScript('production.js','tssProduction'))
+    .then(() => loadScript('interview-sync.js','tssInterviewSync'))
     .catch(err => console.warn('TSS production layer load issue', err));
 });
