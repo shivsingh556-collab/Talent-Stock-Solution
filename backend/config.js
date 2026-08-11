@@ -22,6 +22,7 @@ window.addEventListener('load', () => {
   });
 
   loadScript('brand-assets.js','tssBrandAssets')
+    .then(() => loadScript('todo-exact.js','tssExactTodo'))
     .then(() => loadScript('profile-sync-46.js','tssProfileSync'))
     .then(() => loadScript('document-parser.js','tssDocumentParser'))
     .then(() => loadScript('production.js','tssProduction'))
