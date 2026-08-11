@@ -4,12 +4,25 @@ window.TSS_SUPABASE_CONFIG = window.TSS_SUPABASE_CONFIG || {
   anonKey: 'sb_publishable_qx9Xf31udLMuRWmqNAjBFQ_I7woPxap'
 };
 
-// Load the latest 46-profile master after the core application scripts finish.
-// This keeps the uploaded workbook data authoritative without wiping candidates/screenings.
+// Load production brand + polish + 46-profile sync after the core application scripts finish.
 window.addEventListener('load', () => {
-  if (document.querySelector('script[data-tss-profile-sync]')) return;
-  const s = document.createElement('script');
-  s.src = 'profile-sync-46.js';
-  s.dataset.tssProfileSync = '1';
-  document.body.appendChild(s);
+  const css = document.createElement('link');
+  css.rel = 'stylesheet';
+  css.href = 'production-polish.css';
+  document.head.appendChild(css);
+
+  const loadScript = (src, marker) => new Promise((resolve, reject) => {
+    if (document.querySelector(`script[data-${marker}]`)) return resolve();
+    const s = document.createElement('script');
+    s.src = src;
+    s.dataset[marker] = '1';
+    s.onload = resolve;
+    s.onerror = reject;
+    document.body.appendChild(s);
+  });
+
+  loadScript('brand-assets.js','tssBrandAssets')
+    .then(() => loadScript('profile-sync-46.js','tssProfileSync'))
+    .then(() => loadScript('production.js','tssProduction'))
+    .catch(err => console.warn('TSS production layer load issue', err));
 });
