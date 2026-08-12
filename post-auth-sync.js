@@ -1,4 +1,4 @@
-// Ensures the browser's authoritative 46-profile master is persisted only after Supabase auth exists.
+// Ensures the browser's authoritative 47-requirement master is persisted only after Supabase auth exists.
 (function(){
   const backend=()=>window.TSSBackend;
   let running=false,lastRun=0;
@@ -12,11 +12,10 @@
       lastRun=Date.now();
       console.info('TSS authenticated requirement sync',reason,result);
       if(result.synced){
-        try{toast(`${result.synced} job profiles synced securely`)}catch{}
-        // Re-hydrate so server UUID/profile_key become authoritative in the UI.
+        try{toast(`${result.synced} requirements synced securely`)}catch{}
         setTimeout(()=>window.TSSProduction?.hydrate?.(),250);
       }
-    }catch(err){console.error('TSS authenticated requirement sync failed',err);try{toast('Job profile backend sync failed: '+(err.message||err))}catch{}}
+    }catch(err){console.error('TSS authenticated requirement sync failed',err);try{toast('Requirement backend sync failed: '+(err.message||err))}catch{}}
     finally{running=false}
   }
   function wire(){
