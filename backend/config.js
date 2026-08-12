@@ -6,10 +6,15 @@ window.TSS_SUPABASE_CONFIG = window.TSS_SUPABASE_CONFIG || {
 
 // Load production brand + parsing + backend wiring after the core application scripts finish.
 window.addEventListener('load', () => {
-  const css = document.createElement('link');
-  css.rel = 'stylesheet';
-  css.href = 'production-polish.css';
-  document.head.appendChild(css);
+  const addCss = (href) => {
+    if (document.querySelector(`link[href="${href}"]`)) return;
+    const css = document.createElement('link');
+    css.rel = 'stylesheet';
+    css.href = href;
+    document.head.appendChild(css);
+  };
+  addCss('production-polish.css');
+  addCss('requirements-perfect-fix.css');
 
   const loadScript = (src, marker) => new Promise((resolve, reject) => {
     if (document.querySelector(`script[data-${marker}]`)) return resolve();
@@ -30,5 +35,6 @@ window.addEventListener('load', () => {
     .then(() => loadScript('interview-sync.js','tssInterviewSync'))
     .then(() => loadScript('production-hardening.js','tssProductionHardening'))
     .then(() => loadScript('post-auth-sync.js','tssPostAuthSync'))
+    .then(() => loadScript('requirements-perfect-fix.js','tssRequirementsPerfectFix'))
     .catch(err => console.warn('TSS production layer load issue', err));
 });
