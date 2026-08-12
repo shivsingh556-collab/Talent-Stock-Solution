@@ -14,6 +14,10 @@
   function apply(){
     document.title=PRODUCT;
     replaceText();
+    const loginHeading=document.querySelector('.login-left h1');
+    if(loginHeading) loginHeading.textContent='TODO.AI for TalentStock teams.';
+    const loginCopy=document.querySelector('.login-left > p');
+    if(loginCopy) loginCopy.textContent='Sign in to access your requirements, candidate records, screening results and reports.';
     document.querySelectorAll('.sidebar-caption strong').forEach(el=>el.textContent=PRODUCT);
     document.querySelectorAll('.brand-image').forEach(img=>{
       img.classList.add('todoai-logo');
