@@ -29,5 +29,6 @@ window.addEventListener('load', () => {
     .then(() => loadScript('production.js','tssProduction'))
     .then(() => loadScript('interview-sync.js','tssInterviewSync'))
     .then(() => loadScript('production-hardening.js','tssProductionHardening'))
+    .then(() => loadScript('post-auth-sync.js','tssPostAuthSync'))
     .catch(err => console.warn('TSS production layer load issue', err));
 });
