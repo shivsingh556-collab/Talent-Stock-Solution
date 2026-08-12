@@ -37,6 +37,7 @@ window.addEventListener('load', () => {
     .then(() => loadScript('production.js','tssProduction'))
     .then(() => loadScript('interview-sync.js','tssInterviewSync'))
     .then(() => loadScript('stable-runtime.js','tssStableRuntime'))
+    .then(() => loadScript('requirements-live-sync.js','tssRequirementsLiveSync'))
     .then(() => loadScript('todo-ai-branding.js','tssTodoAiBranding'))
     .catch(err => console.warn('TSS production layer load issue', err));
 });
