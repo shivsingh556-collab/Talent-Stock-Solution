@@ -1,0 +1,58 @@
+/* TODO.AI brand pass — keep supplied TalentStock logo with its original white background. */
+.brand-image.todoai-logo,
+.todoai-logo {
+  display:block;
+  width:100%;
+  height:100%;
+  object-fit:contain;
+  object-position:center;
+  background:#fff;
+  border-radius:8px;
+}
+.sidebar-logo {
+  background:#fff !important;
+  padding:6px !important;
+  min-height:76px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+.sidebar-logo .talent-logo,
+.sidebar-logo .brand-image {
+  width:100% !important;
+  height:58px !important;
+  max-height:58px !important;
+  object-fit:contain !important;
+  background:#fff !important;
+  border-radius:6px;
+}
+.login-left .talent-logo {
+  width:min(360px,100%);
+  height:145px;
+  background:#fff;
+  border-radius:14px;
+  padding:10px 14px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+.login-left .talent-logo .brand-image,
+.login-logo-image {
+  width:100% !important;
+  height:100% !important;
+  max-height:125px !important;
+  object-fit:contain !important;
+  object-position:center !important;
+  background:#fff !important;
+  border-radius:8px;
+}
+.sidebar-caption strong.todoai-product-name {
+  font-size:15px !important;
+  line-height:1.1 !important;
+  letter-spacing:.08em !important;
+  color:#f4f8ff;
+}
+@media(max-width:760px){
+  .login-left .talent-logo{height:110px;width:100%}
+  .login-left .talent-logo .brand-image,.login-logo-image{max-height:92px!important}
+}
