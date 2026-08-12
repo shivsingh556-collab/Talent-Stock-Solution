@@ -25,17 +25,15 @@ window.addEventListener('load', () => {
     document.body.appendChild(s);
   });
 
+  // Stability-first load order. Avoid repeating timers/observers from legacy hardening layers.
   loadScript('brand-assets.js','tssBrandAssets')
     .then(() => loadScript('todo-exact.js','tssExactTodo'))
     .then(() => loadScript('profile-sync-46.js','tssProfileSync'))
     .then(() => loadScript('profile-sync-47-final.js','tssProfileSync47'))
-    .then(() => loadScript('post-auth-sync.js','tssPostAuthSync'))
-    .then(() => window.TSSPostAuthSync?.syncNow?.('prehydrate'))
     .then(() => loadScript('document-parser.js','tssDocumentParser'))
     .then(() => loadScript('candidate-enrichment.js','tssCandidateEnrichment'))
     .then(() => loadScript('production.js','tssProduction'))
     .then(() => loadScript('interview-sync.js','tssInterviewSync'))
-    .then(() => loadScript('production-hardening.js','tssProductionHardening'))
-    .then(() => loadScript('requirements-perfect-fix.js','tssRequirementsPerfectFix'))
+    .then(() => loadScript('stable-runtime.js','tssStableRuntime'))
     .catch(err => console.warn('TSS production layer load issue', err));
 });
