@@ -15,6 +15,7 @@ window.addEventListener('load', () => {
   addCss('production-polish.css');
   addCss('requirements-perfect-fix.css');
   addCss('todo-ai-branding.css');
+  addCss('login-perfect.css');
 
   const loadScript = (src, marker) => new Promise((resolve, reject) => {
     if (document.querySelector(`script[data-${marker}]`)) return resolve();
@@ -36,6 +37,6 @@ window.addEventListener('load', () => {
     .then(() => loadScript('production.js','tssProduction'))
     .then(() => loadScript('interview-sync.js','tssInterviewSync'))
     .then(() => loadScript('stable-runtime.js','tssStableRuntime'))
-    .then(() => loadScript('todo-ai-branding.js','todoAiBranding'))
-    .catch(err => console.warn('TODO.AI production layer load issue', err));
+    .then(() => loadScript('todo-ai-branding.js','tssTodoAiBranding'))
+    .catch(err => console.warn('TSS production layer load issue', err));
 });
