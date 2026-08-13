@@ -5,7 +5,7 @@ window.TSS_SUPABASE_CONFIG = window.TSS_SUPABASE_CONFIG || {
 };
 
 window.addEventListener('load', () => {
-  const BUILD = '20260813-safe-backend-features';
+  const BUILD = '20260813-login-oldsite-match';
   const addCss = (href) => {
     const clean = href.split('?')[0];
     if ([...document.querySelectorAll('link[rel="stylesheet"]')].some(x => (x.getAttribute('href')||'').split('?')[0] === clean)) return;
@@ -29,8 +29,6 @@ window.addEventListener('load', () => {
     document.body.appendChild(s);
   });
 
-  // Supabase is the single source of truth for requirements.
-  // Legacy local profile seed scripts stay out of production to avoid stale 42/46 data.
   loadScript('brand-assets.js','tssBrandAssets')
     .then(() => loadScript('todo-exact.js','tssExactTodo'))
     .then(() => loadScript('document-parser.js','tssDocumentParser'))
@@ -41,7 +39,6 @@ window.addEventListener('load', () => {
     .then(() => loadScript('requirements-live-sync.js','tssRequirementsLiveSync'))
     .then(() => loadScript('safe-backend-features.js','tssSafeBackendFeatures'))
     .then(() => {
-      // Only hydrate authenticated workspace state. Signed-out login is not an error condition.
       setTimeout(async () => {
         try {
           const session = await window.TSSBackend?.client?.auth?.getSession?.();
