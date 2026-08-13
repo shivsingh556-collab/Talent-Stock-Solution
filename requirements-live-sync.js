@@ -1,4 +1,4 @@
-// TODO AI authoritative active requirement sync. Finite retries only; Supabase is source of truth.
+// TODO AI authoritative active requirement sync. Supabase is source of truth.
 (function(){
   const $=id=>document.getElementById(id);
   let finished=false,running=false;
@@ -12,6 +12,7 @@
   function internalId(row,local){
     if(local?.id)return local.id;
     if(row.tss_id==='TSS040'&&/service engineer/i.test(row.job_title||''))return 'TSS040__INTELMAC';
+    if(row.tss_id==='TSS040')return 'TSS040__NEOSOFT';
     return row.tss_id;
   }
   function mapRow(row,locals){
@@ -33,12 +34,13 @@
     if($('clientReqCount'))$('clientReqCount').textContent=String(n);
     if($('activeReqChip'))$('activeReqChip').textContent=`${n} active requirements`;
   }
-  function fixVisibleIds(rows){
-    document.querySelectorAll('.client-role').forEach(el=>{const r=rows.find(x=>x.id===el.dataset.req);const pill=el.querySelector('strong i');if(r&&pill)pill.textContent=r.requirementId||r.id;});
+  function rerender(){
+    try{if(typeof renderAll==='function')renderAll()}catch(e){console.warn('TODO AI renderAll',e)}
+    try{if(typeof renderOldSite==='function')renderOldSite()}catch(e){console.warn('TODO AI renderOldSite',e)}
   }
 
   async function syncNow(){
-    if(running||!backend()?.enabled||!window.db)return false;
+    if(running||!backend()?.enabled||typeof db==='undefined')return false;
     running=true;
     try{
       const c=backend().client;
@@ -46,30 +48,33 @@
       if(sessionError||!session?.user)return false;
       const {data:reqs,error}=await c.from('requirements').select('*,clients(name)').eq('status','Active').order('tss_id',{ascending:true});
       if(error)throw error;
-      if(!Array.isArray(reqs)||reqs.length<47){console.warn('TODO AI expected 47 active requirements but received',reqs?.length||0);return false;}
+      if(!Array.isArray(reqs)){return false;}
+      console.info('TODO AI Supabase active requirements returned:',reqs.length);
+      if(reqs.length<47){console.warn('TODO AI expected 47 active requirements but received',reqs.length);return false;}
+
       const locals=Array.isArray(db.requirements)?db.requirements:[];
-      const seen=new Set();const rows=[];
-      for(const row of reqs){const k=serverKey(row);if(seen.has(k))continue;seen.add(k);rows.push(mapRow(row,locals));}
+      const rows=reqs.map(row=>mapRow(row,locals));
       db.requirements=rows;
       try{localStorage.setItem('tss_talent_buddy_v1',JSON.stringify(db))}catch{}
-      try{if(typeof saveDB==='function')saveDB()}catch{}
-      try{if(typeof renderAll==='function')renderAll()}catch(e){console.warn('TODO AI renderAll',e)}
-      try{if(typeof renderOldSite==='function')renderOldSite()}catch(e){console.warn('TODO AI renderOldSite',e)}
-      paint(rows.length);fixVisibleIds(rows);
-      finished=rows.length>=47;
+      rerender();
+      paint(rows.length);
+      finished=rows.length===47;
       console.info('TODO AI active requirements hydrated:',rows.length);
       return finished;
     }finally{running=false;}
   }
 
   async function boot(){
-    const delays=[0,250,600,1200,2200,3800];
-    for(const delay of delays){if(finished)break;if(delay)await sleep(delay);try{if(await syncNow())break}catch(e){console.warn('TODO AI requirement sync retry',e?.message||e)}}
+    const delays=[0,150,350,700,1200,2000,3200];
+    for(const delay of delays){
+      if(finished)break;
+      if(delay)await sleep(delay);
+      try{if(await syncNow())break}catch(e){console.warn('TODO AI requirement sync retry',e?.message||e)}
+    }
   }
 
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
-  window.addEventListener('load',()=>setTimeout(()=>{if(!finished)boot()},120),{once:true});
-  const c=backend()?.client;
-  if(c?.auth?.onAuthStateChange)c.auth.onAuthStateChange((event,session)=>{if(session?.user&&(event==='SIGNED_IN'||event==='TOKEN_REFRESHED'||event==='INITIAL_SESSION')){finished=false;setTimeout(boot,50)}});
+  window.addEventListener('load',()=>setTimeout(()=>{if(!finished)boot()},80),{once:true});
+  setTimeout(()=>{if(!finished)boot()},800);
   window.TSSRequirementsLiveSync={syncNow,boot};
 })();
