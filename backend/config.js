@@ -5,7 +5,7 @@ window.TSS_SUPABASE_CONFIG = window.TSS_SUPABASE_CONFIG || {
 };
 
 window.addEventListener('load', () => {
-  const BUILD = '20260813-47-authoritative';
+  const BUILD = '20260813-login-final';
   const addCss = (href) => {
     const clean = href.split('?')[0];
     if ([...document.querySelectorAll('link[rel="stylesheet"]')].some(x => (x.getAttribute('href')||'').split('?')[0] === clean)) return;
@@ -40,11 +40,21 @@ window.addEventListener('load', () => {
     .then(() => loadScript('stable-runtime.js','tssStableRuntime'))
     .then(() => loadScript('requirements-live-sync.js','tssRequirementsLiveSync'))
     .then(() => {
-      // Force one authoritative hydrate after all runtime code and session restoration are available.
-      setTimeout(() => window.TSSRequirementsLiveSync?.boot?.(), 100);
-      setTimeout(() => window.TSSProduction?.hydrate?.(), 350);
+      // Only hydrate authenticated workspace state. Signed-out login is not an error condition.
+      setTimeout(async () => {
+        try {
+          const session = await window.TSSBackend?.client?.auth?.getSession?.();
+          if (session?.data?.session?.user) {
+            window.TSSRequirementsLiveSync?.boot?.();
+            setTimeout(() => window.TSSProduction?.hydrate?.(), 220);
+          }
+        } catch (err) {
+          console.warn('TODO AI session restore check', err?.message || err);
+        }
+      }, 100);
     })
     .then(() => loadScript('todo-ai-branding.js','tssTodoAiBranding'))
     .then(() => loadScript('profile-logout.js','tssProfileLogout'))
+    .then(() => loadScript('login-final-guard.js','tssLoginFinalGuard'))
     .catch(err => console.warn('TODO AI production layer load issue', err));
 });
