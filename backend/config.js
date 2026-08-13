@@ -5,7 +5,7 @@ window.TSS_SUPABASE_CONFIG = window.TSS_SUPABASE_CONFIG || {
 };
 
 window.addEventListener('load', () => {
-  const BUILD = '20260813-login-oldsite-match';
+  const BUILD = '20260813-exact-login-assets-v2';
   const addCss = (href) => {
     const clean = href.split('?')[0];
     if ([...document.querySelectorAll('link[rel="stylesheet"]')].some(x => (x.getAttribute('href')||'').split('?')[0] === clean)) return;
@@ -30,6 +30,7 @@ window.addEventListener('load', () => {
   });
 
   loadScript('brand-assets.js','tssBrandAssets')
+    .then(() => loadScript('login-todo-exact.js','tssLoginTodoExact'))
     .then(() => loadScript('todo-exact.js','tssExactTodo'))
     .then(() => loadScript('document-parser.js','tssDocumentParser'))
     .then(() => loadScript('candidate-enrichment.js','tssCandidateEnrichment'))
