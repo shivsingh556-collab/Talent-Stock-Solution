@@ -5,7 +5,7 @@ window.TSS_SUPABASE_CONFIG = window.TSS_SUPABASE_CONFIG || {
 };
 
 window.addEventListener('load', () => {
-  const BUILD = '20260817-dashboard-cleanup-v1';
+  const BUILD = '20260817-interview-actions-v1';
   const addCss = (href) => {
     const clean = href.split('?')[0];
     if ([...document.querySelectorAll('link[rel="stylesheet"]')].some(x => (x.getAttribute('href')||'').split('?')[0] === clean)) return;
@@ -36,6 +36,7 @@ window.addEventListener('load', () => {
     .then(() => loadScript('candidate-enrichment.js','tssCandidateEnrichment'))
     .then(() => loadScript('production.js','tssProduction'))
     .then(() => loadScript('interview-sync.js','tssInterviewSync'))
+    .then(() => loadScript('interview-actions.js','tssInterviewActions'))
     .then(() => loadScript('stable-runtime.js','tssStableRuntime'))
     .then(() => loadScript('requirements-live-sync.js','tssRequirementsLiveSync'))
     .then(() => loadScript('safe-backend-features.js','tssSafeBackendFeatures'))
@@ -48,6 +49,7 @@ window.addEventListener('load', () => {
             window.TSSRequirementsLiveSync?.boot?.();
             setTimeout(() => window.TSSProduction?.hydrate?.(), 220);
             setTimeout(() => window.TSSDashboardCleanup?.apply?.(), 320);
+            setTimeout(() => window.TSSInterviewActions?.syncStatuses?.(), 380);
           }
         } catch (err) {
           console.warn('TODO AI session restore check', err?.message || err);
