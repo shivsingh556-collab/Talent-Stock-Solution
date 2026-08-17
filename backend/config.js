@@ -5,7 +5,7 @@ window.TSS_SUPABASE_CONFIG = window.TSS_SUPABASE_CONFIG || {
 };
 
 window.addEventListener('load', () => {
-  const BUILD = '20260813-exact-login-assets-v2';
+  const BUILD = '20260817-dashboard-cleanup-v1';
   const addCss = (href) => {
     const clean = href.split('?')[0];
     if ([...document.querySelectorAll('link[rel="stylesheet"]')].some(x => (x.getAttribute('href')||'').split('?')[0] === clean)) return;
@@ -39,6 +39,7 @@ window.addEventListener('load', () => {
     .then(() => loadScript('stable-runtime.js','tssStableRuntime'))
     .then(() => loadScript('requirements-live-sync.js','tssRequirementsLiveSync'))
     .then(() => loadScript('safe-backend-features.js','tssSafeBackendFeatures'))
+    .then(() => loadScript('dashboard-cleanup.js','tssDashboardCleanup'))
     .then(() => {
       setTimeout(async () => {
         try {
@@ -46,6 +47,7 @@ window.addEventListener('load', () => {
           if (session?.data?.session?.user) {
             window.TSSRequirementsLiveSync?.boot?.();
             setTimeout(() => window.TSSProduction?.hydrate?.(), 220);
+            setTimeout(() => window.TSSDashboardCleanup?.apply?.(), 320);
           }
         } catch (err) {
           console.warn('TODO AI session restore check', err?.message || err);
