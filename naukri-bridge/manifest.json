@@ -1,0 +1,31 @@
+{
+  "manifest_version": 3,
+  "name": "TODO AI Resdex Auto Search",
+  "version": "1.0.0",
+  "description": "Bridges TODO AI requirements to the authenticated Naukri Resdex search flow.",
+  "permissions": ["storage", "tabs"],
+  "host_permissions": [
+    "https://todo-resume-intelligence.vercel.app/*",
+    "https://recruit.naukri.com/*",
+    "https://www.naukri.com/*",
+    "https://resdex.naukri.com/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://todo-resume-intelligence.vercel.app/*"],
+      "js": ["todo-content.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://recruit.naukri.com/*", "https://www.naukri.com/*", "https://resdex.naukri.com/*"],
+      "js": ["naukri-content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "action": {
+    "default_title": "TODO AI Resdex Auto Search"
+  }
+}
