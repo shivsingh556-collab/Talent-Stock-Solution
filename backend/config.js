@@ -5,7 +5,7 @@ window.TSS_SUPABASE_CONFIG = window.TSS_SUPABASE_CONFIG || {
 };
 
 window.addEventListener('load', () => {
-  const BUILD = '20260818-resdex-final-safe-v7';
+  const BUILD = '20260818-resdex-cv-import-v8';
   const addCss = (href) => {
     const clean = href.split('?')[0];
     if ([...document.querySelectorAll('link[rel="stylesheet"]')].some(x => (x.getAttribute('href')||'').split('?')[0] === clean)) return;
@@ -44,6 +44,7 @@ window.addEventListener('load', () => {
     .then(() => loadScript('dashboard-cleanup.js','tssDashboardCleanup'))
     .then(() => loadScript('resdex-assistant.js','tssResdexAssistant'))
     .then(() => loadScript('resdex-final-safe.js','tssResdexFinalSafe'))
+    .then(() => loadScript('resdex-import-quick.js','tssResdexQuickImport'))
     .then(() => {
       setTimeout(async () => {
         try {
@@ -55,6 +56,7 @@ window.addEventListener('load', () => {
             setTimeout(() => window.TSSInterviewActions?.syncStatuses?.(), 380);
             setTimeout(() => window.TSSResdexAssistant?.decorate?.(), 420);
             setTimeout(() => window.TSSResdexFinalSafe?.apply?.(), 520);
+            setTimeout(() => window.TSSResdexQuickImport?.decorate?.(), 580);
           }
         } catch (err) {
           console.warn('TODO AI session restore check', err?.message || err);
