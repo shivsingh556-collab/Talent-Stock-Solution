@@ -48,9 +48,9 @@
       if(sessionError||!session?.user)return false;
       const {data:reqs,error}=await c.from('requirements').select('*,clients(name)').eq('status','Active').order('tss_id',{ascending:true});
       if(error)throw error;
-      if(!Array.isArray(reqs)){return false;}
+      if(!Array.isArray(reqs))return false;
       console.info('TODO AI Supabase active requirements returned:',reqs.length);
-      if(reqs.length<47){console.warn('TODO AI expected 47 active requirements but received',reqs.length);return false;}
+      if(reqs.length<47){console.warn('TODO AI expected at least 47 active requirements but received',reqs.length);return false;}
 
       const locals=Array.isArray(db.requirements)?db.requirements:[];
       const rows=reqs.map(row=>mapRow(row,locals));
@@ -58,7 +58,7 @@
       try{localStorage.setItem('tss_talent_buddy_v1',JSON.stringify(db))}catch{}
       rerender();
       paint(rows.length);
-      finished=rows.length===47;
+      finished=rows.length>=47;
       console.info('TODO AI active requirements hydrated:',rows.length);
       return finished;
     }finally{running=false;}
