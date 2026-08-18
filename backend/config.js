@@ -5,7 +5,7 @@ window.TSS_SUPABASE_CONFIG = window.TSS_SUPABASE_CONFIG || {
 };
 
 window.addEventListener('load', () => {
-  const BUILD = '20260818-resdex-stability-v5';
+  const BUILD = '20260818-resdex-clean-v6';
   const addCss = (href) => {
     const clean = href.split('?')[0];
     if ([...document.querySelectorAll('link[rel="stylesheet"]')].some(x => (x.getAttribute('href')||'').split('?')[0] === clean)) return;
@@ -44,6 +44,7 @@ window.addEventListener('load', () => {
     .then(() => loadScript('dashboard-cleanup.js','tssDashboardCleanup'))
     .then(() => loadScript('resdex-assistant.js','tssResdexAssistant'))
     .then(() => loadScript('resdex-route-fix.js','tssResdexRouteFix'))
+    .then(() => loadScript('resdex-button-clean.js','tssResdexButtonClean'))
     .then(() => {
       setTimeout(async () => {
         try {
@@ -55,6 +56,7 @@ window.addEventListener('load', () => {
             setTimeout(() => window.TSSInterviewActions?.syncStatuses?.(), 380);
             setTimeout(() => window.TSSResdexAssistant?.decorate?.(), 420);
             setTimeout(() => window.TSSResdexRouteFix?.apply?.(), 500);
+            setTimeout(() => window.TSSResdexButtonClean?.apply?.(), 560);
           }
         } catch (err) {
           console.warn('TODO AI session restore check', err?.message || err);
