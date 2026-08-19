@@ -5,7 +5,7 @@ window.TSS_SUPABASE_CONFIG = window.TSS_SUPABASE_CONFIG || {
 };
 
 window.addEventListener('load', () => {
-  const BUILD = '20260819-assignment-fields-v10';
+  const BUILD = '20260819-assignment-autocomplete-v11';
   const addCss = (href) => {
     const clean = href.split('?')[0];
     if ([...document.querySelectorAll('link[rel="stylesheet"]')].some(x => (x.getAttribute('href')||'').split('?')[0] === clean)) return;
@@ -46,6 +46,7 @@ window.addEventListener('load', () => {
     .then(() => loadScript('resdex-import-quick.js','tssResdexQuickImport'))
     .then(() => loadScript('recruitment-workflow.js','tssRecruitmentWorkflow'))
     .then(() => loadScript('assignment-fields-fix.js','tssAssignmentFieldsFix'))
+    .then(() => loadScript('assignment-email-autocomplete.js','tssAssignmentEmailAutocomplete'))
     .then(() => loadScript('requirement-save-sync.js','tssRequirementSaveSync'))
     .then(() => {
       setTimeout(async () => {
@@ -61,7 +62,8 @@ window.addEventListener('load', () => {
             setTimeout(() => window.TSSResdexQuickImport?.decorate?.(), 580);
             setTimeout(() => window.TSSRecruitmentWorkflow?.boot?.(), 650);
             setTimeout(() => window.TSSAssignmentFieldsFix?.ensureFields?.(), 690);
-            setTimeout(() => window.TSSRequirementSaveSync?.wire?.(), 740);
+            setTimeout(() => window.TSSAssignmentEmailAutocomplete?.boot?.(), 720);
+            setTimeout(() => window.TSSRequirementSaveSync?.wire?.(), 780);
           }
         } catch (err) {
           console.warn('TODO AI session restore check', err?.message || err);
