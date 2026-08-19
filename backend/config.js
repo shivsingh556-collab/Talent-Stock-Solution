@@ -5,7 +5,7 @@ window.TSS_SUPABASE_CONFIG = window.TSS_SUPABASE_CONFIG || {
 };
 
 window.addEventListener('load', () => {
-  const BUILD = '20260819-clean-assignment-v13';
+  const BUILD = '20260819-owner-persist-v14';
   const addCss = (href) => {
     const clean = href.split('?')[0];
     if ([...document.querySelectorAll('link[rel="stylesheet"]')].some(x => (x.getAttribute('href')||'').split('?')[0] === clean)) return;
@@ -47,6 +47,7 @@ window.addEventListener('load', () => {
     .then(() => loadScript('recruitment-workflow.js','tssRecruitmentWorkflow'))
     .then(() => loadScript('assignment-clean-layout.js','tssAssignmentCleanLayout'))
     .then(() => loadScript('requirement-save-sync.js','tssRequirementSaveSync'))
+    .then(() => loadScript('requirement-details-owner-sync.js','tssRequirementDetailsOwnerSync'))
     .then(() => {
       setTimeout(async () => {
         try {
@@ -62,6 +63,7 @@ window.addEventListener('load', () => {
             setTimeout(() => window.TSSRecruitmentWorkflow?.boot?.(), 650);
             setTimeout(() => window.TSSAssignmentCleanLayout?.boot?.(), 720);
             setTimeout(() => window.TSSRequirementSaveSync?.wire?.(), 800);
+            setTimeout(() => window.TSSRequirementDetailsOwnerSync?.patch?.(), 860);
           }
         } catch (err) {
           console.warn('TODO AI session restore check', err?.message || err);
