@@ -5,7 +5,7 @@ window.TSS_SUPABASE_CONFIG = window.TSS_SUPABASE_CONFIG || {
 };
 
 window.addEventListener('load', () => {
-  const BUILD = '20260818-resdex-cv-import-v8';
+  const BUILD = '20260819-recruitment-workflow-v9';
   const addCss = (href) => {
     const clean = href.split('?')[0];
     if ([...document.querySelectorAll('link[rel="stylesheet"]')].some(x => (x.getAttribute('href')||'').split('?')[0] === clean)) return;
@@ -39,12 +39,13 @@ window.addEventListener('load', () => {
     .then(() => loadScript('interview-actions.js','tssInterviewActions'))
     .then(() => loadScript('stable-runtime.js','tssStableRuntime'))
     .then(() => loadScript('requirements-live-sync.js','tssRequirementsLiveSync'))
-    .then(() => loadScript('requirement-save-sync.js','tssRequirementSaveSync'))
     .then(() => loadScript('safe-backend-features.js','tssSafeBackendFeatures'))
     .then(() => loadScript('dashboard-cleanup.js','tssDashboardCleanup'))
     .then(() => loadScript('resdex-assistant.js','tssResdexAssistant'))
     .then(() => loadScript('resdex-final-safe.js','tssResdexFinalSafe'))
     .then(() => loadScript('resdex-import-quick.js','tssResdexQuickImport'))
+    .then(() => loadScript('recruitment-workflow.js','tssRecruitmentWorkflow'))
+    .then(() => loadScript('requirement-save-sync.js','tssRequirementSaveSync'))
     .then(() => {
       setTimeout(async () => {
         try {
@@ -57,6 +58,8 @@ window.addEventListener('load', () => {
             setTimeout(() => window.TSSResdexAssistant?.decorate?.(), 420);
             setTimeout(() => window.TSSResdexFinalSafe?.apply?.(), 520);
             setTimeout(() => window.TSSResdexQuickImport?.decorate?.(), 580);
+            setTimeout(() => window.TSSRecruitmentWorkflow?.boot?.(), 650);
+            setTimeout(() => window.TSSRequirementSaveSync?.wire?.(), 720);
           }
         } catch (err) {
           console.warn('TODO AI session restore check', err?.message || err);
