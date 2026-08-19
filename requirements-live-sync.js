@@ -19,10 +19,10 @@
     const local=findLocal(row,locals)||{};
     return {...local,
       id:internalId(row,local),requirementId:row.tss_id,profileKey:serverKey(row),serverId:row.id,
-      client:row.clients?.name||local.client||'Client',clientOwner:row.client_owner||local.clientOwner||'',
-      requirementHandler:row.requirement_handler||local.requirementHandler||'Shweta Tiwari',
-      assignedRecruiters:Array.isArray(row.assigned_recruiters)?row.assigned_recruiters:(local.assignedRecruiters||[]),
-      submittedAt:row.submitted_at||local.submittedAt||null,submittedBy:row.submitted_by||local.submittedBy||null,
+      client:row.clients?.name||local.client||'Client',clientOwner:row.client_owner||'',
+      requirementHandler:row.requirement_handler||'Shweta Tiwari',
+      assignedRecruiters:Array.isArray(row.assigned_recruiters)?row.assigned_recruiters:[],
+      submittedAt:row.submitted_at||null,submittedBy:row.submitted_by||null,
       title:row.job_title||local.title||'Untitled Requirement',location:row.location||local.location||'Not provided',
       experience:row.experience_text||local.experience||'Not provided',salaryRange:row.salary_range||local.salaryRange||'Not provided',
       industry:row.industry||local.industry||'',qualification:row.qualification||local.qualification||'Not provided',
@@ -53,17 +53,17 @@
       if(error)throw error;
       if(!Array.isArray(reqs))return false;
       console.info('TODO AI Supabase active requirements returned:',reqs.length);
-      if(reqs.length<47){console.warn('TODO AI expected at least 47 active requirements but received',reqs.length);return false;}
-
+      // Never reject authoritative Supabase data because of an old hard-coded count.
+      // Active requirement totals can legitimately increase or decrease as jobs are added/closed/put on hold.
       const locals=Array.isArray(db.requirements)?db.requirements:[];
       const rows=reqs.map(row=>mapRow(row,locals));
       db.requirements=rows;
       try{localStorage.setItem('tss_talent_buddy_v1',JSON.stringify(db))}catch{}
       rerender();
       paint(rows.length);
-      finished=rows.length>=47;
+      finished=true;
       console.info('TODO AI active requirements hydrated:',rows.length);
-      return finished;
+      return true;
     }finally{running=false;}
   }
 
