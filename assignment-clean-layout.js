@@ -3,9 +3,10 @@
   const $=id=>document.getElementById(id);
   const OWNERS=['Akash Mistry','Shraddha Sharma','Pooja Wara'];
   const HANDLER='Shweta Tiwari';
-  const esc=v=>String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+  const esc=v=>String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot',"'":'&#39;'}[m]));
   let people=[];
 
+  function toastSafe(m){try{toast(m)}catch{console.log(m)}}
   function reqByKey(key){
     if(typeof db==='undefined')return null;
     return (db.requirements||[]).find(r=>r.id===key||r.requirementId===key||r.profileKey===key||r.serverId===key)||null;
@@ -101,10 +102,30 @@
     return {r,owner,handler,assigned};
   }
 
+  async function persistOwner(owner){
+    const r=reqByKey($('reqId')?.value);
+    if(!r?.serverId)return; // new requirement: normal Save/Submit will persist it.
+    const c=window.TSSBackend?.client;if(!c)return;
+    try{
+      const user=await window.TSSBackend?.currentUser?.();
+      const payload={client_owner:owner,updated_at:new Date().toISOString()};
+      if(user?.id)payload.updated_by=user.id;
+      const {error}=await c.from('requirements').update(payload).eq('id',r.serverId);
+      if(error)throw error;
+      r.clientOwner=owner;
+      try{localStorage.setItem('tss_talent_buddy_v1',JSON.stringify(db))}catch{}
+      await window.TSSRequirementsLiveSync?.syncNow?.();
+      setTimeout(()=>window.TSSProduction?.hydrate?.(),100);
+      toastSafe(`Client Owner updated to ${owner}`);
+    }catch(e){
+      console.error('Client owner auto-save failed',e);
+      toastSafe('Client Owner update failed: '+(e?.message||e));
+    }
+  }
+
   function removeLegacy(){
     document.querySelectorAll('.workflow-assignment-grid,#reqAssignmentPanel').forEach(el=>el.remove());
     document.querySelectorAll('#reqRecruiterSearch,#reqRecruiterSuggestions,#reqRecruiterChips').forEach(el=>el.closest('.assignee-auto-wrap')?.remove()||el.remove());
-    // Remove any orphan duplicate blocks containing legacy Assigned Recruiter(s) select.
     document.querySelectorAll('select#reqRecruiters').forEach((el,i)=>{if(i>0)el.closest('div')?.remove()});
   }
 
@@ -114,7 +135,6 @@
     removeLegacy();
     $('reqAssignmentClean')?.remove();
 
-    // Remove existing owner/handler controls from their old positions; they will be rebuilt once, cleanly.
     const oldOwner=$('reqClientOwner');if(oldOwner){const holder=oldOwner.closest('div');if(holder)holder.style.display='none';}
     const oldHandler=$('reqHandler');if(oldHandler){const holder=oldHandler.closest('div');if(holder)holder.style.display='none';}
 
@@ -130,11 +150,13 @@
     const ownerClean=$('reqClientOwnerClean');ownerClean.value=OWNERS.includes(vals.owner)?vals.owner:OWNERS[0];
     const sel=$('reqRecruiters');ensureSelectOptions(sel,vals.assigned);renderChips(sel);wireSearch(sel);
 
-    // Sync clean UI back to the legacy IDs expected by save code.
     if(!oldOwner){const hidden=document.createElement('input');hidden.type='hidden';hidden.id='reqClientOwner';form.appendChild(hidden)}
     if(!oldHandler){const hidden=document.createElement('input');hidden.type='hidden';hidden.id='reqHandler';form.appendChild(hidden)}
     $('reqClientOwner').value=ownerClean.value;$('reqHandler').value=$('reqHandlerClean').value;
-    ownerClean.onchange=()=>{$('reqClientOwner').value=ownerClean.value};
+    ownerClean.onchange=async()=>{
+      $('reqClientOwner').value=ownerClean.value;
+      await persistOwner(ownerClean.value);
+    };
   }
 
   async function boot(){style();await loadPeople();build();
@@ -144,5 +166,5 @@
   }
 
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(boot,900),{once:true});else setTimeout(boot,900);
-  window.TSSAssignmentCleanLayout={boot,build};
+  window.TSSAssignmentCleanLayout={boot,build,persistOwner};
 })();
