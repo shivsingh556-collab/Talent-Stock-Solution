@@ -24,7 +24,8 @@
       assignedRecruiters:Array.isArray(row.assigned_recruiters)?row.assigned_recruiters:[],
       submittedAt:row.submitted_at||null,submittedBy:row.submitted_by||null,
       title:row.job_title||local.title||'Untitled Requirement',location:row.location||local.location||'Not provided',
-      experience:row.experience_text||local.experience||'Not provided',salaryRange:row.salary_range||local.salaryRange||'Not provided',
+      experience:row.experience_text||local.experience||'Not provided',positionsCount:row.positions_count??local.positionsCount??null,
+      salaryRange:row.salary_range||local.salaryRange||'Not provided',
       industry:row.industry||local.industry||'',qualification:row.qualification||local.qualification||'Not provided',
       responsibilities:row.responsibilities||local.responsibilities||'',jdText:row.jd_text||local.jdText||'',status:'Active',
       skills:Array.isArray(row.mandatory_skills)&&row.mandatory_skills.length?row.mandatory_skills:(local.skills||[]),
@@ -53,8 +54,6 @@
       if(error)throw error;
       if(!Array.isArray(reqs))return false;
       console.info('TODO AI Supabase active requirements returned:',reqs.length);
-      // Never reject authoritative Supabase data because of an old hard-coded count.
-      // Active requirement totals can legitimately increase or decrease as jobs are added/closed/put on hold.
       const locals=Array.isArray(db.requirements)?db.requirements:[];
       const rows=reqs.map(row=>mapRow(row,locals));
       db.requirements=rows;
