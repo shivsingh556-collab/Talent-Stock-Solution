@@ -5,7 +5,7 @@ window.TSS_SUPABASE_CONFIG = window.TSS_SUPABASE_CONFIG || {
 };
 
 window.addEventListener('load', () => {
-  const BUILD = '20260819-owner-persist-v14';
+  const BUILD = '20260819-positions-v15';
   const addCss = (href) => {
     const clean = href.split('?')[0];
     if ([...document.querySelectorAll('link[rel="stylesheet"]')].some(x => (x.getAttribute('href')||'').split('?')[0] === clean)) return;
@@ -46,6 +46,7 @@ window.addEventListener('load', () => {
     .then(() => loadScript('resdex-import-quick.js','tssResdexQuickImport'))
     .then(() => loadScript('recruitment-workflow.js','tssRecruitmentWorkflow'))
     .then(() => loadScript('assignment-clean-layout.js','tssAssignmentCleanLayout'))
+    .then(() => loadScript('requirement-positions-field.js','tssRequirementPositions'))
     .then(() => loadScript('requirement-save-sync.js','tssRequirementSaveSync'))
     .then(() => loadScript('requirement-details-owner-sync.js','tssRequirementDetailsOwnerSync'))
     .then(() => {
@@ -62,8 +63,9 @@ window.addEventListener('load', () => {
             setTimeout(() => window.TSSResdexQuickImport?.decorate?.(), 580);
             setTimeout(() => window.TSSRecruitmentWorkflow?.boot?.(), 650);
             setTimeout(() => window.TSSAssignmentCleanLayout?.boot?.(), 720);
-            setTimeout(() => window.TSSRequirementSaveSync?.wire?.(), 800);
-            setTimeout(() => window.TSSRequirementDetailsOwnerSync?.patch?.(), 860);
+            setTimeout(() => window.TSSRequirementPositions?.ensure?.(), 770);
+            setTimeout(() => window.TSSRequirementSaveSync?.wire?.(), 820);
+            setTimeout(() => window.TSSRequirementDetailsOwnerSync?.patch?.(), 880);
           }
         } catch (err) {
           console.warn('TODO AI session restore check', err?.message || err);
