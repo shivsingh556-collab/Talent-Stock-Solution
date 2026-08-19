@@ -33,6 +33,9 @@
     const submitMode=e.currentTarget?.id==='submitRequirementBtn';
     const client=clean($('reqClient')?.value),title=clean($('reqTitle')?.value);
     if(!client||!title){toastSafe('Client and Job Title are required');return;}
+    const positionsRaw=clean($('reqPositions')?.value);
+    const positions=positionsRaw?Number(positionsRaw):null;
+    if(positions!==null&&(!Number.isInteger(positions)||positions<1)){toastSafe('No. of Positions must be 1 or more');return;}
     saving=true;
     const btn=e.currentTarget,old=btn?.textContent;if(btn){btn.disabled=true;btn.textContent=submitMode?'Submitting…':'Saving…'}
     try{
@@ -46,6 +49,7 @@
       const payload={
         client_id:clientId,job_title:title,location:clean($('reqLocation')?.value)||null,
         experience_min:exp.min,experience_max:exp.max,experience_text:clean($('reqExperience')?.value)||null,
+        positions_count:positions,
         industry:clean($('reqIndustry')?.value)||null,qualification:clean($('reqQualification')?.value)||null,
         responsibilities:clean($('reqResponsibilities')?.value)||null,jd_text:clean($('reqJdText')?.value)||null,
         status:$('reqStatus')?.value||'Active',mandatory_skills:split($('reqSkills')?.value),preferred_skills:split($('reqPreferred')?.value),
