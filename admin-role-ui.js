@@ -23,8 +23,17 @@
     document.head.appendChild(s);
   }
 
+  function removeDuplicateAdminNav(){
+    const nav=$('nav');if(!nav)return;
+    [...nav.querySelectorAll('.nav-item')].forEach(btn=>{
+      if(btn.id==='adminNavBtn')return;
+      if(String(btn.textContent||'').trim().toLowerCase()==='admin')btn.remove();
+    });
+  }
+
   function ensureSection(){
     const nav=$('nav');const main=document.querySelector('.main-shell');if(!nav||!main)return null;
+    removeDuplicateAdminNav();
     let navBtn=$('adminNavBtn');
     if(!navBtn){
       navBtn=document.createElement('button');navBtn.id='adminNavBtn';navBtn.className='nav-item';navBtn.dataset.view='adminView';navBtn.innerHTML='<span>⚙</span>Admin';nav.appendChild(navBtn);
@@ -75,6 +84,8 @@
       const isAdmin=Boolean(profile?.is_active)&&String(profile?.role||'').toLowerCase()==='admin';
       if(!isAdmin){$('adminNavBtn')?.remove();$('adminView')?.remove();return false;}
       ensureSection();await renderUsers();
+      setTimeout(removeDuplicateAdminNav,300);
+      setTimeout(removeDuplicateAdminNav,900);
       console.info('TODO AI Admin enabled for',profile?.email);
       return true;
     }catch(e){console.warn('Admin UI boot',e?.message||e);return false;}
