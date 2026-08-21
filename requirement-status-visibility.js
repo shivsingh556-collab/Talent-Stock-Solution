@@ -1,8 +1,8 @@
-// Keep TODO AI focused on remaining requirements while allowing fulfilled records to be reviewed by filter.
+// Keep TODO AI focused on the Client Data sheet workflow: remaining = WIP + On Hold; Fulfilled is review-only.
 (function(){
   const $=id=>document.getElementById(id);
   const norm=s=>String(s||'').trim().toLowerCase();
-  const remainingStatus=s=>['active','work in progress','on hold'].includes(norm(s));
+  const remainingStatus=s=>['work in progress','on hold'].includes(norm(s));
 
   function openRequirements(){
     if(typeof db==='undefined' || !Array.isArray(db.requirements)) return [];
@@ -10,7 +10,7 @@
   }
 
   // Legacy renderers use activeReqs() for sidebar, selectors and counts.
-  // Only truly remaining requirements belong there: Active, Work In Progress and On Hold.
+  // In the current Client Data sheet, remaining work is only WIP + On Hold.
   window.activeReqs=openRequirements;
 
   function ensureStatusOptions(){
@@ -25,21 +25,23 @@
   }
 
   function ensureFilter(){
-    if($('requirementStatusFilter')) return $('requirementStatusFilter');
-    const row=document.querySelector('#requirements .filter-row');
-    if(!row) return null;
-    const select=document.createElement('select');
-    select.id='requirementStatusFilter';
-    select.setAttribute('aria-label','Filter requirements by status');
+    let select=$('requirementStatusFilter');
+    if(!select){
+      const row=document.querySelector('#requirements .filter-row');
+      if(!row) return null;
+      select=document.createElement('select');
+      select.id='requirementStatusFilter';
+      select.setAttribute('aria-label','Filter requirements by status');
+      row.appendChild(select);
+      select.addEventListener('change',applyStatusFilter);
+    }
+    const current=select.value;
     select.innerHTML=`
-      <option value="Remaining" selected>Remaining Requirements</option>
-      <option value="Active">Active</option>
+      <option value="Remaining">Remaining Requirements</option>
       <option value="Work In Progress">Work In Progress</option>
       <option value="On Hold">On Hold</option>
-      <option value="Fulfilled">Fulfilled</option>
-      <option value="All">All Non-Closed</option>`;
-    row.appendChild(select);
-    select.addEventListener('change',applyStatusFilter);
+      <option value="Fulfilled">Fulfilled</option>`;
+    select.value=['Remaining','Work In Progress','On Hold','Fulfilled'].includes(current)?current:'Remaining';
     return select;
   }
 
@@ -56,14 +58,12 @@
       const r=requirementForCard(card);
       if(!r) return;
       const status=String(r.status||'').trim();
-      const closed=norm(status)==='closed';
       let statusMatch=false;
       if(chosen==='Remaining') statusMatch=remainingStatus(status);
-      else if(chosen==='All') statusMatch=!closed;
       else statusMatch=status===chosen;
       const baseHidden=card.dataset.statusHidden!=='1' && card.style.display==='none';
-      card.dataset.statusHidden=(closed||!statusMatch)?'1':'0';
-      if(closed||!statusMatch) card.style.display='none';
+      card.dataset.statusHidden=!statusMatch?'1':'0';
+      if(!statusMatch) card.style.display='none';
       else if(!baseHidden) card.style.display='block';
     });
     updateRemainingCount();
@@ -96,7 +96,7 @@
     wrapExistingFilter();
     try{if(typeof renderAll==='function')renderAll()}catch(e){console.warn('TODO AI status visibility renderAll',e)}
     try{if(typeof renderOldSite==='function')renderOldSite()}catch(e){console.warn('TODO AI status visibility renderOldSite',e)}
-    setTimeout(()=>{applyStatusFilter();updateRemainingCount()},20);
+    setTimeout(()=>{ensureFilter();applyStatusFilter();updateRemainingCount()},20);
   }
 
   function observe(){
