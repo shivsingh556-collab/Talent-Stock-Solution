@@ -24,7 +24,7 @@
     if(!backend()?.enabled)return;
     const user=await backend().currentUser().catch(()=>null);if(!user)return;
     const c=backend().client;
-    const {data:reqs,error}=await c.from('requirements').select('*,clients(name)').eq('status','Active').order('tss_id');
+    const {data:reqs,error}=await c.from('requirements').select('*,clients(name)').neq('status','Closed').order('tss_id');
     if(error)throw error;
     if(Array.isArray(reqs)){
       db.requirements=reqs.map(row=>({
@@ -32,17 +32,18 @@
         client:row.clients?.name||'Client', clientOwner:row.client_owner||'', title:row.job_title,
         location:row.location||'Not provided', experience:row.experience_text||'Not provided',
         salaryRange:row.salary_range||'Not provided', industry:row.industry||'', qualification:row.qualification||'',
-        responsibilities:row.responsibilities||'', jdText:row.jd_text||'', status:'Active',
+        responsibilities:row.responsibilities||'', jdText:row.jd_text||'', status:row.status||'Active',
         skills:row.mandatory_skills||[], preferred:row.preferred_skills||[],
         aiSuggested:Boolean(row.ai_suggested_skills?.length&&!row.ai_skills_approved)
       }));
       localStorage.setItem('tss_talent_buddy_v1',JSON.stringify(db));
       try{renderAll()}catch{}
       try{renderOldSite()}catch{}
-      const n=reqs.length;
-      if($('navReqCount'))$('navReqCount').textContent=n;
-      if($('clientReqCount'))$('clientReqCount').textContent=n;
-      if($('activeReqChip'))$('activeReqChip').textContent=`${n} active requirements`;
+      const total=reqs.length;
+      const active=reqs.filter(r=>String(r.status||'').toLowerCase()==='active').length;
+      if($('navReqCount'))$('navReqCount').textContent=total;
+      if($('clientReqCount'))$('clientReqCount').textContent=total;
+      if($('activeReqChip'))$('activeReqChip').textContent=`${active} active · ${total-active} on hold`;
     }
   }
 
