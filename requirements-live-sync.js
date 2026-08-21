@@ -1,4 +1,4 @@
-// TODO AI authoritative active requirement sync. Supabase is source of truth.
+// TODO AI authoritative open requirement sync. Supabase is source of truth.
 (function(){
   const $=id=>document.getElementById(id);
   let finished=false,running=false;
@@ -27,16 +27,18 @@
       experience:row.experience_text||local.experience||'Not provided',positionsCount:row.positions_count??local.positionsCount??null,
       salaryRange:row.salary_range||local.salaryRange||'Not provided',
       industry:row.industry||local.industry||'',qualification:row.qualification||local.qualification||'Not provided',
-      responsibilities:row.responsibilities||local.responsibilities||'',jdText:row.jd_text||local.jdText||'',status:'Active',
+      responsibilities:row.responsibilities||local.responsibilities||'',jdText:row.jd_text||local.jdText||'',status:row.status||local.status||'Active',
       skills:Array.isArray(row.mandatory_skills)&&row.mandatory_skills.length?row.mandatory_skills:(local.skills||[]),
       preferred:Array.isArray(row.preferred_skills)&&row.preferred_skills.length?row.preferred_skills:(local.preferred||[]),
       aiSuggested:Boolean(row.ai_suggested_skills?.length&&!row.ai_skills_approved)
     };
   }
-  function paint(n){
-    if($('navReqCount'))$('navReqCount').textContent=String(n);
-    if($('clientReqCount'))$('clientReqCount').textContent=String(n);
-    if($('activeReqChip'))$('activeReqChip').textContent=`${n} active requirements`;
+  function paint(rows){
+    const total=rows.length;
+    const active=rows.filter(r=>String(r.status||'').toLowerCase()==='active').length;
+    if($('navReqCount'))$('navReqCount').textContent=String(total);
+    if($('clientReqCount'))$('clientReqCount').textContent=String(total);
+    if($('activeReqChip'))$('activeReqChip').textContent=`${active} active · ${total-active} on hold`;
   }
   function rerender(){
     try{if(typeof renderAll==='function')renderAll()}catch(e){console.warn('TODO AI renderAll',e)}
@@ -50,18 +52,19 @@
       const c=backend().client;
       const {data:{session},error:sessionError}=await c.auth.getSession();
       if(sessionError||!session?.user)return false;
-      const {data:reqs,error}=await c.from('requirements').select('*,clients(name)').eq('status','Active').order('tss_id',{ascending:true});
+      // Keep Active and On Hold requirements in the workspace. Closed requirements are excluded.
+      const {data:reqs,error}=await c.from('requirements').select('*,clients(name)').neq('status','Closed').order('tss_id',{ascending:true});
       if(error)throw error;
       if(!Array.isArray(reqs))return false;
-      console.info('TODO AI Supabase active requirements returned:',reqs.length);
+      console.info('TODO AI non-closed requirements returned:',reqs.length);
       const locals=Array.isArray(db.requirements)?db.requirements:[];
       const rows=reqs.map(row=>mapRow(row,locals));
       db.requirements=rows;
       try{localStorage.setItem('tss_talent_buddy_v1',JSON.stringify(db))}catch{}
       rerender();
-      paint(rows.length);
+      paint(rows);
       finished=true;
-      console.info('TODO AI active requirements hydrated:',rows.length);
+      console.info('TODO AI non-closed requirements hydrated:',rows.length);
       return true;
     }finally{running=false;}
   }
