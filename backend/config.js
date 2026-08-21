@@ -5,7 +5,7 @@ window.TSS_SUPABASE_CONFIG = window.TSS_SUPABASE_CONFIG || {
 };
 
 window.addEventListener('load', () => {
-  const BUILD = '20260821-clean-status-filter-v23';
+  const BUILD = '20260821-pipeline-button-v24';
   const addCss = (href) => {
     const clean = href.split('?')[0];
     if ([...document.querySelectorAll('link[rel="stylesheet"]')].some(x => (x.getAttribute('href')||'').split('?')[0] === clean)) return;
@@ -42,6 +42,7 @@ window.addEventListener('load', () => {
     .then(() => loadScript('requirements-live-sync.js','tssRequirementsLiveSync'))
     .then(() => loadScript('safe-backend-features.js','tssSafeBackendFeatures'))
     .then(() => loadScript('dashboard-cleanup.js','tssDashboardCleanup'))
+    .then(() => loadScript('dashboard-actions.js','tssDashboardActions'))
     .then(() => loadScript('resdex-assistant.js','tssResdexAssistant'))
     .then(() => loadScript('resdex-final-safe.js','tssResdexFinalSafe'))
     .then(() => loadScript('resdex-import-quick.js','tssResdexQuickImport'))
@@ -60,6 +61,7 @@ window.addEventListener('load', () => {
             setTimeout(() => window.TSSProduction?.hydrate?.(), 220);
             setTimeout(() => window.TSSRequirementStatusVisibility?.refresh?.(), 270);
             setTimeout(() => window.TSSDashboardCleanup?.apply?.(), 320);
+            setTimeout(() => window.TSSDashboardActions?.wire?.(), 350);
             setTimeout(() => window.TSSInterviewActions?.syncStatuses?.(), 380);
             setTimeout(() => window.TSSResdexAssistant?.decorate?.(), 420);
             setTimeout(() => window.TSSResdexFinalSafe?.apply?.(), 520);
