@@ -8,91 +8,107 @@
 </head>
 <body>
   <div id="toast" class="toast"></div>
+
   <section id="loginGate" class="login-gate">
     <div class="login-shell">
       <div class="login-left">
         <div class="talent-logo wordmark">talent<span>stock</span><small>introducing talent with opportunity</small></div>
-        <div class="secure-pill">SECURE COMPANY WORKSPACE</div>
+        <div class="secure-pill">◉ &nbsp; SECURE COMPANY WORKSPACE</div>
         <h1>Resume intelligence for TalentStock teams.</h1>
         <p>Sign in to access your job profiles, candidate records, screening results and reports.</p>
-        <button id="showLoginForm" class="login-primary">Sign in to your workspace</button>
+        <button id="showLoginForm" class="login-primary">Sign in to your workspace <span>→</span></button>
         <form id="loginForm" class="login-form hidden">
           <label>Company email</label>
           <input id="loginEmail" type="email" autocomplete="email" placeholder="name@talent-stock.com" required />
           <label>Password</label>
-          <input id="loginPassword" type="password" autocomplete="current-password" required />
-          <button class="login-primary" type="submit">Continue securely</button>
+          <input id="loginPassword" type="password" autocomplete="current-password" placeholder="••••••••" required />
+          <button class="login-primary" type="submit">Continue securely <span>→</span></button>
           <div id="loginError" class="login-error"></div>
         </form>
+        <div class="authorized"><b>✓</b><span><strong>Authorized access</strong><small>TalentStock team workspace</small></span></div>
       </div>
       <div class="login-right">
         <div class="welcome-card"><span>TODO · TALENT BUDDY</span><h2>Welcome to your secure workspace.</h2><p>Every employee sees only their own saved screening data.</p></div>
+        <div class="todo-figure">◉<div class="todo-body">👔</div></div>
+        <div class="privacy-card">▣ <span><strong>Private by design</strong><small>Per-user records · protected files</small></span></div>
       </div>
     </div>
   </section>
+
   <div id="workspace" class="workspace hidden">
     <aside class="sidebar">
-      <div class="sidebar-logo"><div class="talent-logo wordmark small">talent<span>stock</span></div></div>
+      <div class="sidebar-logo"><div class="talent-logo wordmark small">talent<span>stock</span><small>introducing talent with opportunity</small></div></div>
+      <div class="sidebar-caption"><strong>RESUME<br>INTELLIGENCE</strong><span>Evidence-based screening</span></div>
       <nav id="nav">
-        <button class="nav-item active" data-view="dashboard">Dashboard</button>
-        <button class="nav-item" data-view="requirements">Job Profiles <b id="navReqCount">0</b></button>
-        <button class="nav-item" data-view="screening">Screening</button>
-        <button class="nav-item" data-view="candidates">Candidates <b id="navCandidateCount">0</b></button>
-        <button class="nav-item" data-view="interviews">Interviews <b id="navInterviewCount">0</b></button>
-        <button class="nav-item" data-view="automation">Automation</button>
+        <button class="nav-item active" data-view="dashboard"><span>▦</span>Dashboard</button>
+        <button class="nav-item" data-view="requirements"><span>▣</span>Job Profiles <b id="navReqCount">0</b></button>
+        <button class="nav-item" data-view="screening"><span>▧</span>Screening</button>
+        <button class="nav-item" data-view="candidates"><span>♧</span>Candidates <b id="navCandidateCount">0</b></button>
+        <button class="nav-item" data-view="interviews"><span>▦</span>Interviews <b id="navInterviewCount">0</b></button>
+        <button class="nav-item" data-view="automation"><span>◎</span>Automation</button>
       </nav>
       <div class="client-header"><span>CLIENT REQUIREMENTS</span><b id="clientReqCount">0</b></div>
-      <div class="sidebar-search"><input id="requirementSidebarSearch" placeholder="Search TSS ID or job profile" /></div>
+      <div class="sidebar-search"><span>⌕</span><input id="requirementSidebarSearch" placeholder="Search TSS ID or job profile" /></div>
       <div id="clientRequirementTree" class="client-tree"></div>
-      <button id="sidebarAddRequirement" class="add-client-btn">Add Client Requirement</button>
+      <button id="sidebarAddRequirement" class="add-client-btn">☁ &nbsp; Add Client Requirement</button>
+      <div class="workspace-note">◈ <span><strong>Recruiter workspace</strong><small>All requirements · your candidates</small></span></div>
       <div id="activeRequirementMini" class="hidden-support"></div>
     </aside>
+
     <main class="main-shell">
       <header class="topbar">
         <div class="page-brand"><span>TALENT STOCK SOLUTIONS</span><h2 id="pageTitle">Recruitment Dashboard</h2></div>
-        <div class="top-search"><input id="globalSearch" placeholder="Search candidates, jobs, skills..." /></div>
-        <button id="askTodoBtn" class="toolbar-btn">Ask Todo</button>
+        <div class="top-search"><span>⌕</span><input id="globalSearch" placeholder="Search candidates, jobs, skills..." /><kbd>⌘K</kbd></div>
+        <button id="askTodoBtn" class="toolbar-btn">▣ <b>Ask<br>Todo</b></button>
         <select id="topRequirementSelect" class="requirement-switcher"></select>
-        <button id="exportBtn" class="toolbar-btn muted">Master Excel</button>
-        <div class="profile-box"><div class="profile-avatar">TS</div><div><strong id="profileName">Recruiter</strong><small>Recruiter workspace</small></div><button id="signOutBtn">Out</button></div>
+        <button id="exportBtn" class="toolbar-btn muted">▤ <b>Master<br>Excel</b></button>
+        <div class="profile-box"><div class="profile-avatar">TS</div><div><strong id="profileName">Recruiter</strong><small>Recruiter workspace</small></div><button id="signOutBtn">↪</button></div>
       </header>
+
       <section id="dashboard" class="view active dashboard-view">
-        <div class="dashboard-title-row"><div><h1>Recruitment Intelligence</h1><p id="welcomeLine">Welcome back.</p></div><div class="dash-actions"><span id="activeReqChip">0 active requirements</span></div></div>
+        <div class="dashboard-title-row"><div><h1>Recruitment Intelligence</h1><p id="welcomeLine">Welcome back. Here's what's happening today.</p></div><div class="dash-actions"><span id="activeReqChip">0 active requirements</span><button>▽ &nbsp; Filters</button></div></div>
         <div class="dashboard-grid hero-dashboard-grid">
-          <article class="old-panel ai-card"><h3>AI Insight</h3><div class="ai-card-body"><div><strong id="worthReviewing">0 candidates worth reviewing</strong><button class="blue-btn" data-open-screening>Review Candidates</button></div><div id="qualityRing" class="quality-ring"><b>0%</b></div></div></article>
-          <article class="old-panel pipeline-card"><h3>Recruitment Pipeline</h3><div id="pipelineVisual" class="pipeline-visual"></div></article>
+          <article class="old-panel ai-card"><h3>✧ &nbsp; AI Insight</h3><div class="ai-card-body"><div><strong id="worthReviewing">0 candidates<br>worth reviewing</strong><p>These candidates strongly match your active job profiles.</p><button class="blue-btn" data-open-screening>Review Candidates</button><small>Source: TSS matching engine · evidence confidence</small></div><div id="qualityRing" class="quality-ring"><b>0%</b><span>Avg. Match Quality</span></div></div></article>
+          <article class="old-panel pipeline-card"><div class="panel-title"><h3>Recruitment Pipeline</h3><span>Total Candidates</span></div><div id="pipelineVisual" class="pipeline-visual"></div><button class="text-btn">View full pipeline →</button></article>
         </div>
         <div class="dashboard-grid lower-dashboard-grid">
-          <article class="old-panel interviews-card"><h3>Today's Interviews</h3><div id="todayInterviews"></div></article>
+          <article class="old-panel interviews-card"><div class="panel-title"><h3>Today's Interviews <i>● Live</i></h3><button class="text-btn nav-shortcut" data-target="interviews">View all</button></div><div id="todayInterviews"></div></article>
           <article class="old-panel health-card"><h3>Requirement Health</h3><div id="requirementHealth"></div></article>
-          <article class="old-panel workload-card"><h3>Recruiter Workload</h3><div id="recruiterWorkload"></div></article>
+          <article class="old-panel workload-card"><div class="panel-title"><h3>Recruiter Workload</h3><span>This Week</span></div><div id="recruiterWorkload"></div><button class="text-btn">View workload →</button></article>
         </div>
         <div class="dashboard-grid bottom-dashboard-grid">
-          <article class="old-panel jobs-table-card"><h3>Active Job Profiles</h3><div id="activeJobsTable"></div></article>
-          <article class="old-panel todo-card"><h3>Todo Help Assistant</h3><div class="todo-small"><strong id="todoGreeting">Hi Recruiter</strong></div><div class="todo-actions"><button data-open-screening>Show top candidates</button><button id="todoReport">Generate screening report</button></div></article>
+          <article class="old-panel jobs-table-card"><div class="panel-title"><h3>Active Job Profiles</h3><button class="text-btn nav-shortcut" data-target="requirements">View all</button></div><div id="activeJobsTable"></div></article>
+          <article class="old-panel todo-card"><div class="panel-title"><h3>Todo Help Assistant</h3><button id="expandTodo" class="text-btn">↗</button></div><div class="todo-small"><div class="mini-todo">◉</div><div><strong id="todoGreeting">Hi Recruiter</strong><p>I can help with screening, scheduling, reports and more.</p></div></div><div class="todo-actions"><button data-open-screening>Show top candidates</button><button class="nav-shortcut" data-target="interviews">Schedule interviews</button><button id="todoReport">Generate screening report</button></div><div class="todo-input">Ask anything... <span>➤</span></div></article>
         </div>
         <div id="statGrid" class="hidden-support"></div><div id="requirementsByClient" class="hidden-support"></div><div id="matchDistribution" class="hidden-support"></div><div id="recentActivity" class="hidden-support"></div><div id="alerts" class="hidden-support"></div>
       </section>
+
       <section id="requirements" class="view">
-        <div class="section-head"><div><span>JOB PROFILE MASTER</span><h1>Client Requirements</h1></div><button id="addRequirementBtn" class="blue-btn">+ Add Requirement</button></div>
-        <div class="filter-row"><input id="jobProfileSearch" placeholder="Search" /><select id="clientFilter"><option value="">All clients</option></select><select id="locationFilter"><option value="">All locations</option></select></div>
+        <div class="section-head"><div><span>JOB PROFILE MASTER</span><h1>Client Requirements</h1><p>Search, review and update active company requirements.</p></div><button id="addRequirementBtn" class="blue-btn">+ Add Requirement</button></div>
+        <div class="filter-row"><input id="jobProfileSearch" placeholder="Search TSS ID, client or job title" /><select id="clientFilter"><option value="">All clients</option></select><select id="locationFilter"><option value="">All locations</option></select></div>
         <div id="requirementCards" class="profile-grid"></div>
       </section>
+
       <section id="screening" class="view screening-view">
-        <article class="old-panel selected-requirement-card"><h2 id="selectedRoleTitle">Select a requirement</h2><small id="selectedRoleMeta"></small><div id="selectedRequirementSummary"></div><div id="requirementNotice" class="notice"></div></article>
-        <article class="old-panel questionnaire-card"><span id="questionnaireId"></span><div id="commonQuestions"></div><span id="jobQuestionClient"></span><div id="jobSpecificQuestions"></div></article>
-        <article class="old-panel upload-card"><label class="dark-upload-btn">Upload JD file<input id="jdQuickFile" type="file" /></label><button id="pasteJdQuick" class="dark-upload-btn">Paste email text</button></article>
-        <article class="old-panel upload-card"><label class="drop-zone" for="resumeFile">Drop CVs</label><input id="resumeFile" class="hidden-file" type="file" /><div class="candidate-detail-grid"><input id="candidateName" placeholder="Candidate name" /><input id="candidateEmail" placeholder="Email" /><input id="candidatePhone" placeholder="Phone" /><input id="candidateExp" type="number" step="0.1" placeholder="Total experience" /><input id="candidateLocation" placeholder="Current location" /><input id="candidateDesignation" placeholder="Current designation" /><input id="candidateNotice" placeholder="Notice period" /><input id="candidateCTC" placeholder="Current CTC" /><input id="candidateExpectedCTC" placeholder="Expected CTC" /></div><textarea id="resumeText" rows="5"></textarea><button id="screenBtn" class="blue-btn full">Screen & rank candidate</button></article>
-        <article class="old-panel result-panel"><div id="screeningEmpty" class="empty-state">Upload a CV</div><div id="screeningResult" class="hidden"></div></article>
+        <div class="workflow-head"><div><span>3-STEP WORKFLOW</span><h1>Upload JD. Get a ranked shortlist.</h1></div><div class="steps"><b class="done">✓ Upload JD</b><i></i><b>2 Upload CVs</b><i></i><b>3 Review & save</b></div></div>
+        <article class="old-panel selected-requirement-card"><div class="panel-title"><div><span class="purple-label">SELECTED COMPANY REQUIREMENT</span><h2 id="selectedRoleTitle">Select a requirement</h2><small id="selectedRoleMeta">—</small></div><b class="active-pill">Active</b></div><div id="selectedRequirementSummary"></div><div id="requirementNotice" class="notice">The supplied list may not include a full JD. Screening uses only confirmed role, skills, location and experience.</div></article>
+        <article class="old-panel questionnaire-card"><div class="panel-title"><div><span class="purple-label" id="questionnaireId">QNR0001 · TSS RECRUITER SCREENING</span><h2>Candidate Screening Questionnaire</h2><p>Ask the common recruiter questions and the client/JD-specific questions before submitting a candidate.</p></div><b class="question-count">15 questions</b></div><div class="question-columns"><div><h4>Common screening questions</h4><small>Required for every candidate</small><div id="commonQuestions"></div></div><div class="job-question-box"><h4><span id="jobQuestionClient">Client</span> / Job-specific questions</h4><small>Based on the confirmed client requirement</small><div id="jobSpecificQuestions"></div></div></div></article>
+        <article class="old-panel upload-card"><div class="number-title"><b>01</b><div><h2>Add the job requirement</h2><p>Upload a file or paste the email body. The app reads the actual content—not the filename.</p></div></div><div class="upload-actions"><label class="dark-upload-btn">Upload JD file<input id="jdQuickFile" type="file" accept=".pdf,.doc,.docx,.txt" /></label><button id="pasteJdQuick" class="dark-upload-btn">Paste email text</button></div><label class="drop-zone" for="jdQuickFile"><strong>Drop the JD file here</strong><small>or click to browse · PDF, DOCX or TXT</small></label></article>
+        <article class="old-panel upload-card"><div class="number-title"><b>02</b><div><h2>Upload candidate resumes</h2><p id="candidateUploadSubtitle">Screening against the selected requirement.</p></div></div><label class="drop-zone" for="resumeFile"><strong>Drop candidate CVs here</strong><small>or click to browse · PDF, DOCX or TXT</small></label><input id="resumeFile" class="hidden-file" type="file" accept=".pdf,.doc,.docx,.txt" /><div class="candidate-detail-grid"><input id="candidateName" placeholder="Candidate name" /><input id="candidateEmail" placeholder="Email" /><input id="candidatePhone" placeholder="Phone" /><input id="candidateExp" type="number" step="0.1" placeholder="Total experience" /><input id="candidateLocation" placeholder="Current location" /><input id="candidateDesignation" placeholder="Current designation" /><input id="candidateNotice" placeholder="Notice period" /><input id="candidateCTC" placeholder="Current CTC" /><input id="candidateExpectedCTC" placeholder="Expected CTC" /></div><textarea id="resumeText" rows="5" placeholder="Resume text is extracted here; you can also paste text manually for screening."></textarea><button id="screenBtn" class="blue-btn full">Screen & rank candidate</button></article>
+        <article class="old-panel result-panel"><div class="panel-title"><div><span class="purple-label">SCREENING RESULT</span><h2>Candidate Evaluation</h2></div></div><div id="screeningEmpty" class="empty-state">Upload a CV and run screening to see match score, evidence, gaps and recruiter controls.</div><div id="screeningResult" class="hidden"></div></article>
         <select id="screenRequirement" class="hidden-support"></select>
       </section>
-      <section id="candidates" class="view"><div class="section-head"><h1>Candidate Records</h1><input id="candidateSearch" class="search-box" /></div><div id="candidateTableWrap" class="old-panel"></div></section>
-      <section id="history" class="view"><div id="historyWrap" class="old-panel"></div></section>
-      <section id="interviews" class="view"><div class="section-head"><h1>Interviews</h1><button id="scheduleInterview" class="blue-btn">+ Schedule Interview</button></div><div id="interviewBoard" class="old-panel"></div></section>
+
+      <section id="candidates" class="view"><div class="section-head"><div><span>CANDIDATE LIBRARY</span><h1>Candidate Records</h1><p>Stored CV profiles, previous screenings and recruiter decisions.</p></div><input id="candidateSearch" class="search-box" placeholder="Search candidates..." /></div><div id="candidateTableWrap" class="old-panel"></div></section>
+      <section id="history" class="view"><div class="section-head"><div><span>AUDIT TRAIL</span><h1>Candidate Screening History</h1></div></div><div id="historyWrap" class="old-panel"></div></section>
+      <section id="interviews" class="view"><div class="section-head"><div><span>INTERVIEW OPERATIONS</span><h1>Interviews</h1><p>Track upcoming interviews and recruiter follow-ups.</p></div><button id="scheduleInterview" class="blue-btn">+ Schedule Interview</button></div><div id="interviewBoard" class="old-panel"></div></section>
     </main>
   </div>
-  <dialog id="requirementDialog"><form method="dialog" id="requirementForm"><div class="dialog-head"><h3>Job Profile & JD Input</h3><button class="icon-btn" value="cancel">x</button></div><input type="hidden" id="reqId" /><div class="form-grid"><div><label>Client Name</label><input id="reqClient" required /></div><div><label>Job Title</label><input id="reqTitle" required /></div><div><label>Location</label><input id="reqLocation" /></div><div><label>Experience</label><input id="reqExperience" /></div><div><label>Industry</label><input id="reqIndustry" /></div><div><label>Status</label><select id="reqStatus"><option>Active</option><option>On Hold</option><option>Closed</option></select></div></div><div class="jd-actions"><label class="file-btn">Upload JD<input id="jdFile" type="file" /></label><button type="button" class="btn ghost" id="generateSkillsBtn">Generate Suggested Skills</button></div><textarea id="reqJdText" rows="7"></textarea><input id="reqSkills" /><div id="suggestedSkills" class="skill-cloud"></div><input id="reqPreferred" /><input id="reqQualification" /><textarea id="reqResponsibilities" rows="4"></textarea><div class="dialog-actions"><button value="cancel" class="btn ghost">Cancel</button><button type="button" class="btn primary" id="saveRequirementBtn">Save Requirement</button></div></form></dialog>
-  <div id="todoModal" class="todo-modal hidden"><div class="todo-modal-card"><button id="closeTodo" class="todo-close">x</button><h2 id="todoModalGreeting">Todo</h2><b id="todoReviewCount">0</b><b id="todoInterviewCount">0</b><b id="todoStrongCount">0</b><button id="expandTodo"></button></div></div>
+
+  <dialog id="requirementDialog"><form method="dialog" id="requirementForm"><div class="dialog-head"><div><span class="purple-label">CLIENT REQUIREMENT</span><h3>Job Profile & JD Input</h3></div><button class="icon-btn" value="cancel">×</button></div><input type="hidden" id="reqId" /><div class="form-grid"><div><label>Client Name</label><input id="reqClient" required /></div><div><label>Job Title</label><input id="reqTitle" required /></div><div><label>Location</label><input id="reqLocation" /></div><div><label>Experience</label><input id="reqExperience" /></div><div><label>Industry</label><input id="reqIndustry" /></div><div><label>Status</label><select id="reqStatus"><option>Active</option><option>On Hold</option><option>Closed</option></select></div></div><div class="jd-actions"><label class="file-btn">Upload JD<input id="jdFile" type="file" accept=".txt,.pdf,.doc,.docx" /></label><button type="button" class="btn ghost" id="generateSkillsBtn">Generate Suggested Skills</button></div><label>Paste JD Text</label><textarea id="reqJdText" rows="7"></textarea><label>Enter Skills Manually</label><input id="reqSkills" /><div id="suggestedSkills" class="skill-cloud"></div><div class="form-grid"><div><label>Preferred Skills</label><input id="reqPreferred" /></div><div><label>Qualification</label><input id="reqQualification" /></div></div><label>Roles & Responsibilities</label><textarea id="reqResponsibilities" rows="4"></textarea><div class="dialog-actions"><button value="cancel" class="btn ghost">Cancel</button><button type="button" class="btn primary" id="saveRequirementBtn">Save Requirement</button></div></form></dialog>
+
+  <div id="todoModal" class="todo-modal hidden"><div class="todo-modal-card"><button id="closeTodo" class="todo-close">×</button><div class="todo-modal-head"><div class="todo-large">◉</div><div><span>TODO · RECRUITER ASSISTANT</span><h2 id="todoModalGreeting">Good evening, Recruiter.</h2><p>Interactive user manual for every recruiter workflow.</p></div></div><div class="todo-metrics"><div><b id="todoReviewCount">0</b><span>candidates need review</span></div><div><b id="todoInterviewCount">0</b><span>interviews today</span></div><div><b>0</b><span>feedback items pending</span></div><div><b id="todoStrongCount">0</b><span>strong matches awaiting action</span></div></div><div class="todo-help"><div class="todo-tabs"><button class="active">Help Manual</button><button>Command Assistant</button></div><p>Ask me to find candidates, open a requirement, or move a candidate to the next stage.</p><div class="todo-command"><input placeholder="Ask: How do I start candidate screening?" /><button>Go</button></div><div class="chips"><button>How do I screen a CV?</button><button>What is a duplicate alert?</button><button>How do I submit a candidate to a client?</button><button>How do I schedule an interview?</button></div><small>Help Mode only explains and guides—it cannot change candidate data.</small></div></div></div>
+
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="backend/config.js"></script>
   <script src="backend/supabase-client.js"></script>
