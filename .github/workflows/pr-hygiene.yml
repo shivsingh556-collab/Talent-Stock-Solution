@@ -1,0 +1,21 @@
+name: PR Hygiene
+on:
+  pull_request:
+    types: [opened, ready_for_review, reopened]
+jobs:
+  hygiene:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+      issues: write
+    steps:
+      - name: Checklist
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: "### Circuit checklist\n- [ ] Scope is clear\n- [ ] No secrets in the diff\n- [ ] Staging path noted"
+            })

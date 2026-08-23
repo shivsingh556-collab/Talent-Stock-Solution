@@ -1,0 +1,18 @@
+name: CI Guard
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Site inventory
+        run: |
+          test -f index.html
+          test -f app.js
+          test -f styles.css
+          echo "Talent-Stock-Solution tree is intact"
+      - name: HTML present
+        run: grep -q "<!DOCTYPE html>" index.html || grep -qi "<html" index.html
