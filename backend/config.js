@@ -5,7 +5,7 @@ window.TSS_SUPABASE_CONFIG = window.TSS_SUPABASE_CONFIG || {
 };
 
 window.addEventListener('load', () => {
-  const BUILD = '20260821-pipeline-button-v24';
+  const BUILD = '20260823-extraction-accuracy-v25';
   const addCss = (href) => {
     const clean = href.split('?')[0];
     if ([...document.querySelectorAll('link[rel="stylesheet"]')].some(x => (x.getAttribute('href')||'').split('?')[0] === clean)) return;
@@ -32,7 +32,7 @@ window.addEventListener('load', () => {
   loadScript('brand-assets.js','tssBrandAssets')
     .then(() => loadScript('login-todo-exact.js','tssLoginTodoExact'))
     .then(() => loadScript('todo-exact.js','tssExactTodo'))
-    .then(() => loadScript('document-parser.js','tssDocumentParser'))
+    .then(() => loadScript('extraction-accuracy.js','tssExtractionAccuracy'))
     .then(() => loadScript('candidate-enrichment.js','tssCandidateEnrichment'))
     .then(() => loadScript('production.js','tssProduction'))
     .then(() => loadScript('interview-sync.js','tssInterviewSync'))
