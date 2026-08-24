@@ -3,12 +3,14 @@
   const KEY = "tss_site_automations_v1";
   const LOG_KEY = "tss_site_automation_runs_v1";
   const PLAYBOOKS = [
-    { id: "auto-match", name: "Library Auto-Match", blurb: "When a job profile is saved, rank every stored CV against it and raise matches >= 55.", when: "On requirement save" },
+    { id: "auto-match", name: "Library Auto-Match", blurb: "Rank every stored CV against remaining requirements and raise matches >= 55.", when: "On requirement save" },
     { id: "pending-chase", name: "Pending Decision Chase", blurb: "Flag screenings still sitting on Pending so recruiters close the loop.", when: "On every data change" },
     { id: "strong-queue", name: "Strong Match Queue", blurb: "Keep a live shortlist of Strong Match candidates that have no recruiter decision yet.", when: "Continuous" },
-    { id: "incomplete-jd", name: "Incomplete JD Watch", blurb: "Surface active requirements missing skills or responsibilities.", when: "Continuous" },
-    { id: "stale-req", name: "Quiet Requirement Pulse", blurb: "Call out active jobs with no screening in the last 7 days.", when: "Continuous" }
+    { id: "incomplete-jd", name: "Incomplete JD Watch", blurb: "Surface remaining requirements missing skills or responsibilities.", when: "Continuous" },
+    { id: "stale-req", name: "Quiet Requirement Pulse", blurb: "Call out remaining requirements with no screening in the last 7 days.", when: "Continuous" }
   ];
+  const remainingStatuses = new Set(["Work In Progress", "On Hold"]);
+  function isRemaining(r) { return !!r && remainingStatuses.has(String(r.status || "").trim()); }
   function loadState() {
     try { return { enabled: { "auto-match": true, "pending-chase": true, "strong-queue": true, "incomplete-jd": true, "stale-req": true }, ...JSON.parse(localStorage.getItem(KEY) || "{}") }; }
     catch { return { enabled: {} }; }
@@ -18,12 +20,22 @@
   function pushRun(entry) { const runs = loadRuns(); runs.unshift(entry); localStorage.setItem(LOG_KEY, JSON.stringify(runs.slice(0, 40))); }
   let state = loadState();
   function store() { return typeof db !== "undefined" ? db : { requirements: [], candidates: [], screenings: [], activity: [] }; }
-  function score(c, r) { if (typeof scoreCandidate === "function") return scoreCandidate(c.resumeText || "", r, c); return { score: 0 }; }
+  function score(c, r) {
+    if (typeof scoreCandidate === "function") return scoreCandidate(c.resumeText || "", r, c);
+    return { score: 0 };
+  }
   function runAutoMatch() {
-    const data = store(); const active = (data.requirements || []).filter(r => r.status === "Active"); const hits = [];
-    active.forEach(r => { (data.candidates || []).forEach(c => { const s = score(c, r).score; if (s >= 55) hits.push({ name: c.name, title: r.title, score: s }); }); });
+    const data = store();
+    const remaining = (data.requirements || []).filter(isRemaining);
+    const hits = [];
+    remaining.forEach(r => {
+      (data.candidates || []).forEach(c => {
+        const s = score(c, r).score;
+        if (s >= 55) hits.push({ name: c.name, title: r.title, score: s });
+      });
+    });
     hits.sort((a,b) => b.score - a.score);
-    return { summary: hits.length + " library matches >= 55 across " + active.length + " active jobs", rows: hits.slice(0, 12) };
+    return { summary: hits.length + " library matches >= 55 across " + remaining.length + " remaining requirements", rows: hits.slice(0, 12) };
   }
   function runPending() {
     const pending = (store().screenings || []).filter(s => !s.recruiterDecision || s.recruiterDecision === "Pending");
@@ -34,13 +46,20 @@
     return { summary: rows.length + " strong matches still open", rows: rows.slice(-12).reverse().map(s => { const c = (store().candidates || []).find(x => x.id === s.candidateId); const r = (store().requirements || []).find(x => x.id === s.requirementId); return { name: c && c.name || "Candidate", title: r && r.title || "", score: s.score }; }) };
   }
   function runIncomplete() {
-    const rows = (store().requirements || []).filter(r => r.status === "Active" && (!(r.skills || []).length || !r.responsibilities));
-    return { summary: rows.length + " active jobs missing skills or responsibilities", rows: rows.map(r => ({ name: r.id, title: r.title, score: null })) };
+    const rows = (store().requirements || []).filter(r => isRemaining(r) && (!(r.skills || []).length || !r.responsibilities));
+    return { summary: rows.length + " remaining requirements missing skills or responsibilities", rows: rows.map(r => ({ name: r.requirementId || r.id, title: r.title, score: null })) };
   }
   function runStale() {
     const week = Date.now() - 7 * 864e5;
-    const rows = (store().requirements || []).filter(r => { if (r.status !== "Active") return false; const last = (store().screenings || []).filter(s => s.requirementId === r.id).at(-1); const t = last ? new Date(last.date).getTime() : 0; return t < week; });
-    return { summary: rows.length + " active jobs with no screening in 7 days", rows: rows.map(r => ({ name: r.client, title: r.title, score: null })) };
+    const rows = (store().requirements || []).filter(r => {
+      if (!isRemaining(r)) return false;
+      const keys = [r.id, r.requirementId, r.serverId].filter(Boolean);
+      const related = (store().screenings || []).filter(s => keys.includes(s.requirementId) || keys.includes(s.requirement_id));
+      const last = related.slice().sort((a,b) => new Date(a.date || a.screened_at || 0) - new Date(b.date || b.screened_at || 0)).at(-1);
+      const t = last ? new Date(last.date || last.screened_at).getTime() : 0;
+      return t < week;
+    });
+    return { summary: rows.length + " remaining requirements with no screening in 7 days", rows: rows.map(r => ({ name: r.client, title: r.title, score: null })) };
   }
   const RUNNERS = { "auto-match": runAutoMatch, "pending-chase": runPending, "strong-queue": runStrong, "incomplete-jd": runIncomplete, "stale-req": runStale };
   function execute(id, silent) {
@@ -58,7 +77,7 @@
     }
     if (!document.getElementById("automation")) {
       const sec = document.createElement("section"); sec.id = "automation"; sec.className = "view";
-      sec.innerHTML = '<div class="section-head"><div><span>RECRUITER AUTOMATION</span><h1>Automation Center</h1><p>Playbooks that watch job profiles, the CV library, and screening decisions on this workspace.</p></div><button id="runAllAutomations" class="blue-btn" type="button">Run all armed playbooks</button></div><div id="automationStats" class="dashboard-grid"></div><div id="automationPlaybooks" class="profile-grid"></div><article class="old-panel" style="margin-top:18px"><div class="panel-title"><h3>Run log</h3></div><div id="automationLog"></div></article>';
+      sec.innerHTML = '<div class="section-head"><div><span>RECRUITER AUTOMATION</span><h1>Automation Center</h1><p>Playbooks that watch remaining requirements, the CV library, and screening decisions on this workspace.</p></div><button id="runAllAutomations" class="blue-btn" type="button">Run all armed playbooks</button></div><div id="automationStats" class="dashboard-grid"></div><div id="automationPlaybooks" class="profile-grid"></div><article class="old-panel" style="margin-top:18px"><div class="panel-title"><h3>Run log</h3></div><div id="automationLog"></div></article>';
       const interviews = document.getElementById("interviews"); if (interviews && interviews.parentElement) interviews.parentElement.insertBefore(sec, interviews.nextSibling);
     }
     const orig = window.gotoView;
