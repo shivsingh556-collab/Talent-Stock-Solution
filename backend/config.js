@@ -5,7 +5,7 @@ window.TSS_SUPABASE_CONFIG = window.TSS_SUPABASE_CONFIG || {
 };
 
 window.addEventListener('load', () => {
-  const BUILD = '20260827-interview-exact-candidate-position-v27';
+  const BUILD = '20260827-assignment-hydration-v27';
   const addCss = (href) => {
     const clean = href.split('?')[0];
     if ([...document.querySelectorAll('link[rel="stylesheet"]')].some(x => (x.getAttribute('href')||'').split('?')[0] === clean)) return;
@@ -37,11 +37,12 @@ window.addEventListener('load', () => {
     .then(() => loadScript('production.js','tssProduction'))
     .then(() => loadScript('candidate-resume-hydration.js','tssCandidateResumeHydration'))
     .then(() => loadScript('interview-sync.js','tssInterviewSync'))
-    .then(() => loadScript('interview-scheduler-ui.js','tssInterviewSchedulerUi'))
     .then(() => loadScript('interview-actions.js','tssInterviewActions'))
+    .then(() => loadScript('interview-scheduler-ui.js','tssInterviewSchedulerUi'))
     .then(() => loadScript('stable-runtime.js','tssStableRuntime'))
     .then(() => loadScript('requirement-status-visibility.js','tssRequirementStatusVisibility'))
     .then(() => loadScript('requirements-live-sync.js','tssRequirementsLiveSync'))
+    .then(() => loadScript('requirement-assignment-hydration-fix.js','tssRequirementAssignmentHydrationFix'))
     .then(() => loadScript('safe-backend-features.js','tssSafeBackendFeatures'))
     .then(() => loadScript('dashboard-cleanup.js','tssDashboardCleanup'))
     .then(() => loadScript('dashboard-actions.js','tssDashboardActions'))
