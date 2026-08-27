@@ -5,7 +5,7 @@ window.TSS_SUPABASE_CONFIG = window.TSS_SUPABASE_CONFIG || {
 };
 
 window.addEventListener('load', () => {
-  const BUILD = '20260827-client-owner-auto-v30';
+  const BUILD = '20260827-ai-deep-screening-v31';
   const addCss = (href) => {
     const clean = href.split('?')[0];
     if ([...document.querySelectorAll('link[rel="stylesheet"]')].some(x => (x.getAttribute('href')||'').split('?')[0] === clean)) return;
@@ -18,6 +18,7 @@ window.addEventListener('load', () => {
   addCss('requirements-perfect-fix.css');
   addCss('todo-ai-branding.css');
   addCss('login-perfect.css');
+  addCss('ai-screening.css');
 
   const loadScript = (src, marker) => new Promise((resolve, reject) => {
     if (document.querySelector(`script[data-${marker}]`)) return resolve();
@@ -57,6 +58,7 @@ window.addEventListener('load', () => {
     .then(() => loadScript('requirement-save-sync.js','tssRequirementSaveSync'))
     .then(() => loadScript('requirement-details-owner-sync.js','tssRequirementDetailsOwnerSync'))
     .then(() => loadScript('admin-role-ui.js','tssAdminRoleUi'))
+    .then(() => loadScript('ai-screening.js','tssAiScreening'))
     .then(() => {
       setTimeout(async () => {
         try {
