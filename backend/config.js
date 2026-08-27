@@ -5,7 +5,7 @@ window.TSS_SUPABASE_CONFIG = window.TSS_SUPABASE_CONFIG || {
 };
 
 window.addEventListener('load', () => {
-  const BUILD = '20260827-requirement-ack-v29';
+  const BUILD = '20260827-client-owner-auto-v30';
   const addCss = (href) => {
     const clean = href.split('?')[0];
     if ([...document.querySelectorAll('link[rel="stylesheet"]')].some(x => (x.getAttribute('href')||'').split('?')[0] === clean)) return;
@@ -51,6 +51,7 @@ window.addEventListener('load', () => {
     .then(() => loadScript('resdex-import-quick.js','tssResdexQuickImport'))
     .then(() => loadScript('recruitment-workflow.js','tssRecruitmentWorkflow'))
     .then(() => loadScript('assignment-clean-layout.js','tssAssignmentCleanLayout'))
+    .then(() => loadScript('client-owner-auto.js','tssClientOwnerAuto'))
     .then(() => loadScript('requirement-acknowledgement-ui.js','tssRequirementAcknowledgementUi'))
     .then(() => loadScript('requirement-positions-field.js','tssRequirementPositions'))
     .then(() => loadScript('requirement-save-sync.js','tssRequirementSaveSync'))
@@ -73,6 +74,7 @@ window.addEventListener('load', () => {
             setTimeout(() => window.TSSResdexQuickImport?.decorate?.(), 580);
             setTimeout(() => window.TSSRecruitmentWorkflow?.boot?.(), 650);
             setTimeout(() => window.TSSAssignmentCleanLayout?.boot?.(), 720);
+            setTimeout(() => window.TSSClientOwnerAuto?.applyOwnerForCurrentClient?.({silent:true}), 735);
             setTimeout(() => window.TSSRequirementAcknowledgementUI?.refresh?.(), 745);
             setTimeout(() => window.TSSRequirementPositions?.ensure?.(), 770);
             setTimeout(() => window.TSSRequirementSaveSync?.wire?.(), 820);
