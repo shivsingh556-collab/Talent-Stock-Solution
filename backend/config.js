@@ -5,7 +5,7 @@ window.TSS_SUPABASE_CONFIG = window.TSS_SUPABASE_CONFIG || {
 };
 
 window.addEventListener('load', () => {
-  const BUILD = '20260824-db-match-screening-parity-v26';
+  const BUILD = '20260827-interview-exact-candidate-position-v27';
   const addCss = (href) => {
     const clean = href.split('?')[0];
     if ([...document.querySelectorAll('link[rel="stylesheet"]')].some(x => (x.getAttribute('href')||'').split('?')[0] === clean)) return;
@@ -37,6 +37,7 @@ window.addEventListener('load', () => {
     .then(() => loadScript('production.js','tssProduction'))
     .then(() => loadScript('candidate-resume-hydration.js','tssCandidateResumeHydration'))
     .then(() => loadScript('interview-sync.js','tssInterviewSync'))
+    .then(() => loadScript('interview-scheduler-ui.js','tssInterviewSchedulerUi'))
     .then(() => loadScript('interview-actions.js','tssInterviewActions'))
     .then(() => loadScript('stable-runtime.js','tssStableRuntime'))
     .then(() => loadScript('requirement-status-visibility.js','tssRequirementStatusVisibility'))
