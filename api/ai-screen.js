@@ -6,7 +6,8 @@ const MAX_RESUME = 14000;
 const MAX_JD = 7000;
 
 const EXTRACT_MODEL = process.env.AI_EXTRACT_MODEL || 'gpt-5-mini';
-const SCREEN_MODEL = process.env.AI_SCREEN_MODEL || 'gpt-5.1';
+const SCREEN_MODEL = process.env.AI_SCREEN_MODEL || 'gpt-5-mini';
+const REASONING_EFFORT = process.env.AI_REASONING_EFFORT || 'low';
 
 function clip(s, n) { return String(s || '').slice(0, n); }
 
@@ -31,10 +32,8 @@ RESUME:
 ${clip(resume, MAX_RESUME)}`;
 }
 
-function screenPrompt(resume, candidate, req) {
-  return `You are a highly experienced technical recruitment consultant screening a candidate for a client role. Be rigorous, evidence-based and honest — like a senior recruiter who has read thousands of resumes. Judge real capability, not keyword presence: recognize related/equivalent technologies (e.g. Postgres ≈ relational SQL experience), and penalize skills that are merely listed without evidence of use.
-
-CLIENT REQUIREMENT
+function screenContext(resume, candidate, req) {
+  return `CLIENT REQUIREMENT
 Client: ${clip(req.client, 120)}
 Role: ${clip(req.title, 160)}
 Location: ${clip(req.location, 120)}
@@ -48,20 +47,42 @@ CANDIDATE FORM DATA (recruiter-entered, may be incomplete)
 Name: ${clip(candidate.name, 100)} | Location: ${clip(candidate.location, 100)} | Experience: ${clip(candidate.totalExperience, 20)}y | Designation: ${clip(candidate.designation, 120)} | Notice: ${clip(candidate.noticePeriod, 60)} | Current CTC: ${clip(candidate.currentCTC, 60)} | Expected CTC: ${clip(candidate.expectedCTC, 60)}
 
 RESUME TEXT
-${clip(resume, MAX_RESUME)}
+${clip(resume, MAX_RESUME)}`;
+}
 
-Scoring guidance:
-- overall_score 0-100. 85+ only for genuinely excellent fits. 70-84 strong. 50-69 possible with gaps. Below 50 poor fit. Never inflate.
-- verdict: "Strong Match" (>=75), "Review Recommended" (50-74), "Not Suitable" (<50) — must be consistent with overall_score.
-- skill_ratings: rate EVERY mandatory and preferred skill 0-10 with evidence quoted/paraphrased from the resume ("0" = no evidence at all). required=true for mandatory skills.
-- dimension scores 0-100 each with a one-line reason.
-- executive_summary: 2-3 sentences a recruiter could read aloud to a hiring manager — specific to THIS person, mentioning their actual companies/projects, not generic filler.
-- red_flags: job hopping, gaps, inconsistencies, overclaiming, notice/CTC/location conflicts. Empty array if none.
-- interview_questions: 5 sharp questions tailored to THIS candidate's actual background and the gaps you found.
-- risk_notes: joining/dropout risk based on notice period, CTC jump expectations, location mismatch.
+// Parallel call A — the numbers: scores, dimensions, per-skill ratings.
+function scoringPrompt(ctx) {
+  return `You are a rigorous technical recruitment consultant screening a candidate. Judge real capability from resume evidence, not keyword presence: recognize related/equivalent technologies (e.g. Postgres ≈ relational SQL experience), and penalize skills merely listed without evidence of use. Never inflate scores.
+
+${ctx}
+
+Scoring rules:
+- overall_score 0-100. 85+ only for genuinely excellent fits. 70-84 strong. 50-69 possible with gaps. Below 50 poor fit.
+- STRICT calibration: each mandatory skill with zero resume evidence must pull the score down hard. If 2+ mandatory skills score 0/10, mandatory_skills dimension must be under 40 and overall_score under 55. If half or more mandatory skills are missing, overall_score must be under 50.
+- Every dimension score is 0-100 (NOT 0-10), each with a reason under 15 words.
+- skill_ratings: rate EVERY mandatory and preferred skill 0-10 with short evidence from the resume (0 = no evidence at all). required=true for mandatory skills. Keep evidence under 15 words.
+- confidence: 0-100.
 
 Return STRICT JSON only, no markdown fences, exactly this shape:
-{"overall_score":0,"verdict":"","confidence":0,"executive_summary":"","dimensions":{"mandatory_skills":{"score":0,"reason":""},"preferred_skills":{"score":0,"reason":""},"experience":{"score":0,"reason":""},"role_relevance":{"score":0,"reason":""},"domain":{"score":0,"reason":""},"location":{"score":0,"reason":""}},"skill_ratings":[{"skill":"","required":true,"rating":0,"years":0,"evidence":""}],"matched_skills":[],"missing_skills":[{"skill":"","impact":"high|medium|low","note":""}],"strengths":[],"concerns":[],"red_flags":[],"interview_questions":[],"risk_notes":"","recommendation_detail":"3-4 sentence final recommendation with clear next step"}`;
+{"overall_score":0,"confidence":0,"dimensions":{"mandatory_skills":{"score":0,"reason":""},"preferred_skills":{"score":0,"reason":""},"experience":{"score":0,"reason":""},"role_relevance":{"score":0,"reason":""},"domain":{"score":0,"reason":""},"location":{"score":0,"reason":""}},"skill_ratings":[{"skill":"","required":true,"rating":0,"years":0,"evidence":""}],"matched_skills":[],"missing_skills":[{"skill":"","impact":"high|medium|low","note":""}]}`;
+}
+
+// Parallel call B — the words: summary, strengths/concerns, red flags, questions, risk.
+function narrativePrompt(ctx) {
+  return `You are a senior recruitment consultant writing a candid screening brief for a hiring manager. Be specific to THIS candidate's actual companies and projects — no generic filler.
+
+${ctx}
+
+Rules:
+- executive_summary: 2-3 sentences a recruiter could read aloud to the client.
+- strengths / concerns: up to 4 each, under 15 words each.
+- red_flags: only real ones (job hopping, gaps, overclaiming, notice/CTC/location conflicts). Empty array if none.
+- interview_questions: 5 sharp questions tailored to this candidate's background and gaps, under 25 words each.
+- risk_notes: joining/dropout risk (notice period, CTC jump, location) in under 40 words.
+- recommendation_detail: 2-3 sentence final recommendation with a clear next step.
+
+Return STRICT JSON only, no markdown fences, exactly this shape:
+{"executive_summary":"","strengths":[],"concerns":[],"red_flags":[],"interview_questions":[],"risk_notes":"","recommendation_detail":""}`;
 }
 
 async function callAI(model, prompt) {
@@ -73,8 +94,9 @@ async function callAI(model, prompt) {
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
     body: JSON.stringify({
       model,
+      reasoning_effort: REASONING_EFFORT,
       messages: [
-        { role: 'system', content: 'You are a precise recruitment AI. You always return valid strict JSON with no markdown, no code fences, no commentary.' },
+        { role: 'system', content: 'You are a precise recruitment AI. You always return valid strict JSON with no markdown, no code fences, no commentary. All scores and numbers MUST be numeric digits (e.g. 55), never words.' },
         { role: 'user', content: prompt }
       ],
       response_format: { type: 'json_object' },
@@ -88,7 +110,55 @@ async function callAI(model, prompt) {
   const data = await r.json();
   let text = data?.choices?.[0]?.message?.content || '';
   text = text.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '');
-  try { return JSON.parse(text); } catch { return JSON.parse(repairJSON(text)); }
+  // Parse escalation: as-is → word-number fix → truncation repair → both.
+  try { return JSON.parse(text); } catch {}
+  try { return JSON.parse(fixWordNumbers(text)); } catch {}
+  try { return JSON.parse(repairJSON(text)); } catch {}
+  return JSON.parse(repairJSON(fixWordNumbers(text)));
+}
+
+// The model occasionally writes JSON numbers as words ("score": Fifty). Fix them.
+const WORD_NUMS = { zero:0,one:1,two:2,three:3,four:4,five:5,six:6,seven:7,eight:8,nine:9,ten:10,eleven:11,twelve:12,thirteen:13,fourteen:14,fifteen:15,sixteen:16,seventeen:17,eighteen:18,nineteen:19,twenty:20,thirty:30,forty:40,fifty:50,sixty:60,seventy:70,eighty:80,ninety:90,hundred:100 };
+function wordToNum(w) {
+  // Split on spaces/hyphens and also camelCase joins like "ThirtyFive".
+  const parts = String(w).replace(/([a-z])([A-Z])/g, '$1 $2').toLowerCase().split(/[\s-]+/).filter(Boolean);
+  let total = 0, ok = parts.length > 0;
+  for (const p of parts) { if (p === 'hundred') { total = (total || 1) * 100; } else if (p in WORD_NUMS) total += WORD_NUMS[p]; else ok = false; }
+  return ok ? total : null;
+}
+function fixWordNumbers(text) {
+  // Walk the JSON, skipping quoted strings, and replace bare word values after a colon.
+  let out = '', i = 0, inStr = false, esc = false;
+  while (i < text.length) {
+    const ch = text[i];
+    if (inStr) {
+      out += ch;
+      if (esc) esc = false;
+      else if (ch === '\\') esc = true;
+      else if (ch === '"') inStr = false;
+      i++; continue;
+    }
+    if (ch === '"') { inStr = true; out += ch; i++; continue; }
+    if (ch === ':') {
+      const m = text.slice(i).match(/^(:\s*)([A-Za-z][A-Za-z -]{1,30}?)(\s*[,}\]])/);
+      if (m) {
+        const t = m[2].trim().toLowerCase();
+        if (t !== 'true' && t !== 'false' && t !== 'null') {
+          const n = wordToNum(m[2]);
+          out += m[1] + (n !== null ? n : `"${m[2].trim()}"`) + m[3];
+          i += m[0].length; continue;
+        }
+      }
+    }
+    out += ch; i++;
+  }
+  return out;
+}
+
+// Models occasionally emit malformed JSON (e.g. numbers as words); retry once.
+async function callAIRetry(model, prompt) {
+  try { return await callAI(model, prompt); }
+  catch (e) { if (e.code === 'NO_CONFIG') throw e; return await callAI(model, prompt); }
 }
 
 // Repairs a JSON string that was truncated mid-way (e.g. token limit hit):
@@ -151,7 +221,7 @@ module.exports = async function handler(req, res) {
     if (mode === 'extract') {
       const resume = String(body.resume || '');
       if (resume.trim().length < 40) { res.statusCode = 400; return res.end(JSON.stringify({ error: 'Resume text too short' })); }
-      const out = await callAI(EXTRACT_MODEL, extractPrompt(resume));
+      const out = await callAIRetry(EXTRACT_MODEL, extractPrompt(resume));
       return res.end(JSON.stringify({ ok: true, data: out }));
     }
     if (mode === 'screen') {
@@ -159,11 +229,37 @@ module.exports = async function handler(req, res) {
       const candidate = body.candidate || {};
       const requirement = body.requirement || {};
       if (resume.trim().length < 40) { res.statusCode = 400; return res.end(JSON.stringify({ error: 'Resume text too short' })); }
-      const out = await callAI(SCREEN_MODEL, screenPrompt(resume, candidate, requirement));
+      // Speed: run scoring and narrative as two smaller parallel AI calls, then merge.
+      const ctx = screenContext(resume, candidate, requirement);
+      const [scoring, narrative] = await Promise.all([
+        callAIRetry(SCREEN_MODEL, scoringPrompt(ctx)),
+        callAIRetry(SCREEN_MODEL, narrativePrompt(ctx))
+      ]);
+      const out = { ...narrative, ...scoring };
+      // Normalize: some models return 0-1 or 0-10 scales despite instructions.
+      const to100 = (v) => { let n = Number(v) || 0; if (n > 0 && n <= 1) n *= 100; else if (n > 1 && n <= 10) n *= 10; return Math.max(0, Math.min(100, Math.round(n))); };
+      out.overall_score = to100(out.overall_score);
+      out.confidence = to100(out.confidence);
+      for (const k of Object.keys(out.dimensions || {})) out.dimensions[k].score = to100(out.dimensions[k].score);
+      // Deterministic calibration guard: missing mandatory skills must cap the score,
+      // regardless of how lenient the model felt. rating<=1 with no evidence = missing.
+      const mand = (out.skill_ratings || []).filter(x => x && x.required);
+      if (mand.length) {
+        const missing = mand.filter(x => (Number(x.rating) || 0) <= 1).length;
+        const ratio = missing / mand.length;
+        let cap = 100;
+        if (ratio >= 0.5) cap = 48;            // half or more mandatory skills absent
+        else if (missing >= 2) cap = 55;       // multiple mandatory gaps
+        else if (missing === 1) cap = 72;      // one mandatory gap blocks "Strong Match"
+        if (out.overall_score > cap) {
+          out.overall_score = cap;
+          if (out.dimensions?.mandatory_skills) {
+            out.dimensions.mandatory_skills.score = Math.min(out.dimensions.mandatory_skills.score, Math.round(100 * (1 - ratio)));
+          }
+        }
+      }
       // Consistency guard: verdict must follow score.
-      const s = Math.max(0, Math.min(100, Math.round(Number(out.overall_score) || 0)));
-      out.overall_score = s;
-      out.verdict = s >= 75 ? 'Strong Match' : s >= 50 ? 'Review Recommended' : 'Not Suitable';
+      out.verdict = out.overall_score >= 75 ? 'Strong Match' : out.overall_score >= 50 ? 'Review Recommended' : 'Not Suitable';
       return res.end(JSON.stringify({ ok: true, data: out }));
     }
     res.statusCode = 400;
