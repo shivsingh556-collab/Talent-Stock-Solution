@@ -1,90 +1,49 @@
-/* TODO AI login screen — match the approved previous-site layout */
+/* TODO AI login screen — polished TalentStock workspace */
 .login-gate{min-height:100vh;display:grid;place-items:center;padding:4vh 3vw;background:#030b14!important}
-.login-shell{width:min(1140px,90vw);min-height:690px;display:grid;grid-template-columns:1.02fr 1fr;border:1px solid #17334b;border-radius:28px;overflow:hidden;background:#071522;box-shadow:0 28px 80px rgba(0,0,0,.34)}
-.login-left{padding:64px 66px;display:flex;flex-direction:column;justify-content:center;background:#071522}
-.login-left .talent-logo{width:min(330px,100%);margin-bottom:12px}
-.login-left .todoai-logo-frame{background:#fff!important;border-radius:0!important;padding:0!important;border:0!important;box-shadow:none!important;overflow:hidden}
-.login-left .todoai-logo{width:100%!important;height:auto!important;max-height:150px!important;object-fit:contain!important;display:block;background:#fff}
-.login-left .secure-pill{margin-top:28px;padding:10px 16px;font-size:12px}
-.login-left h1{font-size:27px;line-height:1.35;font-weight:500;margin:22px 0 10px;max-width:520px}
-.login-left>p{max-width:500px;line-height:1.6;margin:0 0 26px;font-size:15px}
-.login-primary{width:235px;min-height:52px;border-radius:10px;padding:15px 18px}
-.authorized{margin-top:20px}
+.login-shell{width:min(1180px,92vw);min-height:690px;display:grid;grid-template-columns:1.02fr 1fr;border:1px solid #17334b;border-radius:28px;overflow:hidden;background:#071522;box-shadow:0 28px 80px rgba(0,0,0,.34)}
+.login-left{padding:58px 66px;display:flex;flex-direction:column;justify-content:center;background:#071522}
+.login-left .talent-logo{width:min(310px,100%);margin:0 0 8px;padding:0!important;background:transparent!important}
+.login-left .todoai-logo-frame{width:300px!important;max-width:100%!important;background:#fff!important;border-radius:16px!important;padding:15px 20px!important;border:1px solid #dce8f1!important;box-shadow:0 10px 28px rgba(0,0,0,.18)!important;overflow:hidden!important;box-sizing:border-box!important}
+.login-left .todoai-logo{width:100%!important;height:74px!important;max-height:74px!important;object-fit:contain!important;object-position:center!important;display:block!important;background:#fff!important;border-radius:8px!important}
+.login-left .secure-pill{margin-top:24px;padding:10px 16px;font-size:12px}
+.login-left h1{font-size:29px;line-height:1.3;font-weight:600;margin:22px 0 10px;max-width:520px;letter-spacing:-.3px}
+.login-left>p{max-width:500px;line-height:1.6;margin:0 0 26px;font-size:15px;color:#9fc0da}
+.login-primary{width:252px;min-height:54px;border-radius:10px;padding:15px 18px;font-weight:800}
+.authorized{margin-top:22px}
 
-.login-right{position:relative;padding:76px 48px;background:linear-gradient(145deg,#10365d,#0d4f88)!important;overflow:hidden}
+.login-right{position:relative;padding:64px 48px;background:linear-gradient(145deg,#10365d,#0d4f88)!important;overflow:hidden}
 .login-right:before,.login-right:after{opacity:.7}
-.welcome-card{position:relative;z-index:5;border:1px solid #2a5d85;background:#09223a;padding:24px 26px;border-radius:16px}
-.welcome-card span{font-size:11px}.welcome-card h2{font-size:20px;margin:12px 0 7px}.welcome-card p{font-size:14px}
+.welcome-card{position:relative;z-index:8;border:1px solid #2a5d85;background:rgba(9,34,58,.92);padding:24px 26px;border-radius:16px;box-shadow:0 12px 30px rgba(0,0,0,.12)}
+.welcome-card span{font-size:11px}.welcome-card h2{font-size:21px;margin:12px 0 7px}.welcome-card p{font-size:14px}
 
-/* Todo must float freely like the previous site — absolutely no box/frame behind it. */
-.todo-figure{
-  position:absolute!important;
-  z-index:3!important;
-  left:55%!important;
-  bottom:38px!important;
-  transform:translateX(-50%)!important;
-  width:330px!important;
-  height:435px!important;
-  min-width:0!important;
-  min-height:0!important;
-  padding:0!important;
-  margin:0!important;
-  border:0!important;
-  outline:0!important;
-  border-radius:0!important;
-  background:transparent!important;
-  background-image:none!important;
-  box-shadow:none!important;
-  filter:none!important;
-  backdrop-filter:none!important;
-  display:flex!important;
-  align-items:flex-end!important;
-  justify-content:center!important;
-  overflow:visible!important;
-  font-size:0!important;
-  color:transparent!important;
-}
+/* Mascot must be present and visually integrated into the right panel. */
+.todo-figure{position:absolute!important;z-index:4!important;left:57%!important;bottom:18px!important;transform:translateX(-50%)!important;width:360px!important;height:430px!important;min-width:0!important;min-height:0!important;padding:0!important;margin:0!important;border:0!important;outline:0!important;border-radius:0!important;background:transparent!important;background-image:none!important;box-shadow:none!important;filter:none!important;backdrop-filter:none!important;display:flex!important;align-items:flex-end!important;justify-content:center!important;overflow:visible!important;font-size:0!important;color:transparent!important;opacity:1!important;visibility:visible!important}
 .todo-figure:before,.todo-figure:after{content:none!important;display:none!important;border:0!important;background:none!important;box-shadow:none!important}
 .todo-figure>*:not(.login-todo-photo){display:none!important}
 .todo-figure .todo-body{display:none!important}
-.todo-figure .login-todo-photo{
-  display:block!important;
-  position:relative!important;
-  inset:auto!important;
-  width:auto!important;
-  height:415px!important;
-  max-width:100%!important;
-  max-height:none!important;
-  object-fit:contain!important;
-  object-position:center bottom!important;
-  margin:0!important;
-  padding:0!important;
-  border:0!important;
-  outline:0!important;
-  border-radius:0!important;
-  background:transparent!important;
-  box-shadow:none!important;
-  opacity:1!important;
-  visibility:visible!important;
-  filter:drop-shadow(0 18px 24px rgba(0,0,0,.24))!important;
-}
-.privacy-card{left:34px!important;bottom:38px!important;z-index:6!important}
+.todo-figure .login-todo-photo{display:block!important;position:relative!important;inset:auto!important;width:auto!important;height:405px!important;max-width:100%!important;max-height:none!important;object-fit:contain!important;object-position:center bottom!important;margin:0!important;padding:0!important;border:0!important;outline:0!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;opacity:1!important;visibility:visible!important;filter:drop-shadow(0 22px 28px rgba(0,0,0,.28))!important}
+.privacy-card{left:30px!important;bottom:28px!important;z-index:9!important}
 .login-form{margin-top:18px}
+
+.login-brand-note{display:flex;align-items:center;gap:9px;margin:7px 0 0;color:#7298b6;font-size:11px;font-weight:700;letter-spacing:.7px;text-transform:uppercase}
+.login-brand-note:before{content:'';width:24px;height:1px;background:#2b79ad}
 
 @media(max-width:900px){
   .login-shell{grid-template-columns:1fr;width:min(680px,94vw)}
-  .login-right{min-height:540px}
+  .login-right{min-height:550px}
   .login-left{padding:52px 42px}
-  .todo-figure{left:55%!important;bottom:32px!important;width:280px!important;height:350px!important}
-  .todo-figure .login-todo-photo{height:340px!important}
+  .todo-figure{left:57%!important;bottom:20px!important;width:300px!important;height:360px!important}
+  .todo-figure .login-todo-photo{height:350px!important}
 }
 @media(max-width:620px){
   .login-gate{padding:0}
   .login-shell{width:100%;min-height:100vh;border-radius:0;border-left:0;border-right:0}
-  .login-left{padding:42px 26px}
-  .login-right{min-height:470px;padding:42px 24px}
-  .todo-figure{left:58%!important;bottom:35px!important;width:235px!important;height:305px!important}
-  .todo-figure .login-todo-photo{height:295px!important}
-  .privacy-card{left:20px!important;bottom:20px!important}
+  .login-left{padding:38px 26px}
+  .login-left .todoai-logo-frame{width:260px!important;padding:12px 16px!important}
+  .login-left .todoai-logo{height:62px!important;max-height:62px!important}
+  .login-right{min-height:480px;padding:42px 24px}
+  .todo-figure{left:60%!important;bottom:22px!important;width:245px!important;height:315px!important}
+  .todo-figure .login-todo-photo{height:300px!important}
+  .privacy-card{left:18px!important;bottom:18px!important}
   .login-left h1{font-size:24px}
 }
