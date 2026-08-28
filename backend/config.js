@@ -5,7 +5,7 @@ window.TSS_SUPABASE_CONFIG = window.TSS_SUPABASE_CONFIG || {
 };
 
 window.addEventListener('load', () => {
-  const BUILD = '20260828-interview-chat-screen-v33';
+  const BUILD = '20260828-role-access-v34';
   const addCss = (href) => {
     const clean = href.split('?')[0];
     if ([...document.querySelectorAll('link[rel="stylesheet"]')].some(x => (x.getAttribute('href')||'').split('?')[0] === clean)) return;
@@ -57,6 +57,7 @@ window.addEventListener('load', () => {
     .then(() => loadScript('requirement-save-sync.js','tssRequirementSaveSync'))
     .then(() => loadScript('requirement-details-owner-sync.js','tssRequirementDetailsOwnerSync'))
     .then(() => loadScript('admin-role-ui.js','tssAdminRoleUi'))
+    .then(() => loadScript('role-access-visibility.js','tssRoleAccessVisibility'))
     .then(() => loadScript('screening-cleanup.js','tssScreeningCleanup'))
     .then(() => loadScript('todo-chatbot-upgrade.js','tssTodoChatbotUpgrade'))
     .then(() => {
@@ -82,6 +83,7 @@ window.addEventListener('load', () => {
             setTimeout(() => window.TSSRequirementSaveSync?.wire?.(), 820);
             setTimeout(() => window.TSSRequirementDetailsOwnerSync?.patch?.(), 880);
             setTimeout(() => window.TSSAdminRoleUI?.boot?.(), 940);
+            setTimeout(() => window.TSSRoleAccessVisibility?.boot?.(), 960);
             setTimeout(() => window.TSSScreeningCleanup?.apply?.(), 980);
           }
         } catch (err) {
