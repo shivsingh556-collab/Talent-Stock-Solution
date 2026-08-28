@@ -5,7 +5,7 @@ window.TSS_SUPABASE_CONFIG = window.TSS_SUPABASE_CONFIG || {
 };
 
 window.addEventListener('load', () => {
-  const BUILD = '20260827-client-owner-auto-v30';
+  const BUILD = '20260828-login-visual-v31';
   const addCss = (href) => {
     const clean = href.split('?')[0];
     if ([...document.querySelectorAll('link[rel="stylesheet"]')].some(x => (x.getAttribute('href')||'').split('?')[0] === clean)) return;
@@ -31,6 +31,7 @@ window.addEventListener('load', () => {
 
   loadScript('brand-assets.js','tssBrandAssets')
     .then(() => loadScript('login-todo-exact.js','tssLoginTodoExact'))
+    .then(() => loadScript('login-visual-fix.js','tssLoginVisualFix'))
     .then(() => loadScript('todo-exact.js','tssExactTodo'))
     .then(() => loadScript('extraction-accuracy.js','tssExtractionAccuracy'))
     .then(() => loadScript('candidate-enrichment.js','tssCandidateEnrichment'))
@@ -89,5 +90,6 @@ window.addEventListener('load', () => {
     .then(() => loadScript('todo-ai-branding.js','tssTodoAiBranding'))
     .then(() => loadScript('profile-logout.js','tssProfileLogout'))
     .then(() => loadScript('login-final-guard.js','tssLoginFinalGuard'))
+    .then(() => window.TSSLoginVisualFix?.apply?.())
     .catch(err => console.warn('TODO AI production layer load issue', err));
 });
