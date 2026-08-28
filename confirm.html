@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1.0" />
+<title>Confirm availability · Talent Stock Solutions</title>
+<meta name="robots" content="noindex,nofollow" />
+<style>
+:root{--bg:#0b1422;--panel:#11203a;--panel2:#16284a;--border:#274a73;--text:#dceaf6;--muted:#8eabc4;--accent:#73c4ff;--ok:#74e6bd;--okbg:#123f35;--err:#ff9fab}
+*{box-sizing:border-box}html,body{margin:0;min-height:100%;background:radial-gradient(1100px 700px at 20% -10%,#16284a 0%,var(--bg) 62%);color:var(--text);font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif}body{min-height:100vh;display:grid;place-items:center;padding:32px 16px}.card{width:min(590px,100%);background:var(--panel);border:1px solid var(--border);border-radius:18px;overflow:hidden;box-shadow:0 18px 60px rgba(0,0,0,.42)}header{padding:20px 22px;background:linear-gradient(135deg,#0e2848,#16365f);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px}.mark{width:42px;height:42px;border-radius:11px;background:linear-gradient(135deg,#237ac1,#73c4ff);display:grid;place-items:center;color:#071522;font-weight:900;font-size:18px}.brand h1{margin:0;color:#fff;font-size:16px}.brand small{color:var(--muted);text-transform:uppercase;letter-spacing:.5px;font-size:11px}.pill{margin-left:auto;background:var(--okbg);color:var(--ok);padding:6px 10px;border-radius:999px;font-weight:800;font-size:11px}.body{padding:24px}.lead{color:#cbe0ef;margin:0 0 18px}.context{background:var(--panel2);border:1px solid var(--border);border-radius:12px;padding:14px 16px}.row{display:flex;justify-content:space-between;gap:16px;padding:7px 0}.row+.row{border-top:1px dashed #2b4a73}.lbl{color:var(--muted);font-weight:700;font-size:11px;text-transform:uppercase}.val{text-align:right;font-weight:700}.slot{color:var(--accent)}button{width:100%;margin-top:18px;border:0;border-radius:10px;padding:14px 18px;font-weight:800;font-size:14px;cursor:pointer;background:linear-gradient(135deg,#1d8061,#74e6bd);color:#071522}button:disabled{opacity:.55;cursor:not-allowed}.note{margin-top:16px;color:var(--muted);font-size:12px}.note a{color:var(--accent);font-weight:800}.alert{margin:18px 22px 0;padding:13px 15px;border-radius:10px;background:#44232a;color:var(--err);border:1px solid #6e3640}.hidden{display:none!important}.success{text-align:center;padding:32px 24px}.check{width:72px;height:72px;border-radius:50%;margin:0 auto 16px;background:var(--okbg);border:2px solid #1f6e54;display:grid;place-items:center;color:var(--ok);font-size:38px;font-weight:900}.success h2{margin:0 0 8px;font-size:24px}.success p{color:var(--muted)}footer{padding:14px 22px;border-top:1px solid var(--border);background:#0e1b30;color:var(--muted);text-align:center;font-size:11px;text-transform:uppercase;letter-spacing:.5px}@media(max-width:540px){.pill{display:none}.row{align-items:flex-start}.val{max-width:58%}}
+</style>
+</head>
+<body>
+<div class="card">
+<header><div class="mark">T</div><div class="brand"><h1>TODO AI — Talent Stock Solutions</h1><small>Interview availability</small></div><span class="pill">Secure response</span></header>
+<div id="alertHost"></div>
+<section id="formBlock" class="body">
+<p class="lead">Hello <strong id="candidateName">candidate</strong> — please confirm that you are available for the interview below.</p>
+<div class="context"><div class="row"><span class="lbl">Candidate</span><span class="val" id="candidate">—</span></div><div class="row"><span class="lbl">Position</span><span class="val" id="position">—</span></div><div class="row"><span class="lbl">Client</span><span class="val" id="client">—</span></div><div class="row"><span class="lbl">Date · Time</span><span class="val slot" id="slot">—</span></div><div class="row"><span class="lbl">Mode</span><span class="val" id="mode">—</span></div></div>
+<button id="confirmBtn" type="button">Yes, I confirm I am available</button>
+<p class="note">Need a different slot? <a id="rescheduleLink" href="#">Request a reschedule instead</a>.</p>
+</section>
+<section id="successBlock" class="success hidden"><div class="check">✓</div><h2>Availability confirmed</h2><p>The recruiter has been notified. You can safely close this tab.</p></section>
+<footer>TODO AI · Talent Stock Solutions</footer>
+</div>
+<script>
+const API='https://wbclpjdjhlsuspojtner.supabase.co/functions/v1/interview-response';
+const token=new URLSearchParams(location.search).get('token')||''; const $=id=>document.getElementById(id);
+function alertMsg(t){$('alertHost').innerHTML='<div class="alert">'+String(t).replace(/[&<>]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[m]))+'</div>'}
+function fmt(iso){try{return new Intl.DateTimeFormat('en-IN',{timeZone:'Asia/Kolkata',dateStyle:'full',timeStyle:'short'}).format(new Date(iso))}catch{return iso||'—'}}
+async function details(){if(!token){alertMsg('Invalid interview link. Please use the link from your email.');$('confirmBtn').disabled=true;return}try{const r=await fetch(API+'?format=json&action=details&token='+encodeURIComponent(token),{cache:'no-store'});const j=await r.json();if(!r.ok||!j.ok)throw new Error(j.error||'Interview unavailable');const d=j.interview;$('candidateName').textContent=d.candidate_name||'candidate';$('candidate').textContent=d.candidate_name||'—';$('position').textContent=d.position||'—';$('client').textContent=d.client_name||'—';$('slot').textContent=fmt(d.scheduled_at);$('mode').textContent=d.mode||'Client Interview';$('rescheduleLink').href='/reschedule.html?token='+encodeURIComponent(token);if(d.candidate_response==='Confirmed'){showSuccess()}}catch(e){alertMsg(e.message||e);$('confirmBtn').disabled=true}}
+function showSuccess(){$('formBlock').classList.add('hidden');$('successBlock').classList.remove('hidden')}
+$('confirmBtn').addEventListener('click',async()=>{const b=$('confirmBtn');b.disabled=true;b.textContent='Confirming…';try{const r=await fetch(API+'?format=json&token='+encodeURIComponent(token),{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({action:'confirm'})});const j=await r.json();if(!r.ok||!j.ok)throw new Error(j.error||'Could not confirm');showSuccess()}catch(e){b.disabled=false;b.textContent='Yes, I confirm I am available';alertMsg(e.message||e)}});
+details();
+</script>
+</body></html>
