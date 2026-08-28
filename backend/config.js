@@ -5,7 +5,7 @@ window.TSS_SUPABASE_CONFIG = window.TSS_SUPABASE_CONFIG || {
 };
 
 window.addEventListener('load', () => {
-  const BUILD = '20260828-login-stable-v32';
+  const BUILD = '20260828-interview-chat-screen-v33';
   const addCss = (href) => {
     const clean = href.split('?')[0];
     if ([...document.querySelectorAll('link[rel="stylesheet"]')].some(x => (x.getAttribute('href')||'').split('?')[0] === clean)) return;
@@ -57,6 +57,8 @@ window.addEventListener('load', () => {
     .then(() => loadScript('requirement-save-sync.js','tssRequirementSaveSync'))
     .then(() => loadScript('requirement-details-owner-sync.js','tssRequirementDetailsOwnerSync'))
     .then(() => loadScript('admin-role-ui.js','tssAdminRoleUi'))
+    .then(() => loadScript('screening-cleanup.js','tssScreeningCleanup'))
+    .then(() => loadScript('todo-chatbot-upgrade.js','tssTodoChatbotUpgrade'))
     .then(() => {
       setTimeout(async () => {
         try {
@@ -80,6 +82,7 @@ window.addEventListener('load', () => {
             setTimeout(() => window.TSSRequirementSaveSync?.wire?.(), 820);
             setTimeout(() => window.TSSRequirementDetailsOwnerSync?.patch?.(), 880);
             setTimeout(() => window.TSSAdminRoleUI?.boot?.(), 940);
+            setTimeout(() => window.TSSScreeningCleanup?.apply?.(), 980);
           }
         } catch (err) {
           console.warn('TODO AI session restore check', err?.message || err);
@@ -89,5 +92,7 @@ window.addEventListener('load', () => {
     .then(() => loadScript('todo-ai-branding.js','tssTodoAiBranding'))
     .then(() => loadScript('profile-logout.js','tssProfileLogout'))
     .then(() => loadScript('login-final-guard.js','tssLoginFinalGuard'))
+    .then(() => loadScript('login-todo-visible.js','tssLoginTodoVisible'))
+    .then(() => window.TSSLoginTodoVisible?.apply?.())
     .catch(err => console.warn('TODO AI production layer load issue', err));
 });
