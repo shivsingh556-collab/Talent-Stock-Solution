@@ -10,13 +10,13 @@ window.TSS_SUPABASE_CONFIG = window.TSS_SUPABASE_CONFIG || {
   if (!document.querySelector('link[data-tss-reports]')) {
     const css = document.createElement('link');
     css.rel = 'stylesheet';
-    css.href = 'reports-activity.css?v=20260829-reporting-v1';
+    css.href = 'reports-activity.css?v=20260829-role-sheets-v2';
     css.dataset.tssReports = '1';
     document.head.appendChild(css);
   }
   if (!document.querySelector('script[data-tss-reports]')) {
     const script = document.createElement('script');
-    script.src = 'reports-activity.js?v=20260829-reporting-v1';
+    script.src = 'reports-activity.js?v=20260829-role-sheets-v2';
     script.async = false;
     script.dataset.tssReports = '1';
     document.head.appendChild(script);
@@ -24,7 +24,7 @@ window.TSS_SUPABASE_CONFIG = window.TSS_SUPABASE_CONFIG || {
 })();
 
 window.addEventListener('load', () => {
-  const BUILD = '20260829-reporting-v1';
+  const BUILD = '20260829-role-sheets-v2';
   const addCss = (href) => {
     const clean = href.split('?')[0];
     if ([...document.querySelectorAll('link[rel="stylesheet"]')].some(x => (x.getAttribute('href')||'').split('?')[0] === clean)) return;
@@ -80,6 +80,8 @@ window.addEventListener('load', () => {
     .then(() => loadScript('screening-cleanup.js','tssScreeningCleanup'))
     .then(() => loadScript('todo-chatbot-upgrade.js','tssTodoChatbotUpgrade'))
     .then(() => loadScript('role-visibility.js','tssRoleVisibility'))
+    .then(() => loadScript('access-role-cleanup.js','tssAccessRoleCleanup'))
+    .then(() => loadScript('role-google-sheets-sync.js','tssRoleGoogleSheets'))
     .then(() => {
       setTimeout(async () => {
         try {
@@ -104,7 +106,8 @@ window.addEventListener('load', () => {
             setTimeout(() => window.TSSRequirementDetailsOwnerSync?.patch?.(), 880);
             setTimeout(() => window.TSSAdminRoleUI?.boot?.(), 940);
             setTimeout(() => window.TSSScreeningCleanup?.apply?.(), 980);
-            setTimeout(() => window.TSSRoleVisibility?.apply?.(), 1020);
+            setTimeout(() => window.TSSAccessRoleCleanup?.removeSwitchUI?.(), 1020);
+            setTimeout(() => window.TSSRoleGoogleSheets?.sync?.(false), 1300);
           }
         } catch (err) {
           console.warn('TODO AI session restore check', err?.message || err);
