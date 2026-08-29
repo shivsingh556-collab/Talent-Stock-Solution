@@ -4,6 +4,9 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>TSS Resume Intelligence</title>
+  <meta name="description" content="Evidence-based resume intelligence, recruitment screening, and candidate tracking workspace for TalentStock Solutions." />
+  <meta property="og:title" content="TSS Resume Intelligence" />
+  <meta property="og:description" content="Evidence-based resume intelligence, recruitment screening, and candidate tracking workspace for TalentStock Solutions." />
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
@@ -94,8 +97,69 @@
         <article class="old-panel selected-requirement-card"><div class="panel-title"><div><span class="purple-label">SELECTED COMPANY REQUIREMENT</span><h2 id="selectedRoleTitle">Select a requirement</h2><small id="selectedRoleMeta">—</small></div><b class="active-pill">Active</b></div><div id="selectedRequirementSummary"></div><div id="requirementNotice" class="notice">The supplied list may not include a full JD. Screening uses only confirmed role, skills, location and experience.</div></article>
         <article class="old-panel questionnaire-card"><div class="panel-title"><div><span class="purple-label" id="questionnaireId">QNR0001 · TSS RECRUITER SCREENING</span><h2>Candidate Screening Questionnaire</h2><p>Ask the common recruiter questions and the client/JD-specific questions before submitting a candidate.</p></div><b class="question-count">15 questions</b></div><div class="question-columns"><div><h4>Common screening questions</h4><small>Required for every candidate</small><div id="commonQuestions"></div></div><div class="job-question-box"><h4><span id="jobQuestionClient">Client</span> / Job-specific questions</h4><small>Based on the confirmed client requirement</small><div id="jobSpecificQuestions"></div></div></div></article>
         <article class="old-panel upload-card"><div class="number-title"><b>01</b><div><h2>Add the job requirement</h2><p>Upload a file or paste the email body. The app reads the actual content—not the filename.</p></div></div><div class="upload-actions"><label class="dark-upload-btn">Upload JD file<input id="jdQuickFile" type="file" accept=".pdf,.doc,.docx,.txt" /></label><button id="pasteJdQuick" class="dark-upload-btn">Paste email text</button></div><label class="drop-zone" for="jdQuickFile"><strong>Drop the JD file here</strong><small>or click to browse · PDF, DOCX or TXT</small></label></article>
-        <article class="old-panel upload-card"><div class="number-title"><b>02</b><div><h2>Upload candidate resumes</h2><p id="candidateUploadSubtitle">Screening against the selected requirement.</p></div></div><label class="drop-zone" for="resumeFile"><strong>Drop candidate CVs here</strong><small>or click to browse · PDF, DOCX or TXT</small></label><input id="resumeFile" class="hidden-file" type="file" accept=".pdf,.doc,.docx,.txt" /><div class="candidate-detail-grid"><input id="candidateName" placeholder="Candidate name" /><input id="candidateEmail" placeholder="Email" /><input id="candidatePhone" placeholder="Phone" /><input id="candidateExp" type="number" step="0.1" placeholder="Total experience" /><input id="candidateLocation" placeholder="Current location" /><input id="candidateDesignation" placeholder="Current designation" /><input id="candidateNotice" placeholder="Notice period" /><input id="candidateCTC" placeholder="Current CTC" /><input id="candidateExpectedCTC" placeholder="Expected CTC" /></div><textarea id="resumeText" rows="5" placeholder="Resume text is extracted here; you can also paste text manually for screening."></textarea><button id="screenBtn" class="blue-btn full">Screen & rank candidate</button></article>
-        <article class="old-panel result-panel"><div class="panel-title"><div><span class="purple-label">SCREENING RESULT</span><h2>Candidate Evaluation</h2></div></div><div id="screeningEmpty" class="empty-state">Upload a CV and run screening to see match score, evidence, gaps and recruiter controls.</div><div id="screeningResult" class="hidden"></div></article>
+        <article class="old-panel upload-card">
+          <div class="number-title">
+            <b>02</b>
+            <div>
+              <h2>Upload candidate resumes (Single or Batch)</h2>
+              <p id="candidateUploadSubtitle">Screening against the selected requirement · Select multiple CVs for batch ranking.</p>
+            </div>
+          </div>
+          <label class="drop-zone" for="resumeFile">
+            <span style="font-size:32px;display:block;margin-bottom:6px;">📂</span>
+            <strong style="font-size:15px;color:#f0f6fc;display:block;">Drop Candidate Resume(s) Here</strong>
+            <small style="color:#8bb6dc;display:block;margin-top:4px;">Upload single or <b>multiple CV files at once</b> (PDF, DOCX, TXT)</small>
+            <span style="display:inline-block;margin-top:10px;padding:3px 10px;background:#0d2847;border:1px solid #28557a;border-radius:999px;font-size:11px;font-weight:700;color:#79c0ff;">
+              ⚡ Sequential AI Extraction & Shortlist Ranking
+            </span>
+          </label>
+          <input id="resumeFile" class="hidden-file" type="file" multiple accept=".pdf,.doc,.docx,.txt,.csv,.png,.jpg,.jpeg,.webp" />
+          <div class="candidate-detail-grid">
+            <input id="candidateName" placeholder="Candidate name" />
+            <input id="candidateEmail" placeholder="Email" />
+            <input id="candidatePhone" placeholder="Phone" />
+            <input id="candidateExp" type="number" step="0.1" placeholder="Total experience" />
+            <input id="candidateLocation" placeholder="Current location" />
+            <input id="candidateDesignation" placeholder="Current designation" />
+            <input id="candidateNotice" placeholder="Notice period" />
+            <input id="candidateCTC" placeholder="Current CTC" />
+            <input id="candidateExpectedCTC" placeholder="Expected CTC" />
+          </div>
+          <textarea id="resumeText" rows="5" placeholder="Resume text is extracted here; you can also paste text manually for screening."></textarea>
+          <button id="screenBtn" class="blue-btn full">Screen & rank candidate</button>
+        </article>
+
+        <!-- Batch Progress Container -->
+        <div id="batchProgressContainer" class="old-panel hidden" style="margin:16px 0;border:1px solid #1f6feb;background:linear-gradient(135deg, #091e36, #061527);">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+            <strong style="color:#79c0ff;font-size:14px;display:flex;align-items:center;gap:8px;">
+              <span class="spinner" style="display:inline-block;width:14px;height:14px;border:2px solid #388bfd;border-top-color:transparent;border-radius:50%;animation:spin 0.8s linear infinite;"></span>
+              Sequential Batch Screening in Progress…
+            </strong>
+            <span id="batchProgressCount" style="color:#f0f6fc;font-weight:700;background:#0f385c;padding:3px 10px;border-radius:999px;font-size:12px;">0 of 0</span>
+          </div>
+          <div style="background:#091b2c;height:10px;border-radius:99px;overflow:hidden;border:1px solid #173b5e;margin-bottom:10px;">
+            <div id="batchProgressBar" style="width:0%;height:100%;background:linear-gradient(90deg, #1f6feb, #58a6ff);transition:width 0.3s ease;"></div>
+          </div>
+          <div style="display:flex;justify-content:space-between;color:#8bb6dc;font-size:12px;">
+            <span id="batchProgressStatus">Initializing parser…</span>
+            <span id="batchProgressCurrentFile" style="font-family:monospace;color:#a5d6ff;">—</span>
+          </div>
+        </div>
+
+        <!-- Batch Summary Card Container -->
+        <article id="batchSummaryCard" class="old-panel batch-summary-panel hidden"></article>
+
+        <article class="old-panel result-panel">
+          <div class="panel-title">
+            <div>
+              <span class="purple-label">DETAILED EVALUATION</span>
+              <h2>Candidate Scorecard & AI Evidence</h2>
+            </div>
+          </div>
+          <div id="screeningEmpty" class="empty-state">Upload CV(s) and run screening to see match score, evidence, gaps, batch rankings and recruiter controls.</div>
+          <div id="screeningResult" class="hidden"></div>
+        </article>
         <select id="screenRequirement" class="hidden-support"></select>
       </section>
 
@@ -112,9 +176,13 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="backend/config.js"></script>
   <script src="backend/supabase-client.js"></script>
+  <script src="document-parser.js"></script>
+  <script src="batch-screening.js"></script>
+  <script src="google-sheets-sync.js"></script>
   <script src="app.js"></script>
   <script src="site-automation.js"></script>
   <script src="master-data.js"></script>
+  <script src="team-role-intelligence.js"></script>
   <script src="old-site.js"></script>
 </body>
 </html>
