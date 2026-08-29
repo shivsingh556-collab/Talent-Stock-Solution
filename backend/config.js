@@ -4,8 +4,27 @@ window.TSS_SUPABASE_CONFIG = window.TSS_SUPABASE_CONFIG || {
   anonKey: 'sb_publishable_qx9Xf31udLMuRWmqNAjBFQ_I7woPxap'
 };
 
+// Load the reporting module before the page load event so it can initialize
+// against the authenticated workspace without changing the existing index layout.
+(function loadReportingModule(){
+  if (!document.querySelector('link[data-tss-reports]')) {
+    const css = document.createElement('link');
+    css.rel = 'stylesheet';
+    css.href = 'reports-activity.css?v=20260829-reporting-v1';
+    css.dataset.tssReports = '1';
+    document.head.appendChild(css);
+  }
+  if (!document.querySelector('script[data-tss-reports]')) {
+    const script = document.createElement('script');
+    script.src = 'reports-activity.js?v=20260829-reporting-v1';
+    script.async = false;
+    script.dataset.tssReports = '1';
+    document.head.appendChild(script);
+  }
+})();
+
 window.addEventListener('load', () => {
-  const BUILD = '20260828-reschedule-login-todo-v35';
+  const BUILD = '20260829-reporting-v1';
   const addCss = (href) => {
     const clean = href.split('?')[0];
     if ([...document.querySelectorAll('link[rel="stylesheet"]')].some(x => (x.getAttribute('href')||'').split('?')[0] === clean)) return;
@@ -18,6 +37,7 @@ window.addEventListener('load', () => {
   addCss('requirements-perfect-fix.css');
   addCss('todo-ai-branding.css');
   addCss('login-perfect.css');
+  addCss('reports-activity.css');
 
   const loadScript = (src, marker) => new Promise((resolve, reject) => {
     if (document.querySelector(`script[data-${marker}]`)) return resolve();
