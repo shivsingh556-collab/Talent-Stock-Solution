@@ -1,1 +1,2 @@
 Stable rollback marker for TODO AI production after frontend freeze fix.
+2026-08-29: Restored pre-Google-AI-Studio site state. Google Sheets and AI-Studio add-ons removed; extraction accuracy module retained.
