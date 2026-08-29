@@ -1,0 +1,8 @@
+{
+  "name": "TSS Resume Intelligence",
+  "description": "Evidence-based resume intelligence, recruitment screening, and candidate tracking workspace for TalentStock Solutions.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
