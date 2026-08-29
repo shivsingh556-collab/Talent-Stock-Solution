@@ -1,19 +1,18 @@
 (function(){
 'use strict';
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
-const BAD_TEXT=[/switch account/i,/private workspace/i,/switch recruiter/i,/workspace & access control/i,/team workspace/i];
-function textBad(el){const t=(el?.textContent||'').replace(/\s+/g,' ').trim();return BAD_TEXT.some(r=>r.test(t));}
 function removeSwitchUI(){
   const direct=['#workspaceSwitcher','#accountSwitcher','#switchAccountBtn','#workspaceSwitchModal','.workspace-switcher','.account-switcher','.private-workspace-pill','.switch-account-btn','[data-switch-account]','[data-workspace-switch]'];
   direct.forEach(s=>$$(`body ${s}`).forEach(x=>x.remove()));
-  $$('button,a,div,section,aside,dialog').forEach(el=>{
-    if(!textBad(el))return;
+
+  $$('button,a').forEach(el=>{
     const t=(el.textContent||'').replace(/\s+/g,' ').trim();
-    if(/switch account|private workspace/i.test(t)&&t.length<180){el.remove();return;}
-    if(/switch recruiter|workspace & access control|team workspace/i.test(t)){
-      const modal=el.closest('dialog,.modal,.todo-modal,[role="dialog"]')||el;
-      modal.remove();
-    }
+    if(/^(switch account|switch\s*→?|private workspace:?)/i.test(t))el.remove();
+  });
+
+  $$('dialog,.modal,.todo-modal,[role="dialog"]').forEach(modal=>{
+    const t=(modal.textContent||'').replace(/\s+/g,' ').trim();
+    if(/switch recruiter\s*\/\s*admin workspace|workspace & access control/i.test(t))modal.remove();
   });
 }
 async function applyProfile(){
