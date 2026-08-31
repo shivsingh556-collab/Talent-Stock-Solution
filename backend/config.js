@@ -10,13 +10,13 @@ window.TSS_SUPABASE_CONFIG = window.TSS_SUPABASE_CONFIG || {
   if (!document.querySelector('link[data-tss-reports]')) {
     const css = document.createElement('link');
     css.rel = 'stylesheet';
-    css.href = 'reports-activity.css?v=20260831-light-v1';
+    css.href = 'reports-activity.css?v=20260831-minimal-v1';
     css.dataset.tssReports = '1';
     document.head.appendChild(css);
   }
   if (!document.querySelector('script[data-tss-reports]')) {
     const script = document.createElement('script');
-    script.src = 'reports-activity.js?v=20260831-light-v1';
+    script.src = 'reports-activity.js?v=20260831-minimal-v1';
     script.async = false;
     script.dataset.tssReports = '1';
     document.head.appendChild(script);
@@ -24,7 +24,7 @@ window.TSS_SUPABASE_CONFIG = window.TSS_SUPABASE_CONFIG || {
 })();
 
 window.addEventListener('load', () => {
-  const BUILD = '20260831-light-v1';
+  const BUILD = '20260831-minimal-v1';
   const addCss = (href) => {
     const clean = href.split('?')[0];
     if ([...document.querySelectorAll('link[rel="stylesheet"]')].some(x => (x.getAttribute('href')||'').split('?')[0] === clean)) return;
@@ -39,6 +39,7 @@ window.addEventListener('load', () => {
   addCss('login-perfect.css');
   addCss('reports-activity.css');
   addCss('light-theme.css');
+  addCss('minimal-content-theme.css');
 
   const loadScript = (src, marker) => new Promise((resolve, reject) => {
     if (document.querySelector(`script[data-${marker}]`)) return resolve();
