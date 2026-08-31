@@ -9,8 +9,7 @@ function normalizeNav(){
   const nav=$('#nav');if(!nav)return;
   const admins=$$('.nav-item').filter(x=>x.textContent.trim().replace(/\s+/g,' ').toLowerCase()==='admin');
   admins.slice(1).forEach(x=>x.remove());
-  const reports=$('#reportsNav');
-  if(reports){reports.innerHTML='<span>▤</span>Reports';}
+  const reports=$('#reportsNav');if(reports)reports.innerHTML='<span>▤</span>Reports';
   const admin=$('#adminNavBtn')||admins[0];
   if(reports&&admin&&reports.nextElementSibling!==admin)nav.insertBefore(reports,admin);
 }
@@ -29,24 +28,26 @@ function simplifyReports(){
     const h=p.querySelector('h3');if(h&&/management snapshot/i.test(h.textContent||''))p.remove();
   });
 }
+function applyReportCleanup(){simplifyReports();normalizeNav();setTimeout(simplifyReports,80);setTimeout(simplifyReports,250);setTimeout(simplifyReports,700)}
 
-function applyReportCleanup(){
-  simplifyReports();normalizeNav();
-  setTimeout(simplifyReports,80);setTimeout(simplifyReports,250);setTimeout(simplifyReports,700);
-}
+const STAGES=['Scheduled','Interview Completed','Client Feedback Pending','Result Received','Joining / Closure'];
+const RESULTS=['Pending','Second Round','Selected','Hold','Rejected','Client Rejected','Candidate Declined','Candidate Not Available','No Show','Reschedule','Offer / Joining Formalities','Joined-TSS'];
 
 function outcomeDialog(){
   let d=$('#tssOutcomeDialog');if(d)return d;
   d=document.createElement('dialog');d.id='tssOutcomeDialog';
-  d.innerHTML=`<form method="dialog" class="tss-outcome-form"><div class="dialog-head"><div><span class="purple-label">INTERVIEW RESULT</span><h3>Update Interview Outcome</h3></div><button value="cancel" class="icon-btn">×</button></div><label>Outcome</label><select id="tssOutcomeSelect"><option>Feedback Pending</option><option>Second Round</option><option>Selected</option><option>Offer / Joining Formalities</option><option>Joined-TSS</option><option>Hold</option><option>Rejected</option><option>Client Rejected</option><option>Candidate Declined</option><option>Candidate Not Available</option><option>No Show</option><option>Reschedule</option></select><label>Notes</label><textarea id="tssOutcomeNotes" rows="4" placeholder="Client feedback / next step"></textarea><div class="dialog-actions"><button value="cancel" class="btn ghost">Cancel</button><button type="button" id="tssSaveOutcome" class="btn primary">Save Outcome</button></div></form>`;
+  d.innerHTML=`<form method="dialog" class="tss-outcome-form"><div class="dialog-head"><div><span class="purple-label">INTERVIEW PROGRESS</span><h3>Update Interview</h3><p style="margin:4px 0 0;color:#68788a;font-size:12px">Track the interview through 5 clear stages. Every saved update is emailed to active Admins and Super Admins.</p></div><button value="cancel" class="icon-btn">×</button></div><label>Interview Stage</label><select id="tssStageSelect">${STAGES.map(x=>`<option>${x}</option>`).join('')}</select><label>Interview Result</label><select id="tssOutcomeSelect">${RESULTS.map(x=>`<option>${x}</option>`).join('')}</select><label>Feedback / Notes</label><textarea id="tssOutcomeNotes" rows="4" placeholder="Client feedback, next round, joining update, reason for rejection, etc."></textarea><div style="font-size:11px;color:#68788a;margin-top:8px">Flow: Scheduled → Completed → Feedback Pending → Result Received → Joining / Closure</div><div class="dialog-actions"><button value="cancel" class="btn ghost">Cancel</button><button type="button" id="tssSaveOutcome" class="btn primary">Save Interview Update</button></div></form>`;
   document.body.appendChild(d);return d;
 }
 
 async function updateOutcome(id){
   const c=backend()?.client;if(!c)return toast('Backend not available');
-  const {data:iv,error}=await c.from('interviews').select('id,candidate_id,requirement_id,outcome,outcome_notes').eq('id',id).maybeSingle();
+  const {data:iv,error}=await c.from('interviews').select('id,candidate_id,requirement_id,interview_stage,outcome,outcome_notes').eq('id',id).maybeSingle();
   if(error||!iv)return toast('Interview record not found');
-  const d=outcomeDialog();d.dataset.id=id;$('#tssOutcomeSelect').value=iv.outcome||'Feedback Pending';$('#tssOutcomeNotes').value=iv.outcome_notes||'';d.showModal();
+  const d=outcomeDialog();d.dataset.id=id;
+  $('#tssStageSelect').value=STAGES.includes(iv.interview_stage)?iv.interview_stage:'Scheduled';
+  $('#tssOutcomeSelect').value=RESULTS.includes(iv.outcome)?iv.outcome:'Pending';
+  $('#tssOutcomeNotes').value=iv.outcome_notes||'';d.showModal();
 }
 
 function pipelineFor(outcome){
@@ -55,16 +56,21 @@ function pipelineFor(outcome){
   if(['Rejected','Client Rejected','Candidate Declined','No Show'].includes(outcome))return 'Rejected';
   return 'Interview';
 }
+function statusFor(stage,outcome){
+  if(outcome==='No Show')return 'No Show';
+  if(outcome==='Reschedule')return 'Scheduled';
+  if(outcome==='Hold')return 'On Hold';
+  if(['Selected','Rejected','Client Rejected','Candidate Declined','Joined-TSS','Offer / Joining Formalities'].includes(outcome))return 'Completed';
+  if(stage==='Client Feedback Pending')return 'Feedback Pending';
+  if(stage==='Interview Completed'||stage==='Result Received'||stage==='Joining / Closure')return 'Completed';
+  return 'Scheduled';
+}
 
 async function saveOutcome(){
   const d=$('#tssOutcomeDialog'),id=d?.dataset.id,c=backend()?.client;if(!id||!c)return;
-  const outcome=$('#tssOutcomeSelect').value,notes=$('#tssOutcomeNotes').value.trim(),now=new Date().toISOString();
-  const statusMap={
-    'Feedback Pending':'Feedback Pending','Second Round':'Second Round','Selected':'Completed','Offer / Joining Formalities':'Completed','Joined-TSS':'Completed',
-    'Hold':'On Hold','Rejected':'Completed','Client Rejected':'Completed','Candidate Declined':'Completed','Candidate Not Available':'Pending','No Show':'No Show','Reschedule':'Scheduled'
-  };
+  const stage=$('#tssStageSelect').value,outcome=$('#tssOutcomeSelect').value,notes=$('#tssOutcomeNotes').value.trim(),now=new Date().toISOString();
   try{
-    const {data:iv,error}=await c.from('interviews').update({outcome,outcome_notes:notes,outcome_updated_at:now,status:statusMap[outcome]||'Completed'}).eq('id',id).select('candidate_id,requirement_id').single();
+    const {data:iv,error}=await c.from('interviews').update({interview_stage:stage,outcome,outcome_notes:notes,outcome_updated_at:now,status:statusFor(stage,outcome)}).eq('id',id).select('candidate_id,requirement_id').single();
     if(error)throw error;
     const pipeline=pipelineFor(outcome);
     if(iv?.candidate_id&&iv?.requirement_id){
@@ -73,13 +79,13 @@ async function saveOutcome(){
     }
     try{
       const user=await backend().currentUser?.();
-      if(user)await c.from('activity_logs').insert({actor_id:user.id,action:'Interview outcome updated',entity_type:'interviews',entity_id:id,details:{outcome,pipeline}});
+      if(user)await c.from('activity_logs').insert({actor_id:user.id,action:'Interview stage/result updated',entity_type:'interviews',entity_id:id,details:{stage,outcome,pipeline,management_email_queued:true}});
     }catch{}
-    d.close();toast(`Interview outcome: ${outcome}`);
+    d.close();toast(`Interview updated: ${stage} · ${outcome}`);
     await window.TSSProduction?.hydrate?.();
     setTimeout(()=>window.TSSInterviewActions?.syncStatuses?.(),80);
     setTimeout(decorateInterviewOutcomes,180);
-  }catch(e){console.error(e);toast('Could not save outcome: '+(e.message||e))}
+  }catch(e){console.error(e);toast('Could not save interview update: '+(e.message||e))}
 }
 
 function decorateInterviewOutcomes(){
@@ -89,16 +95,11 @@ function decorateInterviewOutcomes(){
     const cell=tr.querySelector('[data-ia-actions]');if(!cell||cell.querySelector('.ia-outcome'))return;
     const local=(typeof db!=='undefined'?(db.interviews||[])[idx]:null);
     const id=String(local?.serverId||local?.id||'');if(!id)return;
-    const b=document.createElement('button');b.type='button';b.className='ia-btn ia-outcome';b.dataset.iaOutcome=id;b.textContent='Update Outcome';cell.prepend(b);
+    const b=document.createElement('button');b.type='button';b.className='ia-btn ia-outcome';b.dataset.iaOutcome=id;b.textContent='Update Interview';cell.prepend(b);
   });
 }
 
-function pulse(){
-  normalizeNav();
-  if($('#reportsActivity')?.classList.contains('active'))simplifyReports();
-  if($('#interviews')?.classList.contains('active'))decorateInterviewOutcomes();
-}
-
+function pulse(){normalizeNav();if($('#reportsActivity')?.classList.contains('active'))simplifyReports();if($('#interviews')?.classList.contains('active'))decorateInterviewOutcomes()}
 function wire(){
   normalizeNav();
   document.addEventListener('click',e=>{
