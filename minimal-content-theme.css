@@ -4,138 +4,61 @@
 .page-brand h2,.dashboard-title-row h1,.section-head h1,.workflow-head h1,.old-panel h3,.ai-card h3{color:#142235!important}
 .page-brand span,.dashboard-title-row p,.section-head p,.workflow-head p,.panel-title span{color:#6e8194!important}
 
-/* Generic main-content cards */
-.main-shell .old-panel,
-.main-shell .req-card,
-.main-shell .summary-box,
-.main-shell .report-panel,
-.main-shell .report-toolbar,
-.main-shell .health-item,
-.main-shell .questionnaire-card,
-.main-shell .screening-card,
-.main-shell .candidate-card,
-.main-shell .interview-card,
-.main-shell .admin-card,
-.main-shell .modal-card,
-.main-shell dialog,
-.main-shell .filter-card,
-.main-shell .panel,
-.main-shell .card{
-  background:#fff!important;
-  color:#142235!important;
-  border:1px solid #dce4ec!important;
-  box-shadow:0 4px 14px rgba(23,49,75,.04)!important;
+.main-shell .old-panel,.main-shell .req-card,.main-shell .summary-box,.main-shell .report-panel,.main-shell .report-toolbar,.main-shell .health-item,.main-shell .questionnaire-card,.main-shell .screening-card,.main-shell .candidate-card,.main-shell .interview-card,.main-shell .admin-card,.main-shell .modal-card,.main-shell dialog,.main-shell .filter-card,.main-shell .panel,.main-shell .card{
+  background:#fff!important;color:#142235!important;border:1px solid #dce4ec!important;box-shadow:0 4px 14px rgba(23,49,75,.04)!important;
 }
 
-/* Inputs / selects / search bars in main workspace */
-.main-shell input,
-.main-shell select,
-.main-shell textarea,
-.main-shell .top-search,
-.main-shell .requirement-switcher,
-.main-shell .toolbar-btn,
-.main-shell .report-toolbar input,
-.main-shell .report-toolbar select,
-.main-shell .eod-remarks{
-  background:#fff!important;
-  color:#1b2d40!important;
-  border:1px solid #cfd9e3!important;
-  box-shadow:none!important;
+.main-shell input,.main-shell select,.main-shell textarea,.main-shell .top-search,.main-shell .requirement-switcher,.main-shell .toolbar-btn,.main-shell .report-toolbar input,.main-shell .report-toolbar select,.main-shell .eod-remarks{
+  background:#fff!important;color:#1b2d40!important;border:1px solid #cfd9e3!important;box-shadow:none!important;
 }
 .main-shell input::placeholder,.main-shell textarea::placeholder{color:#8a99a8!important}
 .main-shell input:focus,.main-shell select:focus,.main-shell textarea:focus{outline:none!important;border-color:#2b86df!important;box-shadow:0 0 0 3px rgba(43,134,223,.10)!important}
 
-/* Requirement/filter controls that were dark */
-#jobProfileSearch,#clientFilter,#locationFilter,#requirementStatusFilter,#candidateSearch,#matchRequirement,#screenRequirement,
-.main-shell .filters input,.main-shell .filters select,.main-shell .search-box,.main-shell .filter-row input,.main-shell .filter-row select{
-  background:#fff!important;color:#1b2d40!important;border:1px solid #cfd9e3!important;border-radius:9px!important;
-}
+#jobProfileSearch,#clientFilter,#locationFilter,#requirementStatusFilter,#candidateSearch,#matchRequirement,#screenRequirement,.main-shell .filters input,.main-shell .filters select,.main-shell .search-box,.main-shell .filter-row input,.main-shell .filter-row select{background:#fff!important;color:#1b2d40!important;border:1px solid #cfd9e3!important;border-radius:9px!important}
 
-/* Screening summary boxes */
-.main-shell .summary-field,
-.main-shell .selected-requirement-summary>div,
-.main-shell .requirement-summary>div,
-.main-shell .meta-card,
-.main-shell .info-box{
-  background:#fff!important;
-  color:#1b2d40!important;
-  border:1px solid #dce4ec!important;
-  box-shadow:none!important;
-}
+.main-shell .summary-field,.main-shell .selected-requirement-summary>div,.main-shell .requirement-summary>div,.main-shell .meta-card,.main-shell .info-box{background:#fff!important;color:#1b2d40!important;border:1px solid #dce4ec!important;box-shadow:none!important}
 .main-shell .summary-field span,.main-shell .meta-card span,.main-shell .info-box span{color:#6d8195!important}
 .main-shell .summary-field strong,.main-shell .meta-card strong,.main-shell .info-box strong{color:#17293c!important}
 
-/* Questionnaire: remove solid navy blocks */
-#commonQuestions,#jobSpecificQuestions,
-.main-shell .question-list,
-.main-shell .question-section,
-.main-shell .question-panel,
-.main-shell .question-column{
-  background:#fff!important;
-  color:#17293c!important;
-  border:1px solid #dce4ec!important;
-  box-shadow:none!important;
+/* Questionnaire: no navy wrappers anywhere in the main workspace */
+.main-shell .questionnaire-card{padding:22px!important}
+.main-shell .question-columns{gap:18px!important;background:transparent!important}
+.main-shell .question-columns>div,.main-shell .job-question-box,#commonQuestions,#jobSpecificQuestions,.main-shell .question-list,.main-shell .question-section,.main-shell .question-panel,.main-shell .question-column{
+  background:#fff!important;color:#17293c!important;border:1px solid #dce4ec!important;border-radius:12px!important;box-shadow:none!important;padding:14px!important;
 }
-.main-shell .question-row{
-  background:#fff!important;
-  color:#203449!important;
-  border:0!important;
-  border-bottom:1px solid #e6ebf0!important;
-  border-radius:0!important;
-  box-shadow:none!important;
-}
+.main-shell .question-columns>div>h4,.main-shell .job-question-box h4{color:#17293c!important;margin:0 0 5px!important}
+.main-shell .question-columns>div>small,.main-shell .job-question-box>small{color:#718399!important}
+.main-shell #commonQuestions,.main-shell #jobSpecificQuestions{padding:0!important;margin-top:12px!important;overflow:hidden!important}
+.main-shell .question-row{background:#fff!important;color:#203449!important;border:0!important;border-bottom:1px solid #e6ebf0!important;border-radius:0!important;box-shadow:none!important;min-height:54px!important}
 .main-shell .question-row:last-child{border-bottom:0!important}
 .main-shell .question-row b{background:#edf5ff!important;color:#1e74c9!important;border:1px solid #cfe3f6!important}
 .main-shell .question-row span{background:#eef6ff!important;color:#1c6fb8!important;border:1px solid #d2e6f7!important}
 
-/* Tables */
 .main-shell table{background:#fff!important;color:#1b2d40!important}
 .main-shell th{background:#f5f7fa!important;color:#60758a!important;border-color:#dfe6ed!important}
 .main-shell td{background:#fff!important;color:#1b2d40!important;border-color:#e6ebf0!important}
 .main-shell tbody tr:hover td{background:#f8fbfe!important}
 
-/* Skill/status chips: soft, not navy */
-.main-shell .skill,
-.main-shell .badge,
-.main-shell .report-chip,
-.main-shell .status-pill,
-.main-shell .tag,
-.main-shell .chip{
-  background:#eef6ff!important;
-  color:#1d6fb8!important;
-  border:1px solid #cfe3f6!important;
-  box-shadow:none!important;
-}
+.main-shell .skill,.main-shell .badge,.main-shell .report-chip,.main-shell .status-pill,.main-shell .tag,.main-shell .chip{background:#eef6ff!important;color:#1d6fb8!important;border:1px solid #cfe3f6!important;box-shadow:none!important}
 .main-shell .skill.ai{background:#f1f7ff!important;color:#1d6fb8!important}
 
-/* Buttons: blue primary, light secondary, red-outline danger */
-.main-shell .btn,
-.main-shell button:not(.nav-item):not(.blue-btn):not(.login-primary){
-  background:#fff!important;
-  color:#245f91!important;
-  border:1px solid #b9d1e5!important;
-  box-shadow:none!important;
-}
-.main-shell .blue-btn,
-.main-shell .btn.primary,
-.main-shell button.primary,
-.main-shell [data-open-screening],
-.main-shell #screenBtn,
-.main-shell #addRequirementBtn,
-.main-shell #scheduleInterview{
-  background:#1f7fe5!important;
-  color:#fff!important;
-  border:1px solid #1f7fe5!important;
-}
+.main-shell .btn,.main-shell button:not(.nav-item):not(.blue-btn):not(.login-primary){background:#fff!important;color:#245f91!important;border:1px solid #b9d1e5!important;box-shadow:none!important}
+.main-shell .blue-btn,.main-shell .btn.primary,.main-shell button.primary,.main-shell [data-open-screening],.main-shell #screenBtn,.main-shell #addRequirementBtn,.main-shell #scheduleInterview{background:#1f7fe5!important;color:#fff!important;border:1px solid #1f7fe5!important}
 .main-shell .danger,.main-shell .delete,.main-shell button[class*="delete"]{background:#fff!important;color:#c43d4b!important;border-color:#e7aab1!important}
 .main-shell button:hover{filter:brightness(.98)}
 
-/* Reports */
 .main-shell .report-tabs{background:#f3f6f9!important;border-color:#dce4ec!important}
 .main-shell .report-tabs button{background:transparent!important;color:#607388!important;border:0!important}
 .main-shell .report-tabs button.active{background:#1f7fe5!important;color:#fff!important}
 .main-shell .report-summary-grid>div,.main-shell .eod-summary-grid>div{background:#fff!important;border-color:#dce4ec!important}
 .main-shell .report-summary-grid strong,.main-shell .eod-summary-grid strong{color:#17293c!important}
+
+/* Interview action controls */
+.main-shell .ia-btn{background:#fff!important;color:#275f91!important;border:1px solid #b9d1e5!important}
+.main-shell .ia-outcome{background:#1f7fe5!important;color:#fff!important;border-color:#1f7fe5!important}
+.main-shell .ia-delete{color:#c43d4b!important;border-color:#e7aab1!important}
+.main-shell .ia-cancel{color:#a36b13!important;border-color:#e5c789!important}
+.main-shell .ia-status,.main-shell .ia-response{border:1px solid #d7e3ed!important}
 
 /* Keep sidebar intentionally dark */
 .sidebar{background:linear-gradient(180deg,#081725,#07131f)!important;color:#f4f8ff!important}
@@ -147,4 +70,4 @@
 .sidebar .client-role small,.sidebar .workspace-note small,.sidebar .client-header{color:#718ba3!important}
 .sidebar input{background:transparent!important;color:#dcecff!important;border:0!important}
 
-@media(max-width:900px){.main-shell .old-panel,.main-shell .req-card,.main-shell .report-panel{box-shadow:none!important}}
+@media(max-width:900px){.main-shell .old-panel,.main-shell .req-card,.main-shell .report-panel{box-shadow:none!important}.main-shell .question-columns{grid-template-columns:1fr!important}}
