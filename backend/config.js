@@ -4,19 +4,17 @@ window.TSS_SUPABASE_CONFIG = window.TSS_SUPABASE_CONFIG || {
   anonKey: 'sb_publishable_qx9Xf31udLMuRWmqNAjBFQ_I7woPxap'
 };
 
-// Load the reporting module before the page load event so it can initialize
-// against the authenticated workspace without changing the existing index layout.
 (function loadReportingModule(){
   if (!document.querySelector('link[data-tss-reports]')) {
     const css = document.createElement('link');
     css.rel = 'stylesheet';
-    css.href = 'reports-activity.css?v=20260831-minimal-v1';
+    css.href = 'reports-activity.css?v=20260831-final-v1';
     css.dataset.tssReports = '1';
     document.head.appendChild(css);
   }
   if (!document.querySelector('script[data-tss-reports]')) {
     const script = document.createElement('script');
-    script.src = 'reports-activity.js?v=20260831-minimal-v1';
+    script.src = 'reports-activity.js?v=20260831-final-v1';
     script.async = false;
     script.dataset.tssReports = '1';
     document.head.appendChild(script);
@@ -24,7 +22,7 @@ window.TSS_SUPABASE_CONFIG = window.TSS_SUPABASE_CONFIG || {
 })();
 
 window.addEventListener('load', () => {
-  const BUILD = '20260831-minimal-v1';
+  const BUILD = '20260831-final-v1';
   const addCss = (href) => {
     const clean = href.split('?')[0];
     if ([...document.querySelectorAll('link[rel="stylesheet"]')].some(x => (x.getAttribute('href')||'').split('?')[0] === clean)) return;
@@ -83,6 +81,7 @@ window.addEventListener('load', () => {
     .then(() => loadScript('todo-chatbot-upgrade.js','tssTodoChatbotUpgrade'))
     .then(() => loadScript('role-visibility.js','tssRoleVisibility'))
     .then(() => loadScript('realtime-performance.js','tssRealtimePerformance'))
+    .then(() => loadScript('workflow-finalization.js','tssWorkflowFinalization'))
     .then(() => {
       setTimeout(async () => {
         try {
@@ -109,6 +108,8 @@ window.addEventListener('load', () => {
             setTimeout(() => window.TSSScreeningCleanup?.apply?.(), 980);
             setTimeout(() => window.TSSRoleVisibility?.apply?.(), 1020);
             setTimeout(() => window.TSSRealtimePerformance?.subscribe?.(), 1100);
+            setTimeout(() => window.TSSWorkflowFinalization?.cleanDuplicateAdmin?.(), 1160);
+            setTimeout(() => window.TSSWorkflowFinalization?.decorateInterviewOutcomes?.(), 1200);
           }
         } catch (err) {
           console.warn('TODO AI session restore check', err?.message || err);
