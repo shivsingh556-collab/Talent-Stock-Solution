@@ -34,6 +34,31 @@
 .main-shell .question-row b{background:#edf5ff!important;color:#1e74c9!important;border:1px solid #cfe3f6!important}
 .main-shell .question-row span{background:#eef6ff!important;color:#1c6fb8!important;border:1px solid #d2e6f7!important}
 
+/* Screening result: no remaining navy metric or evidence boxes */
+.main-shell #screeningResult{color:#17293c!important}
+.main-shell #screeningResult .result-score{background:transparent!important;color:#17293c!important}
+.main-shell #screeningResult .result-score h3,.main-shell #screeningResult .result-score .eyebrow{color:#17293c!important}
+.main-shell #screeningResult .score-ring{
+  background:radial-gradient(circle,#fff 58%,transparent 59%),conic-gradient(#1f7fe5 0 var(--score),#e4ebf3 var(--score) 360deg)!important;
+  border:0!important;box-shadow:none!important;
+}
+.main-shell #screeningResult .score-ring strong{color:#17293c!important}
+.main-shell #screeningResult .metric-grid{gap:12px!important}
+.main-shell #screeningResult .metric{
+  background:#fff!important;color:#17293c!important;border:1px solid #dce4ec!important;border-radius:10px!important;box-shadow:none!important;
+}
+.main-shell #screeningResult .metric small{color:#6f8193!important}
+.main-shell #screeningResult .metric strong{color:#17293c!important}
+.main-shell #screeningResult .notes-box{
+  background:#fff!important;color:#17293c!important;border:1px solid #dce4ec!important;border-radius:10px!important;box-shadow:none!important;
+}
+.main-shell #screeningResult .notes-box>strong{color:#17293c!important}
+.main-shell #screeningResult .notes-box p,.main-shell #screeningResult .notes-box small{color:#66788a!important}
+.main-shell #screeningResult .skill{background:#eef6ff!important;color:#1d6fb8!important;border:1px solid #cfe3f6!important}
+.main-shell #screeningResult>label{color:#455d73!important;font-weight:700!important}
+.main-shell #screeningResult #resultNotes{background:#fff!important;color:#1b2d40!important;border:1px solid #cfd9e3!important}
+.main-shell #screeningResult .manual-actions{background:transparent!important}
+
 .main-shell table{background:#fff!important;color:#1b2d40!important}
 .main-shell th{background:#f5f7fa!important;color:#60758a!important;border-color:#dfe6ed!important}
 .main-shell td{background:#fff!important;color:#1b2d40!important;border-color:#e6ebf0!important}
@@ -70,4 +95,4 @@
 .sidebar .client-role small,.sidebar .workspace-note small,.sidebar .client-header{color:#718ba3!important}
 .sidebar input{background:transparent!important;color:#dcecff!important;border:0!important}
 
-@media(max-width:900px){.main-shell .old-panel,.main-shell .req-card,.main-shell .report-panel{box-shadow:none!important}.main-shell .question-columns{grid-template-columns:1fr!important}}
+@media(max-width:900px){.main-shell .old-panel,.main-shell .req-card,.main-shell .report-panel{box-shadow:none!important}.main-shell .question-columns{grid-template-columns:1fr!important}.main-shell #screeningResult .metric-grid{grid-template-columns:1fr!important}}
