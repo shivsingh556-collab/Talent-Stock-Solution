@@ -95,4 +95,7 @@
 .sidebar .client-role small,.sidebar .workspace-note small,.sidebar .client-header{color:#718ba3!important}
 .sidebar input{background:transparent!important;color:#dcecff!important;border:0!important}
 
+/* Admin page: keep account management, remove duplicate summary KPI boxes. */
+#adminKpis{display:none!important}
+
 @media(max-width:900px){.main-shell .old-panel,.main-shell .req-card,.main-shell .report-panel{box-shadow:none!important}.main-shell .question-columns{grid-template-columns:1fr!important}.main-shell #screeningResult .metric-grid{grid-template-columns:1fr!important}}
