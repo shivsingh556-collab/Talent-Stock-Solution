@@ -8,13 +8,13 @@ window.TSS_SUPABASE_CONFIG = window.TSS_SUPABASE_CONFIG || {
   if (!document.querySelector('link[data-tss-reports]')) {
     const css = document.createElement('link');
     css.rel = 'stylesheet';
-    css.href = 'reports-activity.css?v=20260831-final-v3';
+    css.href = 'reports-activity.css?v=20260901-screenfix-v1';
     css.dataset.tssReports = '1';
     document.head.appendChild(css);
   }
   if (!document.querySelector('script[data-tss-reports]')) {
     const script = document.createElement('script');
-    script.src = 'reports-activity.js?v=20260831-final-v3';
+    script.src = 'reports-activity.js?v=20260901-screenfix-v1';
     script.async = false;
     script.dataset.tssReports = '1';
     document.head.appendChild(script);
@@ -22,7 +22,7 @@ window.TSS_SUPABASE_CONFIG = window.TSS_SUPABASE_CONFIG || {
 })();
 
 window.addEventListener('load', () => {
-  const BUILD = '20260831-final-v3';
+  const BUILD = '20260901-screenfix-v1';
   const addCss = (href) => {
     const clean = href.split('?')[0];
     if ([...document.querySelectorAll('link[rel="stylesheet"]')].some(x => (x.getAttribute('href')||'').split('?')[0] === clean)) return;
@@ -82,6 +82,7 @@ window.addEventListener('load', () => {
     .then(() => loadScript('role-visibility.js','tssRoleVisibility'))
     .then(() => loadScript('realtime-performance.js','tssRealtimePerformance'))
     .then(() => loadScript('workflow-finalization.js','tssWorkflowFinalization'))
+    .then(() => loadScript('requirement-screening-selection-fix.js','tssRequirementScreeningSelectionFix'))
     .then(() => {
       setTimeout(async () => {
         try {
