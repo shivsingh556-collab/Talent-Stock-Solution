@@ -11,10 +11,9 @@
       const ids=window.db.candidates.map(x=>x.serverId||x.id).filter(Boolean);
       if(!ids.length) return;
       const {data,error}=await c.from('resume_versions')
-        .select('candidate_id,extracted_text,uploaded_at,is_current,is_outdated')
+        .select('candidate_id,extracted_text,uploaded_at,is_current')
         .in('candidate_id',ids)
         .eq('is_current',true)
-        .eq('is_outdated',false)
         .order('uploaded_at',{ascending:false});
       if(error) throw error;
       const latest=new Map();
@@ -44,3 +43,4 @@
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',boot,{once:true}); else boot();
   window.TSSCandidateResumeHydration={hydrateResumeText,lastCount:0};
 })();
+
