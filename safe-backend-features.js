@@ -81,8 +81,9 @@
 
   async function latestResume(c){const id=c.serverId||c.id;if(!C()||!id)return null;const {data,error}=await C().from('resume_versions').select('*').eq('candidate_id',id).order('uploaded_at',{ascending:false}).limit(1).maybeSingle();if(error)throw error;return data}
   async function viewResume(c){try{const r=await latestResume(c);if(!r)return notify('No stored resume found');const {data,error}=await C().storage.from('candidate-resumes').createSignedUrl(r.storage_path,120);if(error)throw error;window.open(data.signedUrl,'_blank','noopener');await logAction('resume_viewed','candidate',c.serverId||c.id,{resume_version:r.id})}catch(e){notify('Unable to open resume: '+e.message)}}
-  async function markOutdated(c){try{const r=await latestResume(c);if(!r)return notify('No stored resume found');const {error}=await C().from('resume_versions').update({is_outdated:true,is_current:false}).eq('id',r.id);if(error)throw error;notify('Resume marked outdated');await logAction('resume_marked_outdated','candidate',c.serverId||c.id,{resume_version:r.id})}catch(e){notify('Could not mark resume outdated: '+e.message)}}
   async function deleteEverywhere(c){
+    const me=await getIdentity();
+    if(me?.role!=='admin')return notify('Only admins can delete candidates');
     if(!confirm(`Delete ${c.name||'this candidate'} everywhere?\n\nThis permanently removes the candidate, CV versions, screenings, matches, notes and interviews. This cannot be undone.`))return;
     try{const id=c.serverId||c.id;if(!C()||!id)return;const {data:versions}=await C().from('resume_versions').select('storage_path').eq('candidate_id',id);const paths=(versions||[]).map(x=>x.storage_path).filter(Boolean);if(paths.length){const {error:se}=await C().storage.from('candidate-resumes').remove(paths);if(se)throw se}const {error}=await C().from('candidates').delete().eq('id',id);if(error)throw error;
       db.candidates=(db.candidates||[]).filter(x=>(x.serverId||x.id)!==id);db.screenings=(db.screenings||[]).filter(x=>x.candidateId!==id);db.interviews=(db.interviews||[]).filter(x=>x.candidateId!==id);localStorage.setItem('tss_talent_buddy_v1',JSON.stringify(db));try{renderAll()}catch{}try{renderOldSite()}catch{}notify('Candidate deleted everywhere');await logAction('candidate_deleted','candidate',id,{})
@@ -90,10 +91,12 @@
   }
 
   function findCandidateFromRow(tr){const text=tr.innerText||'';const email=(text.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i)||[])[0];return (db.candidates||[]).find(c=>email&&c.email?.toLowerCase()===email.toLowerCase())||(db.candidates||[]).find(c=>c.name&&text.includes(c.name))}
-  function enhanceCandidateTable(){
+  async function enhanceCandidateTable(){
     const wrap=$('candidateTableWrap');if(!wrap)return;
+    const me=await getIdentity();
+    const canDelete=me?.role==='admin';
     const head=wrap.querySelector('thead tr');if(head&&!head.querySelector('.safe-actions-head')){const th=document.createElement('th');th.className='safe-actions-head';th.textContent='Actions';head.appendChild(th)}
-    wrap.querySelectorAll('tbody tr').forEach(tr=>{if(tr.querySelector('.safe-candidate-actions'))return;const c=findCandidateFromRow(tr);if(!c)return;const td=document.createElement('td');td.className='safe-candidate-actions';td.innerHTML='<div class="safe-action-row"><button class="btn ghost" data-a="view">View Resume</button><button class="btn ghost" data-a="old">Mark Outdated</button><button class="btn ghost safe-danger" data-a="delete">Delete Everywhere</button></div>';tr.appendChild(td);td.querySelector('[data-a="view"]').onclick=()=>viewResume(c);td.querySelector('[data-a="old"]').onclick=()=>markOutdated(c);td.querySelector('[data-a="delete"]').onclick=()=>deleteEverywhere(c)})
+    wrap.querySelectorAll('tbody tr').forEach(tr=>{if(tr.querySelector('.safe-candidate-actions'))return;const c=findCandidateFromRow(tr);if(!c)return;const td=document.createElement('td');td.className='safe-candidate-actions';td.innerHTML=`<div class="safe-action-row"><button class="btn ghost" data-a="view">View Resume</button>${canDelete?'<button class="btn ghost safe-danger" data-a="delete">Delete Everywhere</button>':''}</div>`;tr.appendChild(td);td.querySelector('[data-a="view"]').onclick=()=>viewResume(c);const del=td.querySelector('[data-a="delete"]');if(del)del.onclick=()=>deleteEverywhere(c)})
   }
 
   function ensureAdminUI(){
@@ -116,5 +119,6 @@
     if(document.querySelector('.nav-item.active')?.dataset.view==='candidates')setTimeout(enhanceCandidateTable,150);
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',wire,{once:true});else wire();
-  window.TSSSafeBackendFeatures={upsertLatestMatch,rematchRequirement,viewResume,markOutdated,deleteEverywhere,renderAdmin,logAction};
+  window.TSSSafeBackendFeatures={upsertLatestMatch,rematchRequirement,viewResume,deleteEverywhere,renderAdmin,logAction};
 })();
+
