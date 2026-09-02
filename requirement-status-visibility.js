@@ -1,8 +1,8 @@
-// Keep TODO AI focused on the Client Data sheet workflow: remaining = WIP + On Hold; Fulfilled is review-only.
+// Remaining requirements include every open status; fulfilled and closed are review-only.
 (function(){
   const $=id=>document.getElementById(id);
   const norm=s=>String(s||'').trim().toLowerCase();
-  const remainingStatus=s=>['work in progress','on hold'].includes(norm(s));
+  const remainingStatus=s=>['active','work in progress','on hold'].includes(norm(s));
 
   function openRequirements(){
     if(typeof db==='undefined' || !Array.isArray(db.requirements)) return [];
@@ -10,7 +10,7 @@
   }
 
   // Legacy renderers use activeReqs() for sidebar, selectors and counts.
-  // In the current Client Data sheet, remaining work is only WIP + On Hold.
+  // Active, WIP and On Hold requirements must remain visible in operational views.
   window.activeReqs=openRequirements;
 
   function ensureStatusOptions(){
@@ -38,10 +38,11 @@
     const current=select.value;
     select.innerHTML=`
       <option value="Remaining">Remaining Requirements</option>
+      <option value="Active">Active</option>
       <option value="Work In Progress">Work In Progress</option>
       <option value="On Hold">On Hold</option>
       <option value="Fulfilled">Fulfilled</option>`;
-    select.value=['Remaining','Work In Progress','On Hold','Fulfilled'].includes(current)?current:'Remaining';
+    select.value=['Remaining','Active','Work In Progress','On Hold','Fulfilled'].includes(current)?current:'Remaining';
     return select;
   }
 
@@ -111,3 +112,4 @@
 
   window.TSSRequirementStatusVisibility={openRequirements,refresh,applyStatusFilter,ensureFilter,updateRemainingCount};
 })();
+
