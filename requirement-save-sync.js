@@ -52,7 +52,7 @@
         positions_count:positions,
         industry:clean($('reqIndustry')?.value)||null,qualification:clean($('reqQualification')?.value)||null,
         responsibilities:clean($('reqResponsibilities')?.value)||null,jd_text:clean($('reqJdText')?.value)||null,
-        status:$('reqStatus')?.value||'Active',mandatory_skills:split($('reqSkills')?.value),preferred_skills:split($('reqPreferred')?.value),
+        status:local?.status||'Active',mandatory_skills:split($('reqSkills')?.value),preferred_skills:split($('reqPreferred')?.value),
         client_owner:clean($('reqClientOwner')?.value)||null,
         requirement_handler:clean($('reqHandler')?.value)||'Shweta Tiwari',assigned_recruiters:assigned,
         updated_by:user.id,updated_at:new Date().toISOString()
@@ -82,3 +82,4 @@
   setTimeout(wire,500);setTimeout(wire,1200);
   window.TSSRequirementSaveSync={wire};
 })();
+
