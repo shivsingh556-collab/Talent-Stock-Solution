@@ -39,5 +39,16 @@ function showResult(s,c,r){screeningEmpty.classList.add('hidden');screeningResul
 function explain(s,c,r){const strengths=[];if(s.metrics.mandatoryPct>=70)strengths.push('strong mandatory skill coverage');if(s.metrics.expPct>=90)strengths.push('experience meets the requirement');if(s.metrics.domainPct>=55)strengths.push('resume context overlaps with the role responsibilities');const concerns=[];if(s.missing.length)concerns.push(`${s.missing.length} mandatory skill(s) are not clearly evidenced`);if(s.metrics.locPct<60)concerns.push('location may need recruiter confirmation');return `The candidate scores ${s.score}/100 based on skills, experience, role relevance, domain context and location. ${strengths.length?'Strengths include '+strengths.join(', ')+'. ':''}${concerns.length?'Key concerns: '+concerns.join('; ')+'. ':''}This result does not reject candidates only on keyword differences; contextual and related terms are considered.`}
 function updateDecision(id,d){const s=db.screenings.find(x=>x.id===id);s.recruiterDecision=d;s.notes=document.getElementById('resultNotes')?.value||s.notes;s.manualOverride=d!=='AI Result Approved';db.activity.push({date:new Date().toISOString(),title:'Recruiter decision',detail:`${d} — screening ${id}`});saveDB();toast(`Decision saved: ${d}`)}
 exportBtn.onclick=()=>{const headers=['Client Name','Job Title','Candidate Name','Email','Phone','Location','Total Experience','Relevant Experience','Current Designation','Match Score','Recommendation','Matching Skills','Missing Skills','Notice Period','Recruiter Decision','Recruiter Notes','Screening Date'];const rows=db.screenings.map(s=>{const c=db.candidates.find(x=>x.id===s.candidateId)||{},r=db.requirements.find(x=>x.id===s.requirementId)||{};return [r.client,r.title,c.name,c.email,c.phone,c.location,c.totalExperience,'',c.designation,s.score,s.recommendation,(s.matched||[]).join('; '),(s.missing||[]).join('; '),c.noticePeriod,s.recruiterDecision,s.notes,new Date(s.date).toLocaleString()]});const csv=[headers,...rows].map(row=>row.map(v=>`"${String(v??'').replace(/"/g,'""')}"`).join(',')).join('\n');const blob=new Blob([csv],{type:'text/csv;charset=utf-8'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`TSS_Screening_Export_${new Date().toISOString().slice(0,10)}.csv`;a.click();URL.revokeObjectURL(a.href);toast('Excel-compatible export downloaded')};
+const openRequirementBase=openRequirement;
+openRequirement=function(id){
+  openRequirementBase(id);
+  const r=id?db.requirements.find(x=>x.id===id):null;
+  reqStatus.value=['Work In Progress','On Hold','Closed','Fulfilled'].includes(r?.status)?r.status:'Work In Progress';
+};
+saveRequirementBtn.addEventListener('click',()=>{
+  if(window.TSSBackend?.enabled)return;
+  const r=reqId.value?db.requirements.find(x=>x.id===reqId.value):db.requirements.at(-1);
+  if(r){r.status=reqStatus.value||'Work In Progress';saveDB();renderAll();}
+});
 renderAll();
 
