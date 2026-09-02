@@ -16,11 +16,13 @@
   function ensureStatusOptions(){
     const reqStatus=$('reqStatus');
     if(reqStatus){
-      ['Active','Work In Progress','On Hold','Fulfilled','Closed'].forEach(v=>{
-        if(![...reqStatus.options].some(o=>o.value===v || o.textContent===v)){
-          const o=document.createElement('option');o.value=v;o.textContent=v;reqStatus.appendChild(o);
-        }
-      });
+      const current=reqStatus.value;
+      reqStatus.innerHTML=`
+        <option value="Work In Progress">Work In Progress</option>
+        <option value="On Hold">On Hold</option>
+        <option value="Closed">Closed</option>
+        <option value="Fulfilled">Joined TSS</option>`;
+      reqStatus.value=['Work In Progress','On Hold','Closed','Fulfilled'].includes(current)?current:'Work In Progress';
     }
   }
 
@@ -38,11 +40,11 @@
     const current=select.value;
     select.innerHTML=`
       <option value="Remaining">Remaining Requirements</option>
-      <option value="Active">Active</option>
       <option value="Work In Progress">Work In Progress</option>
       <option value="On Hold">On Hold</option>
-      <option value="Fulfilled">Fulfilled</option>`;
-    select.value=['Remaining','Active','Work In Progress','On Hold','Fulfilled'].includes(current)?current:'Remaining';
+      <option value="Closed">Closed</option>
+      <option value="Fulfilled">Joined TSS</option>`;
+    select.value=['Remaining','Work In Progress','On Hold','Closed','Fulfilled'].includes(current)?current:'Remaining';
     return select;
   }
 
