@@ -8,21 +8,30 @@ window.TSS_SUPABASE_CONFIG = window.TSS_SUPABASE_CONFIG || {
   if (!document.querySelector('link[data-tss-reports]')) {
     const css = document.createElement('link');
     css.rel = 'stylesheet';
-    css.href = 'reports-activity.css?v=20260901-admin-clean-v1';
+    css.href = 'reports-activity.css?v=20260903-daily-activity-v1';
     css.dataset.tssReports = '1';
     document.head.appendChild(css);
   }
   if (!document.querySelector('script[data-tss-reports]')) {
     const script = document.createElement('script');
-    script.src = 'reports-activity.js?v=20260901-admin-clean-v1';
+    script.src = 'reports-activity.js?v=20260903-daily-activity-v1';
     script.async = false;
     script.dataset.tssReports = '1';
+    script.onload = () => {
+      if (!document.querySelector('script[data-tss-daily-activity]')) {
+        const daily = document.createElement('script');
+        daily.src = 'reports-daily-activity.js?v=20260903-daily-activity-v1';
+        daily.async = false;
+        daily.dataset.tssDailyActivity = '1';
+        document.head.appendChild(daily);
+      }
+    };
     document.head.appendChild(script);
   }
 })();
 
 window.addEventListener('load', () => {
-  const BUILD = '20260901-admin-clean-v1';
+  const BUILD = '20260903-daily-activity-v1';
   const addCss = (href) => {
     const clean = href.split('?')[0];
     if ([...document.querySelectorAll('link[rel="stylesheet"]')].some(x => (x.getAttribute('href')||'').split('?')[0] === clean)) return;
