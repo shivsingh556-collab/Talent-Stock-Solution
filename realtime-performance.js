@@ -166,11 +166,13 @@
     });
   }
 
-  async function boot(){
+   async function boot(){
     installOptimizedSave();
     lifecycle();
+    watchAuth();
     await subscribe();
     lastServerRefresh=Date.now();
+  }
   }
 
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',()=>setTimeout(boot,50),{once:true});
