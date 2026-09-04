@@ -8,19 +8,19 @@ window.TSS_SUPABASE_CONFIG = window.TSS_SUPABASE_CONFIG || {
   if (!document.querySelector('link[data-tss-reports]')) {
     const css = document.createElement('link');
     css.rel = 'stylesheet';
-    css.href = 'reports-activity.css?v=20260903-daily-activity-v1';
+    css.href = 'reports-activity.css?v=20260905-live-ui-v2';
     css.dataset.tssReports = '1';
     document.head.appendChild(css);
   }
   if (!document.querySelector('script[data-tss-reports]')) {
     const script = document.createElement('script');
-    script.src = 'reports-activity.js?v=20260903-daily-activity-v1';
+    script.src = 'reports-activity.js?v=20260905-live-ui-v2';
     script.async = false;
     script.dataset.tssReports = '1';
     script.onload = () => {
       if (!document.querySelector('script[data-tss-daily-activity]')) {
         const daily = document.createElement('script');
-        daily.src = 'reports-daily-activity.js?v=20260903-daily-activity-v1';
+        daily.src = 'reports-daily-activity.js?v=20260905-live-ui-v2';
         daily.async = false;
         daily.dataset.tssDailyActivity = '1';
         document.head.appendChild(daily);
@@ -31,7 +31,7 @@ window.TSS_SUPABASE_CONFIG = window.TSS_SUPABASE_CONFIG || {
 })();
 
 window.addEventListener('load', () => {
-  const BUILD = '20260903-daily-activity-v1';
+  const BUILD = '20260905-live-ui-v2';
   const addCss = (href) => {
     const clean = href.split('?')[0];
     if ([...document.querySelectorAll('link[rel="stylesheet"]')].some(x => (x.getAttribute('href')||'').split('?')[0] === clean)) return;
@@ -91,6 +91,7 @@ window.addEventListener('load', () => {
     .then(() => loadScript('role-visibility.js','tssRoleVisibility'))
     .then(() => loadScript('realtime-performance.js','tssRealtimePerformance'))
     .then(() => loadScript('workflow-finalization.js','tssWorkflowFinalization'))
+    .then(() => loadScript('interview-lifecycle-ui.js','tssInterviewLifecycleUi'))
     .then(() => loadScript('requirement-screening-selection-fix.js','tssRequirementScreeningSelectionFix'))
     .then(() => {
       setTimeout(async () => {
@@ -117,9 +118,10 @@ window.addEventListener('load', () => {
             setTimeout(() => window.TSSAdminRoleUI?.boot?.(), 940);
             setTimeout(() => window.TSSScreeningCleanup?.apply?.(), 980);
             setTimeout(() => window.TSSRoleVisibility?.apply?.(), 1020);
-            setTimeout(() => window.TSSRealtimePerformance?.subscribe?.(), 1100);
+            setTimeout(() => window.TSSRealtimePerformance?.boot?.(), 1080);
             setTimeout(() => window.TSSWorkflowFinalization?.cleanDuplicateAdmin?.(), 1160);
             setTimeout(() => window.TSSWorkflowFinalization?.decorateInterviewOutcomes?.(), 1200);
+            setTimeout(() => window.TSSInterviewLifecycleUI?.refresh?.(), 1260);
           }
         } catch (err) {
           console.warn('TODO AI session restore check', err?.message || err);
