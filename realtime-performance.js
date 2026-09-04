@@ -136,7 +136,17 @@
         }
       });
   }
-
+  function watchAuth(){
+    const b=backend(); if(!b?.enabled||!b.client) return;
+    b.client.auth.onAuthStateChange((event,session)=>{
+      if(session?.user && (event==='SIGNED_IN'||event==='TOKEN_REFRESHED'||event==='INITIAL_SESSION')){
+        subscribe();
+      }
+      if(event==='SIGNED_OUT'){
+        if(channel){ b.client.removeChannel(channel); channel=null; }
+      }
+    });
+  }
   async function backgroundRefresh(force=false){
     if(reconnecting) return;
     const now=Date.now();
