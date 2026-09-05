@@ -21,3 +21,11 @@ For multi-user production use, migrate the same entities to Supabase (Postgres +
 
 ## Deploy on Vercel
 Import this GitHub repository in Vercel and deploy with default settings. No build command is required.
+
+## Security
+
+See [SECURITY.md](SECURITY.md).
+
+- Do not commit Supabase **service_role** keys or unrestricted Google API keys.
+- GitHub secret scanning alert #1 (Google API key in git history) must be **rotated in Google Cloud**, then marked Revoked.
+- After pulling this branch, run `supabase/2026-09-06-security-hardening.sql` in the Supabase SQL editor.

@@ -37,3 +37,8 @@ Only switch the frontend fully to Supabase after record counts and sample record
 
 ## Security
 Never expose the service-role key in frontend code, GitHub or Vercel public environment variables. The browser should use only the anon/publishable key with Row Level Security enabled.
+
+## Latest hardening migration
+Run `supabase/2026-09-06-security-hardening.sql` after the earlier 2026-08-* files.
+It tightens match-row visibility, profile WITH CHECK, and anon table grants.
+Full policy: [SECURITY.md](SECURITY.md).
