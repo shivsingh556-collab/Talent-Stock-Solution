@@ -3,11 +3,12 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>TSS Resume Intelligence</title>
+  <title>Todo AI | Talent Stock Recruitment Workspace</title>
   <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="professional-ui.css" />
 </head>
 <body>
-  <div id="toast" class="toast"></div>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
   <section id="loginGate" class="login-gate">
     <div class="login-shell">
@@ -18,9 +19,9 @@
         <p>Sign in to access your job profiles, candidate records, screening results and reports.</p>
         <button id="showLoginForm" class="login-primary">Sign in to your workspace <span>→</span></button>
         <form id="loginForm" class="login-form hidden">
-          <label>Company email</label>
+          <label for="loginEmail">Company email</label>
           <input id="loginEmail" type="email" autocomplete="email" placeholder="name@talent-stock.com" required />
-          <label>Password</label>
+          <label for="loginPassword">Password</label>
           <input id="loginPassword" type="password" autocomplete="current-password" placeholder="••••••••" required />
           <button class="login-primary" type="submit">Continue securely <span>→</span></button>
           <div id="loginError" class="login-error"></div>
@@ -62,7 +63,7 @@
         <button id="askTodoBtn" class="toolbar-btn">▣ <b>Ask<br>Todo</b></button>
         <select id="topRequirementSelect" class="requirement-switcher"></select>
         <button id="exportBtn" class="toolbar-btn muted">▤ <b>Master<br>Excel</b></button>
-        <div class="profile-box"><div class="profile-avatar">TS</div><div><strong id="profileName">Recruiter</strong><small>Recruiter workspace</small></div><button id="signOutBtn">↪</button></div>
+        <div class="profile-box"><div class="profile-avatar">TS</div><div><strong id="profileName">Recruiter</strong><small>Recruiter workspace</small></div><button id="signOutBtn" aria-label="Sign out">↪</button></div>
       </header>
 
       <section id="dashboard" class="view active dashboard-view">
