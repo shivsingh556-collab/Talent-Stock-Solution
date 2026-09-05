@@ -8,19 +8,19 @@ window.TSS_SUPABASE_CONFIG = window.TSS_SUPABASE_CONFIG || {
   if (!document.querySelector('link[data-tss-reports]')) {
     const css = document.createElement('link');
     css.rel = 'stylesheet';
-    css.href = 'reports-activity.css?v=20260905-interview-history-v3';
+    css.href = 'reports-activity.css?v=20260905-interview-guard-v4';
     css.dataset.tssReports = '1';
     document.head.appendChild(css);
   }
   if (!document.querySelector('script[data-tss-reports]')) {
     const script = document.createElement('script');
-    script.src = 'reports-activity.js?v=20260905-interview-history-v3';
+    script.src = 'reports-activity.js?v=20260905-interview-guard-v4';
     script.async = false;
     script.dataset.tssReports = '1';
     script.onload = () => {
       if (!document.querySelector('script[data-tss-daily-activity]')) {
         const daily = document.createElement('script');
-        daily.src = 'reports-daily-activity.js?v=20260905-interview-history-v3';
+        daily.src = 'reports-daily-activity.js?v=20260905-interview-guard-v4';
         daily.async = false;
         daily.dataset.tssDailyActivity = '1';
         document.head.appendChild(daily);
@@ -31,7 +31,7 @@ window.TSS_SUPABASE_CONFIG = window.TSS_SUPABASE_CONFIG || {
 })();
 
 window.addEventListener('load', () => {
-  const BUILD = '20260905-interview-history-v3';
+  const BUILD = '20260905-interview-guard-v4';
   const addCss = (href) => {
     const clean = href.split('?')[0];
     if ([...document.querySelectorAll('link[rel="stylesheet"]')].some(x => (x.getAttribute('href')||'').split('?')[0] === clean)) return;
@@ -93,6 +93,7 @@ window.addEventListener('load', () => {
     .then(() => loadScript('realtime-performance.js','tssRealtimePerformance'))
     .then(() => loadScript('workflow-finalization.js','tssWorkflowFinalization'))
     .then(() => loadScript('interview-lifecycle-ui.js','tssInterviewLifecycleUi'))
+    .then(() => loadScript('interview-active-render-guard.js','tssInterviewActiveRenderGuard'))
     .then(() => loadScript('requirement-screening-selection-fix.js','tssRequirementScreeningSelectionFix'))
     .then(() => {
       setTimeout(async () => {
@@ -124,6 +125,7 @@ window.addEventListener('load', () => {
             setTimeout(() => window.TSSWorkflowFinalization?.cleanDuplicateAdmin?.(), 1160);
             setTimeout(() => window.TSSWorkflowFinalization?.decorateInterviewOutcomes?.(), 1200);
             setTimeout(() => window.TSSInterviewLifecycleUI?.refresh?.(), 1260);
+            setTimeout(() => window.TSSInterviewActiveRenderGuard?.reconcile?.(), 1300);
           }
         } catch (err) {
           console.warn('TODO AI session restore check', err?.message || err);
