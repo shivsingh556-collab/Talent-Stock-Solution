@@ -1,3 +1,6 @@
+const assert=require('node:assert/strict');
+const {chromium}=require('playwright');
+
 (async()=>{
   const executablePath=process.env.TSS_BROWSER_PATH||undefined;
   const browser=await chromium.launch({headless:true,...(executablePath?{executablePath}:{})});
@@ -18,4 +21,3 @@
   await browser.close();
   console.log('browser smoke test passed');
 })().catch(error=>{console.error(error);process.exitCode=1});
-
