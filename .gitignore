@@ -1,0 +1,21 @@
+# Secrets and local config
+.env
+.env.*
+!.env.example
+*.pem
+*.p12
+*.key
+id_rsa
+id_rsa.pub
+google-services.json
+GoogleService-Info.plist
+firebase-applet-config.json
+backend/config.local.js
+
+# Dependencies / tooling
+node_modules/
+.DS_Store
+.vercel
+.idea/
+.vscode/
+*.log

@@ -43,7 +43,7 @@
         <button class="nav-item active" data-view="dashboard"><span>▦</span>Dashboard</button>
         <button class="nav-item" data-view="requirements"><span>▣</span>Job Profiles <b id="navReqCount">0</b></button>
         <button class="nav-item" data-view="screening"><span>▧</span>Screening</button>
-        <button class="nav-item" data-view="candidates"><span>♧</span>Candidates <b id="navCandidateCount">0</b></button>
+        <button class="nav-item" data-view="candidates"><span>♤</span>Candidates <b id="navCandidateCount">0</b></button>
         <button class="nav-item" data-view="interviews"><span>▦</span>Interviews <b id="navInterviewCount">0</b></button>
         <button class="nav-item" data-view="automation"><span>◎</span>Automation</button>
       </nav>
@@ -109,7 +109,7 @@
 
   <div id="todoModal" class="todo-modal hidden"><div class="todo-modal-card"><button id="closeTodo" class="todo-close">×</button><div class="todo-modal-head"><div class="todo-large">◉</div><div><span>TODO · RECRUITER ASSISTANT</span><h2 id="todoModalGreeting">Good evening, Recruiter.</h2><p>Interactive user manual for every recruiter workflow.</p></div></div><div class="todo-metrics"><div><b id="todoReviewCount">0</b><span>candidates need review</span></div><div><b id="todoInterviewCount">0</b><span>interviews today</span></div><div><b>0</b><span>feedback items pending</span></div><div><b id="todoStrongCount">0</b><span>strong matches awaiting action</span></div></div><div class="todo-help"><div class="todo-tabs"><button class="active">Help Manual</button><button>Command Assistant</button></div><p>Ask me to find candidates, open a requirement, or move a candidate to the next stage.</p><div class="todo-command"><input placeholder="Ask: How do I start candidate screening?" /><button>Go</button></div><div class="chips"><button>How do I screen a CV?</button><button>What is a duplicate alert?</button><button>How do I submit a candidate to a client?</button><button>How do I schedule an interview?</button></div><small>Help Mode only explains and guides—it cannot change candidate data.</small></div></div></div>
 
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.47.10/dist/umd/supabase.js" integrity="sha384-8ljL080xacUYrqBXUJRcP68fd1dVCh9qK/xi9QMzxUgOVNycXp0s6mBZAjBMp9W0" crossorigin="anonymous"></script>
   <script src="backend/config.js"></script>
   <script src="backend/supabase-client.js"></script>
   <script src="app.js"></script>
@@ -119,4 +119,3 @@
   <script src="old-site.js"></script>
 </body>
 </html>
-
