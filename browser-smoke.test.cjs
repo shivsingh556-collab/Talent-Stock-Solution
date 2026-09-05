@@ -1,6 +1,3 @@
-const assert=require('node:assert/strict');
-const {chromium}=require('playwright');
-
 (async()=>{
   const executablePath=process.env.TSS_BROWSER_PATH||undefined;
   const browser=await chromium.launch({headless:true,...(executablePath?{executablePath}:{})});
@@ -9,7 +6,8 @@ const {chromium}=require('playwright');
   page.on('pageerror',error=>errors.push(String(error)));
   page.on('console',message=>{if(message.type()==='error'&&!message.text().startsWith('Failed to load resource:'))errors.push(message.text())});
   page.on('response',response=>{if(response.status()>=400)failedResponses.push(`${response.status()} ${response.url()}`)});
-  const response=await page.goto('http://127.0.0.1:4173/',{waitUntil:'networkidle',timeout:30000});
+  const baseUrl=process.env.TSS_BASE_URL||'http://127.0.0.1:4173/';
+  const response=await page.goto(baseUrl,{waitUntil:'networkidle',timeout:30000});
   assert.equal(response.status(),200);
   assert.ok((await page.locator('body').innerText()).trim().length>100,'page has visible content');
   assert.ok(await page.locator('#loginGate').count(),'login shell renders');
@@ -20,3 +18,4 @@ const {chromium}=require('playwright');
   await browser.close();
   console.log('browser smoke test passed');
 })().catch(error=>{console.error(error);process.exitCode=1});
+
