@@ -25,15 +25,12 @@
       try{if(typeof renderOldSite==='function')renderOldSite()}catch(e){console.warn('TSS live renderOldSite',e)}
       try{window.TSSDashboardCleanup?.apply?.()}catch{}
       try{window.TSSWorkflowFinalization?.decorateInterviewOutcomes?.()}catch{}
-      try{window.TSSInterviewLifecycleUI?.refresh?.()}catch{}
     };
     if(window.requestAnimationFrame)requestAnimationFrame(run);else setTimeout(run,16);
   }
 
   function installOptimizedSave(){
-    try{
-      window.saveDB=function(){persistLocal();queueRender()};
-    }catch{}
+    try{window.saveDB=function(){persistLocal();queueRender()};}catch{}
   }
 
   function mapCandidate(c){
@@ -52,7 +49,7 @@
 
   function mapInterview(i){
     const d=i.scheduled_at?new Date(i.scheduled_at):null;
-    return {id:i.id,serverId:i.id,date:d&&!isNaN(d)?new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Kolkata',year:'numeric',month:'2-digit',day:'2-digit'}).format(d):'',time:d&&!isNaN(d)?new Intl.DateTimeFormat('en-IN',{timeZone:'Asia/Kolkata',hour:'2-digit',minute:'2-digit',hour12:true}).format(d):'',candidate:i.candidate_name_snapshot||'Candidate',email:i.candidate_email_snapshot||'',position:i.job_title_snapshot||'',client:i.client_name_snapshot||'',mode:i.interview_type||'Client Interview',status:i.status||'Scheduled',interviewStage:i.interview_stage||'Scheduled',outcome:i.outcome||'Pending',outcomeNotes:i.outcome_notes||'',outcomeUpdatedAt:i.outcome_updated_at||null,candidateResponse:i.candidate_response||'Pending',notes:i.notes||'',requirementServerId:i.requirement_id,candidateId:i.candidate_id,scheduledAt:i.scheduled_at||null};
+    return {id:i.id,serverId:i.id,date:d&&!isNaN(d)?new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Kolkata',year:'numeric',month:'2-digit',day:'2-digit'}).format(d):'',time:d&&!isNaN(d)?new Intl.DateTimeFormat('en-IN',{timeZone:'Asia/Kolkata',hour:'2-digit',minute:'2-digit',hour12:true}).format(d):'',candidate:i.candidate_name_snapshot||'Candidate',email:i.candidate_email_snapshot||'',position:i.job_title_snapshot||'',client:i.client_name_snapshot||'',mode:i.interview_type||'Client Interview',status:i.status||'Scheduled',interviewStage:i.interview_stage||'Scheduled',outcome:i.outcome||'Pending',outcomeNotes:i.outcome_notes||'',outcomeUpdatedAt:i.outcome_updated_at||null,candidateResponse:i.candidate_response||'Pending',notes:i.notes||'',requirementServerId:i.requirement_id,candidateId:i.candidate_id,scheduledAt:i.scheduled_at||null,archivedAt:i.archived_at||null};
   }
 
   function upsert(list,row,key='id'){
@@ -93,7 +90,6 @@
       await window.TSSProduction?.hydrate?.();
       lastServerRefresh=Date.now();
       queueRender();
-      setTimeout(()=>window.TSSInterviewLifecycleUI?.refresh?.(),80);
     }catch(e){console.warn('TSS background refresh',e?.message||e)}finally{refreshing=false}
   }
 
