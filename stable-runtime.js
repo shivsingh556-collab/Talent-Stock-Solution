@@ -114,7 +114,7 @@
     `;document.head.appendChild(s);
   }
 
-  async function boot(){if(booted)return;booted=true;css();renameUI();makeSidebarUsable();ensureLogout();ensureOwnerField();ensureDetailsDialog();wireRequirementClicks();wireOwnerSave();try{await refreshFromSupabase()}catch(e){console.error('Stable refresh failed',e)}renameUI();makeSidebarUsable();}
+  async function boot(){if(booted)return;booted=true;css();renameUI();makeSidebarUsable();ensureLogout();ensureOwnerField();ensureDetailsDialog();wireRequirementClicks();wireOwnerSave();renameUI();makeSidebarUsable();}
 
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(boot,300));else setTimeout(boot,300);
   window.TSSStableRuntime={boot,refreshFromSupabase,openDetails,logout};

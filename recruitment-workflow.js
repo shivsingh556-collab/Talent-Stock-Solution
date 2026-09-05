@@ -5,14 +5,8 @@
   const store=()=>typeof db!=='undefined'?db:null;
   const esc=v=>String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
   const norm=s=>String(s||'').trim();
-  const OWNERS=['Akash Mistry','Shraddha Sharma','Pooja Wara'];
-  const HANDLER='Shweta Tiwari';
-  const FRIENDLY={
-    'pooja.w@talent-stock.com':'Pooja Wara',
-    'shraddha.s@talent-stock.com':'Shraddha Sharma',
-    'shweta.t@talent-stock.com':'Shweta Tiwari'
-  };
   let recruiters=[];
+  const ownerNames=current=>[...new Set([current,...recruiters.map(r=>r.name)].filter(Boolean))];
 
   function toastSafe(m){try{toast(m)}catch{console.log(m)}}
   function reqByKey(key){return (store()?.requirements||[]).find(r=>r.id===key||r.requirementId===key||r.profileKey===key||r.serverId===key)||null}
@@ -26,15 +20,11 @@
   async function loadRecruiters(){
     try{
       const c=backend()?.client;if(!c)return;
+      const {data:{session}}=await c.auth.getSession();if(!session?.user)return;
       const {data,error}=await c.from('profiles').select('full_name,email,role,is_active').eq('is_active',true).eq('role','recruiter').order('email');
       if(error)throw error;
-      recruiters=(data||[]).map(x=>({email:x.email,name:FRIENDLY[String(x.email||'').toLowerCase()]||x.full_name||x.email}));
+      recruiters=(data||[]).map(x=>({email:x.email,name:x.full_name||x.email}));
     }catch(e){console.warn('Recruiter list',e?.message||e);}
-    if(!recruiters.length)recruiters=[
-      {name:'Shraddha Sharma',email:'shraddha.s@talent-stock.com'},
-      {name:'Pooja Wara',email:'pooja.w@talent-stock.com'},
-      {name:'Shweta Tiwari',email:'shweta.t@talent-stock.com'}
-    ];
     refreshRecruiterOptions();
   }
 
@@ -44,8 +34,8 @@
     const wrap=document.createElement('div');
     wrap.className='workflow-assignment-grid';
     wrap.innerHTML=`
-      <div><label>Client Owner</label><select id="reqClientOwner" required>${OWNERS.map(x=>`<option value="${esc(x)}">${esc(x)}</option>`).join('')}</select></div>
-      <div><label>Requirement Handler</label><input id="reqHandler" value="${HANDLER}" readonly /></div>
+      <div><label>Client Owner</label><select id="reqClientOwner" required><option value="">Select owner</option>${ownerNames().map(x=>`<option value="${esc(x)}">${esc(x)}</option>`).join('')}</select></div>
+      <div><label>Requirement Handler</label><input id="reqHandler" value="" readonly /></div>
       <div class="workflow-recruiter-field"><label>Assigned Recruiter(s)</label><select id="reqRecruiters" multiple size="3"></select><small>Ctrl/Cmd click to assign more than one recruiter.</small></div>`;
     jd.before(wrap);
 
@@ -71,8 +61,8 @@
   function populateRequirementWorkflow(){
     const id=$('reqId')?.value;const r=reqByKey(id);
     const owner=$('reqClientOwner'),handler=$('reqHandler'),assigned=$('reqRecruiters');
-    if(owner)owner.value=r?.clientOwner&&OWNERS.includes(r.clientOwner)?r.clientOwner:OWNERS[0];
-    if(handler)handler.value=r?.requirementHandler||HANDLER;
+    if(owner){const value=r?.clientOwner||'';if(value&&![...owner.options].some(x=>x.value===value))owner.add(new Option(value,value));owner.value=value}
+    if(handler)handler.value=r?.requirementHandler||'';
     if(assigned){
       const vals=Array.isArray(r?.assignedRecruiters)?r.assignedRecruiters:[];
       [...assigned.options].forEach(o=>o.selected=vals.includes(o.value));
@@ -99,8 +89,8 @@
       if(!key)return;const r=reqByKey(key);if(!r)return;
       if(!card.querySelector('.workflow-strip')){
         const strip=document.createElement('div');strip.className='workflow-strip';
-        const assigned=(r.assignedRecruiters||[]).map(x=>FRIENDLY[String(x).toLowerCase()]||x).join(', ')||'Unassigned';
-        strip.innerHTML=`<span class="workflow-chip">Owner: ${esc(r.clientOwner||'—')}</span><span class="workflow-chip">Handler: ${esc(r.requirementHandler||HANDLER)}</span><span class="workflow-chip">Recruiter: ${esc(assigned)}</span>`;
+        const assigned=(r.assignedRecruiters||[]).map(x=>recruiters.find(p=>p.email===x)?.name||x).join(', ')||'Unassigned';
+        strip.innerHTML=`<span class="workflow-chip">Owner: ${esc(r.clientOwner||'—')}</span><span class="workflow-chip">Handler: ${esc(r.requirementHandler||'—')}</span><span class="workflow-chip">Recruiter: ${esc(assigned)}</span>`;
         const actions=card.querySelector('.card-actions');(actions||card).before?.(strip) || card.appendChild(strip);
       }
       const actions=card.querySelector('.card-actions');
