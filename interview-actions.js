@@ -1,32 +1,120 @@
 (function(){
-  const DB=()=>typeof db!=='undefined'?db:null;
+  'use strict';
+  if(window.__TSS_INTERVIEW_ACTIONS_STABLE__)return;
+  window.__TSS_INTERVIEW_ACTIONS_STABLE__=true;
+
+  const DB=()=>{try{return typeof db!=='undefined'?db:null}catch{return null}};
   const backend=()=>window.TSSBackend;
   const board=()=>document.getElementById('interviewBoard');
   const statusMap=new Map();
-  let decorating=false,profileMap=new Map(),profilesLoadedAt=0;
+  let lastSignature='';
+  let rendererWrapped=false;
+
+  const esc=v=>String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
   function toastSafe(msg){try{toast(msg)}catch{console.log(msg)}}
-  function esc(v=''){return String(v).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
   function visibleItems(){return (DB()?.interviews||[]).filter(i=>!i.archivedAt)}
-  function localItem(id){return (DB()?.interviews||[]).find(i=>String(i.serverId||i.id)===String(id));}
+  function localItem(id){return (DB()?.interviews||[]).find(i=>String(i.serverId||i.id)===String(id))}
   function saveLocal(){try{localStorage.setItem('tss_talent_buddy_v1',JSON.stringify(DB()))}catch{}}
-  function toIso(date,time){const m=String(time||'11:00 AM').trim().match(/^(\d{1,2}):(\d{2})\s*(AM|PM)?$/i);if(!date||!m)return null;let h=Number(m[1]),mm=Number(m[2]);const ap=(m[3]||'').toUpperCase();if(ap==='PM'&&h<12)h+=12;if(ap==='AM'&&h===12)h=0;const iso=new Date(`${date}T${String(h).padStart(2,'0')}:${String(mm).padStart(2,'0')}:00+05:30`);return isNaN(iso)?null:iso.toISOString();}
-  function fmtTime(iso){return new Date(iso).toLocaleTimeString('en-IN',{timeZone:'Asia/Kolkata',hour:'2-digit',minute:'2-digit'}).toLowerCase();}
-  function statusBadge(status){const s=status||'Scheduled';const cls=s==='Cancelled'?'ia-cancelled':s==='Confirmed'?'ia-confirmed':s==='Reschedule Requested'?'ia-reschedule':s==='Completed'?'ia-confirmed':'ia-scheduled';return `<span class="ia-status ${cls}">${esc(s)}</span>`;}
-  function responseBadge(server,item){const r=server.candidate_response||item?.candidateResponse||'Pending';if(r==='Confirmed')return '<span class="ia-response ia-available">✓ Candidate available</span>';if(r==='Reschedule Requested'){let slot='';if(server.reschedule_preferred_date){slot=`<small>Preferred: ${esc(server.reschedule_preferred_date)}${server.reschedule_preferred_time?' · '+esc(String(server.reschedule_preferred_time).slice(0,5)):''}</small>`}return `<span class="ia-response ia-requested">↻ Reschedule requested</span>${slot}`;}return '<span class="ia-response ia-pending">Awaiting response</span>';}
-  async function loadProfiles(){if(Date.now()-profilesLoadedAt<300000&&profileMap.size)return;const {data,error}=await backend().client.from('profiles').select('id,full_name,email');if(error)throw error;profileMap=new Map((data||[]).map(p=>[String(p.id),p]));profilesLoadedAt=Date.now()}
-  function scheduledByFor(row){const p=profileMap.get(String(row.created_by||''));return p?.full_name||p?.email?.split('@')?.[0]||'—'}
-  async function syncStatuses(){if(!backend()?.enabled)return;try{await loadProfiles();const {data,error}=await backend().client.from('interviews').select('id,status,candidate_response,cancelled_at,reschedule_preferred_date,reschedule_preferred_time,confirmed_at,reschedule_requested_at,archived_at,created_by');if(error)throw error;(data||[]).forEach(x=>statusMap.set(String(x.id),{...x,scheduled_by:scheduledByFor(x)}));decorate(true)}catch(e){console.warn('Interview action status sync',e?.message||e)}}
-  function removeWrongScheduledBy(table){const head=table.querySelector('thead tr');if(!head)return;const heads=[...head.children];const idx=heads.findIndex(th=>(th.textContent||'').trim()==='Scheduled By'&&!th.dataset.iaScheduledByHead);if(idx<0)return;heads[idx].remove();table.querySelectorAll('tbody tr').forEach(tr=>{const cell=tr.children[idx];if(cell)cell.remove()})}
-  function decorate(force=false){if(decorating)return;const b=board(),store=DB();if(!b||!store)return;const table=b.querySelector('table');if(!table)return;decorating=true;try{
-      removeWrongScheduledBy(table);
-      const head=table.querySelector('thead tr');if(head&&!head.querySelector('[data-ia-status-head]')){const thR=document.createElement('th');thR.dataset.iaResponseHead='1';thR.textContent='Candidate Response';head.appendChild(thR);const thBy=document.createElement('th');thBy.dataset.iaScheduledByHead='1';thBy.textContent='Scheduled By';head.appendChild(thBy);const th1=document.createElement('th');th1.dataset.iaStatusHead='1';th1.textContent='Status';head.appendChild(th1);const th2=document.createElement('th');th2.dataset.iaActionsHead='1';th2.textContent='Actions';head.appendChild(th2)}
-      const items=visibleItems();
-      [...table.querySelectorAll('tbody tr')].forEach((tr,idx)=>{if(force)tr.querySelectorAll('[data-ia-response],[data-ia-scheduled-by],[data-ia-status],[data-ia-actions]').forEach(x=>x.remove());if(tr.querySelector('[data-ia-actions]'))return;const item=items[idx];if(!item)return;const id=String(item.serverId||item.id||'');if(!id)return;const server=statusMap.get(id)||{};const st=server.status||item.status||item.localStatus||'Scheduled';const tdR=document.createElement('td');tdR.dataset.iaResponse='1';tdR.className='ia-response-cell';tdR.innerHTML=responseBadge(server,item);tr.appendChild(tdR);const tdBy=document.createElement('td');tdBy.dataset.iaScheduledBy='1';tdBy.textContent=server.scheduled_by||'—';tr.appendChild(tdBy);const tdStatus=document.createElement('td');tdStatus.dataset.iaStatus='1';tdStatus.innerHTML=statusBadge(st);tr.appendChild(tdStatus);const td=document.createElement('td');td.dataset.iaActions='1';td.className='ia-actions';td.innerHTML=`<button type="button" class="ia-btn ia-edit" data-ia-edit="${esc(id)}">Edit / Reschedule</button><button type="button" class="ia-btn ia-cancel" data-ia-cancel="${esc(id)}" ${st==='Cancelled'?'disabled':''}>Cancel</button><button type="button" class="ia-btn ia-delete" data-ia-delete="${esc(id)}">Remove</button>`;tr.appendChild(td)})
-    }finally{decorating=false}}
-  async function reschedule(id){const item=localItem(id);if(!item)return toastSafe('Interview record not found');const date=prompt('New interview date (YYYY-MM-DD)',item.date||new Date().toISOString().slice(0,10));if(!date)return;const time=prompt('New interview time',item.time||'11:00 AM');if(!time)return;const scheduled=toIso(date,time);if(!scheduled)return toastSafe('Invalid date or time');if(!confirm(`Reschedule ${item.candidate||'this candidate'} to ${date} at ${time}?\n\nA fresh confirmation email and new reminders will be created.`))return;try{if(backend()?.enabled){const patch={scheduled_at:scheduled,status:'Scheduled',cancelled_at:null,candidate_response:'Pending',confirmed_at:null,reschedule_requested_at:null,reschedule_preferred_date:null,reschedule_preferred_time:null,confirmation_sent_at:null,reminder_10am_sent_at:null,reminder_1h_sent_at:null,reminder_30m_sent_at:null,reminder_5m_sent_at:null,reminder_status:'Pending',archived_at:null};const {error}=await backend().client.from('interviews').update(patch).eq('id',id);if(error)throw error}item.date=date;item.time=fmtTime(scheduled);item.localStatus='Scheduled';item.status='Scheduled';item.candidateResponse='Pending';item.archivedAt=null;saveLocal();statusMap.set(String(id),{...(statusMap.get(String(id))||{}),id,status:'Scheduled',candidate_response:'Pending',cancelled_at:null,archived_at:null});toastSafe('Interview rescheduled · new confirmation and reminders queued');if(window.TSSProduction?.hydrate)await window.TSSProduction.hydrate();else if(window.renderOldSite)window.renderOldSite();setTimeout(syncStatuses,180)}catch(e){console.error(e);toastSafe('Could not reschedule: '+(e.message||e))}}
-  async function cancelInterview(id){const item=localItem(id);if(!item)return toastSafe('Interview record not found');if(!confirm(`Cancel interview for ${item.candidate||'this candidate'}?\n\nFuture reminder emails will be stopped. The record will remain saved.`))return;try{const now=new Date().toISOString();if(backend()?.enabled){const {error}=await backend().client.from('interviews').update({status:'Cancelled',cancelled_at:now,reminder_status:'Cancelled'}).eq('id',id);if(error)throw error}item.localStatus='Cancelled';item.status='Cancelled';item.cancelledAt=now;saveLocal();statusMap.set(String(id),{...(statusMap.get(String(id))||{}),id,status:'Cancelled',candidate_response:item.candidateResponse||'Pending',cancelled_at:now});toastSafe('Interview cancelled · record retained');if(window.renderOldSite)window.renderOldSite();setTimeout(syncStatuses,100)}catch(e){console.error(e);toastSafe('Could not cancel interview: '+(e.message||e))}}
-  async function deleteInterview(id){const item=localItem(id);if(!item)return toastSafe('Interview record not found');if(!confirm(`Remove interview for ${item.candidate||'this candidate'} from Interview Operations?\n\nThe full record, result and feedback will remain saved in Supabase for reports and audit.`))return;try{const now=new Date().toISOString();if(backend()?.enabled){const {error}=await backend().client.from('interviews').update({archived_at:now,updated_at:now}).eq('id',id);if(error)throw error}item.archivedAt=now;saveLocal();statusMap.set(String(id),{...(statusMap.get(String(id))||{}),id,archived_at:now});toastSafe('Removed from Interviews · backend record preserved');if(window.TSSInterviewArchiveSync?.refresh)window.TSSInterviewArchiveSync.refresh();else if(window.renderOldSite)window.renderOldSite();setTimeout(()=>decorate(true),80)}catch(e){console.error(e);toastSafe('Could not remove interview: '+(e.message||e))}}
-  function wire(){const style=document.createElement('style');style.textContent=`#interviewBoard .ia-actions{white-space:nowrap;min-width:290px}.ia-btn{border:1px solid #2c5270;background:#102b40;color:#cfe9ff;border-radius:8px;padding:7px 10px;margin:2px 4px 2px 0;font:600 12px/1.2 Arial,sans-serif;cursor:pointer}.ia-btn:disabled{opacity:.45;cursor:not-allowed}.ia-edit{border-color:#237ac1}.ia-cancel{border-color:#b98022;color:#ffd68e}.ia-delete{border-color:#a74451;color:#ffadb7}.ia-status,.ia-response{display:inline-block;border-radius:999px;padding:5px 9px;font-size:11px;font-weight:800}.ia-scheduled{background:#103b5c;color:#73c4ff}.ia-confirmed{background:#123f35;color:#74e6bd}.ia-reschedule{background:#4a3311;color:#ffd28a}.ia-cancelled{background:#44232a;color:#ff9fab}.ia-available{background:#123f35;color:#74e6bd}.ia-requested{background:#4a3311;color:#ffd28a}.ia-pending{background:#243443;color:#b7c7d4}.ia-response-cell small{display:block;color:#8eabc4;margin-top:5px;white-space:nowrap}@media(max-width:900px){#interviewBoard .ia-actions{min-width:220px}.ia-btn{display:block;width:100%;margin:4px 0}}`;document.head.appendChild(style);document.addEventListener('click',e=>{const edit=e.target.closest('[data-ia-edit]');if(edit){reschedule(edit.dataset.iaEdit);return}const cancel=e.target.closest('[data-ia-cancel]');if(cancel){cancelInterview(cancel.dataset.iaCancel);return}const del=e.target.closest('[data-ia-delete]');if(del){deleteInterview(del.dataset.iaDelete);return}});const b=board();if(b)new MutationObserver(()=>setTimeout(()=>decorate(false),0)).observe(b,{childList:true,subtree:true});setTimeout(syncStatuses,300);window.addEventListener('focus',()=>setTimeout(syncStatuses,80));setInterval(()=>{if(!document.hidden)syncStatuses()},30000)}
+  function toIso(date,time){const m=String(time||'11:00 AM').trim().match(/^(\d{1,2}):(\d{2})\s*(AM|PM)?$/i);if(!date||!m)return null;let h=Number(m[1]),mm=Number(m[2]);const ap=(m[3]||'').toUpperCase();if(ap==='PM'&&h<12)h+=12;if(ap==='AM'&&h===12)h=0;const iso=new Date(`${date}T${String(h).padStart(2,'0')}:${String(mm).padStart(2,'0')}:00+05:30`);return isNaN(iso)?null:iso.toISOString()}
+  function fmtTime(iso){return new Date(iso).toLocaleTimeString('en-IN',{timeZone:'Asia/Kolkata',hour:'2-digit',minute:'2-digit'}).toLowerCase()}
+
+  function statusBadge(status){
+    const s=status||'Scheduled';
+    const cls=s==='Cancelled'?'ia-cancelled':s==='Completed'?'ia-confirmed':s==='Confirmed'?'ia-confirmed':s==='Reschedule Requested'?'ia-reschedule':'ia-scheduled';
+    return `<span class="ia-status ${cls}">${esc(s)}</span>`;
+  }
+  function responseBadge(server,item){
+    const r=server?.candidate_response||item?.candidateResponse||'Pending';
+    if(r==='Confirmed')return '<span class="ia-response ia-available">✓ Candidate available</span>';
+    if(r==='Reschedule Requested')return '<span class="ia-response ia-requested">↻ Reschedule requested</span>';
+    return '<span class="ia-response ia-pending">Awaiting response</span>';
+  }
+  function scheduledBy(server,item){return server?.scheduled_by||item?.scheduledBy||item?.scheduled_by_name||'—'}
+
+  function signature(items){
+    return JSON.stringify(items.map(i=>{const id=String(i.serverId||i.id||'');const s=statusMap.get(id)||{};return [id,i.date,i.time,i.candidate,i.position,i.client,i.mode,s.candidate_response||i.candidateResponse,s.scheduled_by||i.scheduledBy,s.status||i.status,i.archivedAt]}));
+  }
+
+  function renderStable(force=false){
+    const b=board();if(!b)return;
+    const items=visibleItems();
+    const sig=signature(items);
+    if(!force&&sig===lastSignature&&b.querySelector('[data-tss-stable-interview-table]'))return;
+    lastSignature=sig;
+    const html=items.length?`<table class="jobs-table" data-tss-stable-interview-table="1"><thead><tr><th>Date</th><th>Time</th><th>Candidate</th><th>Position</th><th>Client</th><th>Mode</th><th>Candidate Response</th><th>Scheduled By</th><th>Status</th><th>Actions</th></tr></thead><tbody>${items.map(item=>{const id=String(item.serverId||item.id||'');const server=statusMap.get(id)||{};const st=server.status||item.status||item.localStatus||'Scheduled';return `<tr data-interview-id="${esc(id)}"><td>${esc(item.date||'—')}</td><td>${esc(item.time||'—')}</td><td><strong>${esc(item.candidate||'Candidate')}</strong></td><td>${esc(item.position||'')}</td><td>${esc(item.client||'')}</td><td>${esc(item.mode||'Client Interview')}</td><td class="ia-response-cell">${responseBadge(server,item)}</td><td>${esc(scheduledBy(server,item))}</td><td>${statusBadge(st)}</td><td class="ia-actions"><button type="button" class="ia-btn ia-outcome" data-ia-outcome="${esc(id)}">Update Interview</button><button type="button" class="ia-btn ia-edit" data-ia-edit="${esc(id)}">Edit / Reschedule</button><button type="button" class="ia-btn ia-cancel" data-ia-cancel="${esc(id)}" ${st==='Cancelled'?'disabled':''}>Cancel</button><button type="button" class="ia-btn ia-delete" data-ia-delete="${esc(id)}">Remove</button></td></tr>`}).join('')}</tbody></table>`:'<div class="empty-state">No interviews scheduled yet.</div>';
+    if(b.innerHTML!==html)b.innerHTML=html;
+    const count=document.getElementById('navInterviewCount');if(count)count.textContent=String(items.length);
+  }
+
+  function wrapLegacyRenderer(){
+    if(rendererWrapped||typeof window.renderOldSite!=='function')return;
+    const original=window.renderOldSite;
+    if(original.__tssInterviewStable){rendererWrapped=true;return}
+    const wrapped=function(){const out=original.apply(this,arguments);renderStable(false);return out};
+    wrapped.__tssInterviewStable=true;
+    window.renderOldSite=wrapped;
+    rendererWrapped=true;
+  }
+
+  async function syncStatuses(){
+    if(!backend()?.enabled)return renderStable(false);
+    try{
+      const {data,error}=await backend().client.from('interviews').select('id,status,candidate_response,archived_at,scheduled_by_name,scheduled_by_email');
+      if(error)throw error;
+      let changed=false;
+      (data||[]).forEach(x=>{
+        const id=String(x.id),scheduled=x.scheduled_by_name||String(x.scheduled_by_email||'').split('@')[0]||'—';
+        const next={...x,scheduled_by:scheduled};
+        if(JSON.stringify(statusMap.get(id)||{})!==JSON.stringify(next))changed=true;
+        statusMap.set(id,next);
+        const item=localItem(id);if(item){item.status=x.status||item.status;item.candidateResponse=x.candidate_response||item.candidateResponse;item.archivedAt=x.archived_at||null;item.scheduledBy=scheduled;}
+      });
+      if(changed)saveLocal();
+      renderStable(changed);
+    }catch(e){console.warn('Interview status sync',e?.message||e);renderStable(false)}
+  }
+
+  async function reschedule(id){
+    const item=localItem(id);if(!item)return toastSafe('Interview record not found');
+    const date=prompt('New interview date (YYYY-MM-DD)',item.date||new Date().toISOString().slice(0,10));if(!date)return;
+    const time=prompt('New interview time',item.time||'11:00 AM');if(!time)return;
+    const scheduled=toIso(date,time);if(!scheduled)return toastSafe('Invalid date or time');
+    if(!confirm(`Reschedule ${item.candidate||'this candidate'} to ${date} at ${time}?\n\nA fresh confirmation email and new reminders will be created.`))return;
+    try{
+      if(backend()?.enabled){const {error}=await backend().client.from('interviews').update({scheduled_at:scheduled,status:'Scheduled',cancelled_at:null,candidate_response:'Pending',confirmed_at:null,reschedule_requested_at:null,reschedule_preferred_date:null,reschedule_preferred_time:null,confirmation_sent_at:null,reminder_10am_sent_at:null,reminder_1h_sent_at:null,reminder_30m_sent_at:null,reminder_5m_sent_at:null,reminder_status:'Pending',archived_at:null}).eq('id',id);if(error)throw error}
+      item.date=date;item.time=fmtTime(scheduled);item.status='Scheduled';item.candidateResponse='Pending';item.archivedAt=null;saveLocal();lastSignature='';renderStable(true);toastSafe('Interview rescheduled · new confirmation and reminders queued');setTimeout(syncStatuses,120);
+    }catch(e){console.error(e);toastSafe('Could not reschedule: '+(e.message||e))}
+  }
+
+  async function cancelInterview(id){
+    const item=localItem(id);if(!item)return toastSafe('Interview record not found');
+    if(!confirm(`Cancel interview for ${item.candidate||'this candidate'}?\n\nFuture reminder emails will be stopped. The record will remain saved.`))return;
+    try{
+      const now=new Date().toISOString();
+      if(backend()?.enabled){const {error}=await backend().client.from('interviews').update({status:'Cancelled',cancelled_at:now,reminder_status:'Cancelled'}).eq('id',id);if(error)throw error}
+      item.status='Cancelled';item.cancelledAt=now;saveLocal();lastSignature='';renderStable(true);toastSafe('Interview cancelled · record retained');setTimeout(syncStatuses,100);
+    }catch(e){console.error(e);toastSafe('Could not cancel interview: '+(e.message||e))}
+  }
+
+  async function deleteInterview(id){
+    const item=localItem(id);if(!item)return toastSafe('Interview record not found');
+    if(!confirm(`Remove interview for ${item.candidate||'this candidate'} from Interview Operations?\n\nThe full record, result and feedback will remain saved in Supabase for reports and audit.`))return;
+    try{
+      const now=new Date().toISOString();
+      if(backend()?.enabled){const {error}=await backend().client.from('interviews').update({archived_at:now,updated_at:now}).eq('id',id);if(error)throw error}
+      item.archivedAt=now;saveLocal();lastSignature='';renderStable(true);toastSafe('Removed from Interviews · backend record preserved');
+    }catch(e){console.error(e);toastSafe('Could not remove interview: '+(e.message||e))}
+  }
+
+  function wire(){
+    wrapLegacyRenderer();
+    if(!document.getElementById('tssInterviewStableStyle')){const style=document.createElement('style');style.id='tssInterviewStableStyle';style.textContent=`#interviewBoard .ia-actions{white-space:nowrap;min-width:390px}.ia-btn{border:1px solid #c9d9e8;background:#fff;color:#155b91;border-radius:8px;padding:7px 10px;margin:2px 4px 2px 0;font:600 12px/1.2 Arial,sans-serif;cursor:pointer}.ia-btn:disabled{opacity:.45;cursor:not-allowed}.ia-status,.ia-response{display:inline-block;border-radius:999px;padding:5px 9px;font-size:11px;font-weight:800}.ia-scheduled{background:#d9efff;color:#075887}.ia-confirmed,.ia-available{background:#d8f5e9;color:#086347}.ia-reschedule,.ia-requested{background:#fff0cd;color:#845800}.ia-cancelled{background:#ffe1e5;color:#8d2633}.ia-pending{background:#e8eef4;color:#395166}@media(max-width:900px){#interviewBoard .ia-actions{min-width:220px}.ia-btn{display:block;width:100%;margin:4px 0}}`;document.head.appendChild(style)}
+    document.addEventListener('click',e=>{const edit=e.target.closest('[data-ia-edit]');if(edit){reschedule(edit.dataset.iaEdit);return}const cancel=e.target.closest('[data-ia-cancel]');if(cancel){cancelInterview(cancel.dataset.iaCancel);return}const del=e.target.closest('[data-ia-delete]');if(del){deleteInterview(del.dataset.iaDelete);return}});
+    document.addEventListener('click',e=>{if(e.target.closest?.('.nav-item[data-view="interviews"]')){wrapLegacyRenderer();setTimeout(()=>renderStable(false),0)}});
+    setTimeout(()=>{wrapLegacyRenderer();syncStatuses()},180);
+    window.addEventListener('focus',()=>setTimeout(syncStatuses,80),{passive:true});
+  }
+
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',wire,{once:true});else wire();
-  window.TSSInterviewActions={decorate,syncStatuses,reschedule,cancelInterview,deleteInterview};
+  window.TSSInterviewActions={decorate:renderStable,renderStable,syncStatuses,reschedule,cancelInterview,deleteInterview};
 })();
