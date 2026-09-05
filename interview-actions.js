@@ -59,11 +59,13 @@
   async function syncStatuses(){
     if(!backend()?.enabled)return renderStable(false);
     try{
-      const {data,error}=await backend().client.from('interviews').select('id,status,candidate_response,archived_at,scheduled_by_name,scheduled_by_email');
+      const {data:{session}}=await backend().client.auth.getSession();
+      if(!session?.user)return renderStable(false);
+      const {data,error}=await backend().client.from('interviews').select('id,status,candidate_response,archived_at');
       if(error)throw error;
       let changed=false;
       (data||[]).forEach(x=>{
-        const id=String(x.id),scheduled=x.scheduled_by_name||String(x.scheduled_by_email||'').split('@')[0]||'—';
+        const id=String(x.id),scheduled=localItem(x.id)?.scheduledBy||'—';
         const next={...x,scheduled_by:scheduled};
         if(JSON.stringify(statusMap.get(id)||{})!==JSON.stringify(next))changed=true;
         statusMap.set(id,next);

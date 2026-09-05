@@ -54,6 +54,6 @@
       out.innerHTML=`<div class="resdex-note"><strong>${ok} processed</strong> · ${dupes} duplicates reused · ${failed} failed</div>${rows.join('')}`;try{await window.TSSProduction?.hydrate?.()}catch{}toast(`Resdex import complete: ${ok} processed`)}catch(e){console.error(e);out.innerHTML=`<div class="resdex-note resdex-bad">${esc(e.message||'Import failed')}</div>`;toast(e.message||'Resdex import failed')}
   }
 
-  function wire(){ensureStyle();ensureDialog();decorate();document.addEventListener('click',e=>{const b=e.target.closest('.resdex-card-btn');if(b){e.preventDefault();e.stopPropagation();openAssistant(reqByKey(b.dataset.req))}},true);const cards=$('requirementCards');if(cards)new MutationObserver(decorate).observe(cards,{childList:true,subtree:true});setInterval(decorate,1200)}
+  function wire(){ensureStyle();ensureDialog();decorate();document.addEventListener('click',e=>{const b=e.target.closest('.resdex-card-btn');if(b){e.preventDefault();e.stopPropagation();openAssistant(reqByKey(b.dataset.req))}},true);const cards=$('requirementCards');if(cards)new MutationObserver(decorate).observe(cards,{childList:true,subtree:true})}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(wire,500));else setTimeout(wire,500);window.TSSResdexAssistant={openAssistant,importFiles,decorate};
 })();

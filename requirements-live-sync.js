@@ -20,7 +20,7 @@
     return {...local,
       id:internalId(row,local),requirementId:row.tss_id,profileKey:serverKey(row),serverId:row.id,
       client:row.clients?.name||local.client||'Client',clientOwner:row.client_owner||'',
-      requirementHandler:row.requirement_handler||'Shweta Tiwari',
+      requirementHandler:row.requirement_handler||local.requirementHandler||'',
       assignedRecruiters:Array.isArray(row.assigned_recruiters)?row.assigned_recruiters:[],
       submittedAt:row.submitted_at||null,submittedBy:row.submitted_by||null,
       title:row.job_title||local.title||'Untitled Requirement',location:row.location||local.location||'Not provided',
@@ -78,8 +78,7 @@
     }
   }
 
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
-  window.addEventListener('load',()=>setTimeout(()=>{if(!finished)boot()},80),{once:true});
-  setTimeout(()=>{if(!finished)boot()},800);
+  // Realtime coordinator owns startup and reconnect refreshes. Keeping this module
+  // callable avoids competing fetch/render loops during page boot.
   window.TSSRequirementsLiveSync={syncNow,boot};
 })();

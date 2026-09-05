@@ -109,7 +109,7 @@ function wire(){
     if(e.target.closest('.nav-item[data-view="interviews"]'))setTimeout(decorateInterviewOutcomes,140);
   });
   setTimeout(()=>{decorateInterviewOutcomes();applyReportCleanup();normalizeNav()},450);
-  setInterval(pulse,1200);
+  document.addEventListener('tss:data-rendered',pulse);
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',wire,{once:true});else wire();
 window.TSSWorkflowFinalization={simplifyReports,cleanDuplicateAdmin:normalizeNav,decorateInterviewOutcomes,updateOutcome};

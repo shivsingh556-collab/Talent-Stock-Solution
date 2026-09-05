@@ -1,128 +1,84 @@
-// TSS realtime + performance layer. Keeps Supabase authoritative without manual refreshes.
+// One authoritative realtime coordinator for TODO AI.
 (function(){
   'use strict';
-  if(window.__TSS_REALTIME_PERFORMANCE__) return;
-  window.__TSS_REALTIME_PERFORMANCE__ = true;
-
-  const STORAGE_KEY='tss_talent_buddy_v1';
+  if(window.__TSS_REALTIME_PERFORMANCE__)return;
+  window.__TSS_REALTIME_PERFORMANCE__=true;
   const backend=()=>window.TSSBackend;
-  let channel=null;
-  let renderQueued=false;
-  let requirementTimer=null;
-  let lastServerRefresh=0;
-  let refreshing=false;
-  let authWatcherInstalled=false;
+  let channel=null,refreshTimer=null,reconnectTimer=null;
+  let refreshing=false,refreshAgain=false,lastRefresh=0,reconnectAttempt=0,booted=false;
+  let online=navigator.onLine;
 
-  const getDB=()=>{try{return typeof db!=='undefined'?db:null}catch{return null}};
-  const persistLocal=()=>{const store=getDB();if(store){try{localStorage.setItem(STORAGE_KEY,JSON.stringify(store))}catch{}}};
-
-  function queueRender(){
-    if(renderQueued)return;
-    renderQueued=true;
-    const run=()=>{
-      renderQueued=false;
-      try{if(typeof renderAll==='function')renderAll()}catch(e){console.warn('TSS live renderAll',e)}
-      try{if(typeof renderOldSite==='function')renderOldSite()}catch(e){console.warn('TSS live renderOldSite',e)}
-      try{window.TSSDashboardCleanup?.apply?.()}catch{}
-      try{window.TSSWorkflowFinalization?.decorateInterviewOutcomes?.()}catch{}
-    };
-    if(window.requestAnimationFrame)requestAnimationFrame(run);else setTimeout(run,16);
+  function setState(state){
+    document.documentElement.dataset.tssLive=state;
+    const label=document.querySelector('#backendIndicator span');
+    if(label)label.textContent=state==='on'?'Live updates on':state==='syncing'?'Syncing…':state==='offline'?'Offline · changes saved locally':'Reconnecting…';
   }
-
-  function installOptimizedSave(){
-    try{window.saveDB=function(){persistLocal();queueRender()};}catch{}
+  function renderOnce(){
+    try{if(typeof renderAll==='function')renderAll()}catch(e){console.warn('TODO AI render',e)}
+    try{if(typeof renderOldSite==='function')renderOldSite()}catch(e){console.warn('TODO AI legacy render',e)}
+    document.dispatchEvent(new CustomEvent('tss:data-rendered'));
   }
-
-  function mapCandidate(c){
-    return {id:c.id,serverId:c.id,name:c.candidate_name||'Candidate',email:c.email||'',phone:c.phone||'',location:c.current_location||'',preferredLocation:c.preferred_location||'',totalExperience:c.total_experience??'',relevantExperience:c.relevant_experience??'',currentCompany:c.current_company||'',designation:c.current_designation||'',skills:c.skills||[],education:c.education||'',noticePeriod:c.notice_period||'',currentCTC:c.current_ctc||'',expectedCTC:c.expected_ctc||'',uploadDate:c.created_at,lastScreenedDate:c.last_screened_at,uploadedBy:c.uploaded_by||'Supabase'};
+  function installSave(){
+    if(typeof window.saveDB!=='function'||window.saveDB.__tssCoordinated)return;
+    const original=window.saveDB;
+    const coordinated=function(){const result=original.apply(this,arguments);queueMicrotask(renderOnce);return result};
+    coordinated.__tssCoordinated=true;window.saveDB=coordinated;
   }
-
-  function localRequirementId(serverId){
-    const store=getDB();
-    const r=(store?.requirements||[]).find(x=>String(x.serverId||'')===String(serverId||''));
-    return r?.id||r?.profileKey||serverId;
-  }
-
-  function mapScreening(s){
-    return {id:s.id,serverId:s.id,candidateId:s.candidate_id,requirementId:localRequirementId(s.requirement_id),date:s.screened_at,score:Number(s.overall_score||0),recommendation:s.final_recommendation||s.ai_recommendation||'Review Recommended',matched:s.matching_skills||[],missing:s.missing_skills||[],metrics:{mandatoryPct:Number(s.mandatory_skill_score||0),prefPct:Number(s.preferred_skill_score||0),expPct:Number(s.experience_score||0),domainPct:Number(s.domain_score||0),locPct:Number(s.location_score||0)},recruiterDecision:s.recruiter_decision||'Pending',notes:s.recruiter_notes||'',manualOverride:Boolean(s.manually_overridden)};
-  }
-
-  function mapInterview(i){
-    const d=i.scheduled_at?new Date(i.scheduled_at):null;
-    return {id:i.id,serverId:i.id,date:d&&!isNaN(d)?new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Kolkata',year:'numeric',month:'2-digit',day:'2-digit'}).format(d):'',time:d&&!isNaN(d)?new Intl.DateTimeFormat('en-IN',{timeZone:'Asia/Kolkata',hour:'2-digit',minute:'2-digit',hour12:true}).format(d):'',candidate:i.candidate_name_snapshot||'Candidate',email:i.candidate_email_snapshot||'',position:i.job_title_snapshot||'',client:i.client_name_snapshot||'',mode:i.interview_type||'Client Interview',status:i.status||'Scheduled',interviewStage:i.interview_stage||'Scheduled',outcome:i.outcome||'Pending',outcomeNotes:i.outcome_notes||'',outcomeUpdatedAt:i.outcome_updated_at||null,candidateResponse:i.candidate_response||'Pending',notes:i.notes||'',requirementServerId:i.requirement_id,candidateId:i.candidate_id,scheduledAt:i.scheduled_at||null,archivedAt:i.archived_at||null};
-  }
-
-  function upsert(list,row,key='id'){
-    if(!Array.isArray(list))return[row];
-    const idx=list.findIndex(x=>String(x[key]||x.serverId||'')===String(row[key]||row.serverId||''));
-    if(idx>=0)list[idx]={...list[idx],...row};else list.unshift(row);
-    return list;
-  }
-  const remove=(list,id)=>(list||[]).filter(x=>String(x.id||x.serverId||'')!==String(id||''));
-
-  function handleCandidate(payload){const store=getDB();if(!store)return;if(payload.eventType==='DELETE')store.candidates=remove(store.candidates,payload.old?.id);else store.candidates=upsert(store.candidates,mapCandidate(payload.new));persistLocal();queueRender()}
-  function handleScreening(payload){const store=getDB();if(!store)return;if(payload.eventType==='DELETE')store.screenings=remove(store.screenings,payload.old?.id);else store.screenings=upsert(store.screenings,mapScreening(payload.new));persistLocal();queueRender()}
-  function handleInterview(payload){const store=getDB();if(!store)return;if(payload.eventType==='DELETE')store.interviews=remove(store.interviews,payload.old?.id);else store.interviews=upsert(store.interviews,mapInterview(payload.new));persistLocal();queueRender()}
-  function handleRequirement(){clearTimeout(requirementTimer);requirementTimer=setTimeout(async()=>{try{await window.TSSRequirementsLiveSync?.syncNow?.();queueRender()}catch(e){console.warn('TSS requirement realtime sync',e?.message||e)}},100)}
-
-  async function subscribe(){
-    const b=backend();if(!b?.enabled||!b.client)return;
-    const {data:{session}}=await b.client.auth.getSession();
-    if(!session?.user)return;
-    if(channel){try{await b.client.removeChannel(channel)}catch{}channel=null}
-    channel=b.client.channel('tss-operational-live-v2')
-      .on('postgres_changes',{event:'*',schema:'public',table:'requirements'},handleRequirement)
-      .on('postgres_changes',{event:'*',schema:'public',table:'candidates'},handleCandidate)
-      .on('postgres_changes',{event:'*',schema:'public',table:'screenings'},handleScreening)
-      .on('postgres_changes',{event:'*',schema:'public',table:'interviews'},handleInterview)
-      .subscribe(state=>{
-        if(state==='SUBSCRIBED'){document.documentElement.dataset.tssLive='on';console.info('TSS realtime connected')}
-        else if(state==='CHANNEL_ERROR'||state==='TIMED_OUT')document.documentElement.dataset.tssLive='degraded';
-      });
-  }
-
-  async function backgroundRefresh(force=false){
-    if(refreshing)return;
-    const now=Date.now();
-    if(!force&&now-lastServerRefresh<30000)return;
-    refreshing=true;
+  async function refresh(reason='background',force=false){
+    if(!online||document.visibilityState==='hidden')return false;
+    if(refreshing){refreshAgain=true;return false}
+    if(!force&&Date.now()-lastRefresh<1500)return false;
+    refreshing=true;setState('syncing');
     try{
       await window.TSSProduction?.hydrate?.();
-      lastServerRefresh=Date.now();
-      queueRender();
-    }catch(e){console.warn('TSS background refresh',e?.message||e)}finally{refreshing=false}
+      lastRefresh=Date.now();setState(channel?'on':'degraded');
+      console.info('TODO AI sync complete',reason);return true;
+    }catch(e){setState('degraded');console.warn('TODO AI sync failed',reason,e?.message||e);return false}
+    finally{refreshing=false;if(refreshAgain){refreshAgain=false;scheduleRefresh('queued',250,true)}}
   }
-
-  function watchAuth(){
-    if(authWatcherInstalled)return;
-    const b=backend();if(!b?.enabled||!b.client)return;
-    authWatcherInstalled=true;
-    b.client.auth.onAuthStateChange((event,session)=>{
-      if(session?.user&&(event==='SIGNED_IN'||event==='TOKEN_REFRESHED'||event==='INITIAL_SESSION')){
-        setTimeout(async()=>{await subscribe();await backgroundRefresh(true)},0);
-      }
-      if(event==='SIGNED_OUT'){
-        if(channel){b.client.removeChannel(channel);channel=null}
-        document.documentElement.dataset.tssLive='off';
-      }
+  function scheduleRefresh(reason='change',delay=180,force=false){
+    clearTimeout(refreshTimer);refreshTimer=setTimeout(()=>refresh(reason,force),delay);
+  }
+  function scheduleReconnect(){
+    if(!online||reconnectTimer)return;
+    const delay=Math.min(30000,1000*(2**Math.min(reconnectAttempt++,5)));
+    reconnectTimer=setTimeout(()=>{reconnectTimer=null;subscribe()},delay);
+  }
+  async function removeChannel(){
+    if(!channel)return;const current=channel;channel=null;
+    try{await backend()?.client?.removeChannel(current)}catch{}
+  }
+  async function subscribe(){
+    const b=backend();if(!b?.enabled||!b.client||!online)return false;
+    const {data:{session}}=await b.client.auth.getSession();if(!session?.user)return false;
+    await removeChannel();channel=b.client.channel('tss-operational-live-v3');
+    ['requirements','candidates','screenings','interviews'].forEach(table=>channel.on('postgres_changes',{event:'*',schema:'public',table},()=>scheduleRefresh(table,180,true)));
+    channel.subscribe(status=>{
+      if(status==='SUBSCRIBED'){reconnectAttempt=0;setState('on');scheduleRefresh('reconnected',250,true)}
+      else if(status==='CHANNEL_ERROR'||status==='TIMED_OUT'||status==='CLOSED'){setState('degraded');scheduleReconnect()}
+    });
+    return true;
+  }
+  function installLifecycle(){
+    window.addEventListener('online',()=>{online=true;setState('degraded');subscribe()},{passive:true});
+    window.addEventListener('offline',()=>{online=false;setState('offline');removeChannel()},{passive:true});
+    window.addEventListener('focus',()=>scheduleRefresh('focus',150,false),{passive:true});
+    document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')scheduleRefresh('visible',150,false)});
+    document.addEventListener('tss:data-changed',()=>scheduleRefresh('local-change',250,true));
+    window.addEventListener('pagehide',()=>removeChannel(),{once:true});
+  }
+  function installAuth(){
+    backend()?.client?.auth?.onAuthStateChange?.((event,session)=>{
+      if(session?.user&&(event==='SIGNED_IN'||event==='INITIAL_SESSION'))setTimeout(()=>{subscribe();scheduleRefresh(event,100,true)},0);
+      if(event==='SIGNED_OUT'){removeChannel();setState('offline')}
     });
   }
-
-  function lifecycle(){
-    window.addEventListener('online',()=>backgroundRefresh(true),{passive:true});
-    window.addEventListener('focus',()=>backgroundRefresh(true),{passive:true});
-    document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')backgroundRefresh(true)});
-    document.addEventListener('tss:data-changed',()=>backgroundRefresh(true));
-  }
-
   async function boot(){
-    installOptimizedSave();
-    lifecycle();
-    watchAuth();
-    await subscribe();
-    await backgroundRefresh(true);
+    if(booted)return;booted=true;installSave();installLifecycle();installAuth();
+    const connected=await subscribe();
+    if(connected)await refresh('startup',true);else setState(online?'degraded':'offline');
+    setInterval(()=>{if(document.visibilityState==='visible')scheduleRefresh('fallback',0,false)},120000);
   }
-
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(boot,50),{once:true});else setTimeout(boot,50);
-  window.TSSRealtimePerformance={boot,subscribe,backgroundRefresh,queueRender};
+  window.TSSRealtimePerformance={boot,subscribe,refresh,backgroundRefresh:refresh,scheduleRefresh,removeChannel};
 })();

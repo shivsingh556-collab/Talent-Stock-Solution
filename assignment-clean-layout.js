@@ -1,10 +1,9 @@
 // Final clean assignment layout for requirement form. Removes duplicate legacy workflow controls.
 (function(){
   const $=id=>document.getElementById(id);
-  const OWNERS=['Akash Mistry','Shraddha Sharma','Pooja Wara'];
-  const HANDLER='Shweta Tiwari';
   const esc=v=>String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot',"'":'&#39;'}[m]));
   let people=[];
+  const ownerNames=current=>[...new Set([current,...people.map(p=>p.name)].filter(Boolean))];
 
   function toastSafe(m){try{toast(m)}catch{console.log(m)}}
   function reqByKey(key){
@@ -16,6 +15,7 @@
     try{
       const c=window.TSSBackend?.client;
       if(!c)return;
+      const {data:{session}}=await c.auth.getSession();if(!session?.user)return;
       const {data,error}=await c.from('profiles').select('full_name,email,role,is_active').eq('is_active',true).order('email');
       if(error)throw error;
       people=(data||[]).filter(x=>x.email).map(x=>({name:x.full_name||x.email,email:x.email,role:x.role||''}));
@@ -96,8 +96,8 @@
 
   function currentValues(){
     const r=reqByKey($('reqId')?.value);
-    const owner=$('reqClientOwner')?.value||r?.clientOwner||OWNERS[0];
-    const handler=$('reqHandler')?.value||r?.requirementHandler||HANDLER;
+    const owner=$('reqClientOwner')?.value||r?.clientOwner||'';
+    const handler=$('reqHandler')?.value||r?.requirementHandler||'';
     const assigned=$('reqRecruiters')?selectedEmails($('reqRecruiters')):(Array.isArray(r?.assignedRecruiters)?r.assignedRecruiters:[]);
     return {r,owner,handler,assigned};
   }
@@ -140,14 +140,14 @@
 
     const panel=document.createElement('div');panel.id='reqAssignmentClean';
     panel.innerHTML=`
-      <div class="clean-field"><label>Client Owner</label><select id="reqClientOwnerClean">${OWNERS.map(x=>`<option value="${esc(x)}">${esc(x)}</option>`).join('')}</select></div>
-      <div class="clean-field"><label>Requirement Handler</label><input id="reqHandlerClean" value="${esc(vals.handler||HANDLER)}" readonly /></div>
+      <div class="clean-field"><label>Client Owner</label><select id="reqClientOwnerClean"><option value="">Select owner</option>${ownerNames(vals.owner).map(x=>`<option value="${esc(x)}">${esc(x)}</option>`).join('')}</select></div>
+      <div class="clean-field"><label>Requirement Handler</label><input id="reqHandlerClean" value="${esc(vals.handler)}" readonly /></div>
       <div class="clean-field clean-assignee-field"><label>Assigned Recruiter(s)</label><div class="clean-assignee-wrap"><input id="reqRecruiterCleanSearch" autocomplete="off" placeholder="Type name or talent-stock email" /><div id="reqRecruiterCleanSuggestions" class="clean-assignee-suggestions"></div></div><div id="reqRecruiterCleanChips" class="clean-assignee-chips"></div><small class="clean-help">Type a name or email and select the matching user.</small><select id="reqRecruiters" multiple aria-hidden="true"></select></div>`;
 
     const anchor=form.querySelector('.jd-actions')||form.querySelector('[id="reqJdText"]')?.closest('div');
     if(anchor)anchor.insertAdjacentElement('beforebegin',panel);else form.appendChild(panel);
 
-    const ownerClean=$('reqClientOwnerClean');ownerClean.value=OWNERS.includes(vals.owner)?vals.owner:OWNERS[0];
+    const ownerClean=$('reqClientOwnerClean');ownerClean.value=vals.owner||'';
     const sel=$('reqRecruiters');ensureSelectOptions(sel,vals.assigned);renderChips(sel);wireSearch(sel);
 
     if(!oldOwner){const hidden=document.createElement('input');hidden.type='hidden';hidden.id='reqClientOwner';form.appendChild(hidden)}

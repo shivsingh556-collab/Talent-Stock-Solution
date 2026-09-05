@@ -1,7 +1,6 @@
 // TODO AI client-owner automation. One client -> one owner -> all its requirements.
 (function(){
   const $=id=>document.getElementById(id);
-  const OWNERS=['Akash Mistry','Shraddha Sharma','Pooja Wara'];
   const norm=v=>String(v||'').replace(/\s+/g,' ').trim().toLowerCase();
   let clients=[];
   let loading=false;
@@ -15,6 +14,7 @@
     const c=backend();if(!c)return clients;
     loading=true;
     try{
+      const {data:{session}}=await c.auth.getSession();if(!session?.user)return clients;
       const {data,error}=await c.from('clients').select('id,name,client_owner').eq('is_active',true).order('name');
       if(error)throw error;
       clients=(data||[]).map(x=>({id:x.id,name:x.name,owner:x.client_owner||''}));
@@ -26,7 +26,7 @@
   function setOwnerControls(owner){
     if(!owner)return;
     const hidden=$('reqClientOwner');if(hidden)hidden.value=owner;
-    const clean=$('reqClientOwnerClean');if(clean&&OWNERS.includes(owner))clean.value=owner;
+    const clean=$('reqClientOwnerClean');if(clean&&[...clean.options].some(x=>x.value===owner))clean.value=owner;
   }
 
   async function applyOwnerForCurrentClient({silent=false}={}){

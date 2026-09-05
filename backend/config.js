@@ -93,39 +93,6 @@ window.addEventListener('load', () => {
     .then(() => loadScript('realtime-performance.js','tssRealtimePerformance'))
     .then(() => loadScript('workflow-finalization.js','tssWorkflowFinalization'))
     .then(() => loadScript('requirement-screening-selection-fix.js','tssRequirementScreeningSelectionFix'))
-    .then(() => {
-      setTimeout(async () => {
-        try {
-          const session = await window.TSSBackend?.client?.auth?.getSession?.();
-          if (session?.data?.session?.user) {
-            setTimeout(() => window.TSSProduction?.hydrate?.(), 220);
-            setTimeout(() => window.TSSCandidateResumeHydration?.hydrateResumeText?.(), 255);
-            setTimeout(() => window.TSSRequirementStatusVisibility?.refresh?.(), 270);
-            setTimeout(() => window.TSSDashboardCleanup?.apply?.(), 320);
-            setTimeout(() => window.TSSDashboardActions?.wire?.(), 350);
-            setTimeout(() => window.TSSInterviewActions?.syncStatuses?.(), 380);
-            setTimeout(() => window.TSSResdexAssistant?.decorate?.(), 420);
-            setTimeout(() => window.TSSResdexFinalSafe?.apply?.(), 520);
-            setTimeout(() => window.TSSResdexQuickImport?.decorate?.(), 580);
-            setTimeout(() => window.TSSRecruitmentWorkflow?.boot?.(), 650);
-            setTimeout(() => window.TSSAssignmentCleanLayout?.boot?.(), 720);
-            setTimeout(() => window.TSSClientOwnerAuto?.applyOwnerForCurrentClient?.({silent:true}), 735);
-            setTimeout(() => window.TSSRequirementAcknowledgementUI?.refresh?.(), 745);
-            setTimeout(() => window.TSSRequirementPositions?.ensure?.(), 770);
-            setTimeout(() => window.TSSRequirementSaveSync?.wire?.(), 820);
-            setTimeout(() => window.TSSRequirementDetailsOwnerSync?.patch?.(), 880);
-            setTimeout(() => window.TSSAdminRoleUI?.boot?.(), 940);
-            setTimeout(() => window.TSSScreeningCleanup?.apply?.(), 980);
-            setTimeout(() => window.TSSRoleVisibility?.apply?.(), 1020);
-            setTimeout(() => window.TSSWorkflowFinalization?.cleanDuplicateAdmin?.(), 1160);
-            setTimeout(() => window.TSSWorkflowFinalization?.decorateInterviewOutcomes?.(), 1200);
-            setTimeout(() => window.TSSInterviewLifecycleUI?.refresh?.(), 1260);
-          }
-        } catch (err) {
-          console.warn('TODO AI session restore check', err?.message || err);
-        }
-      }, 100);
-    })
     .then(() => loadScript('todo-ai-branding.js','tssTodoAiBranding'))
     .then(() => loadScript('profile-logout.js','tssProfileLogout'))
     .then(() => loadScript('login-final-guard.js','tssLoginFinalGuard'))
