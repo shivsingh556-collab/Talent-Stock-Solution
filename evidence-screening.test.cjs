@@ -1,0 +1,16 @@
+const fs=require('fs'),vm=require('vm'),assert=require('assert');
+const context={window:{},Date};vm.createContext(context);vm.runInContext(fs.readFileSync('evidence-screening.js','utf8'),context);
+const engine=context.window.tssEvidenceScreening;
+const jd={title:'Backend Python Developer',experience:'3+ years',location:'',skills:['Python','FastAPI or Django','REST APIs','PostgreSQL','Git','Automated testing'],preferred:['Docker','AWS','Redis']};
+const resume='Asha Mehta | Pune\nJan 2022-Present: Built REST APIs using Python and FastAPI, PostgreSQL, Docker, Git and pytest.\nJul 2020-Dec 2021: Maintained Java applications.';
+const result=engine.scoreCandidate(resume,jd,{totalExperience:6.2,location:'Pune',designation:'Python Developer'});
+assert.deepStrictEqual([...result.missingRequired],[]);
+assert(result.matched.includes('FastAPI'));
+assert(result.matched.includes('Automated testing'));
+assert(result.matched.includes('Docker'));
+assert(!result.matched.includes('Django'));
+assert.deepStrictEqual([...result.missingPreferred],['AWS','Redis']);
+assert.strictEqual(result.totalExperienceYears,6.3);
+assert.strictEqual(result.relevantExperienceYears,4.8);
+assert.strictEqual(result.score,91);
+console.log(JSON.stringify(result,null,2));
