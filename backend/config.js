@@ -8,19 +8,19 @@ window.TSS_SUPABASE_CONFIG = window.TSS_SUPABASE_CONFIG || {
   if (!document.querySelector('link[data-tss-reports]')) {
     const css = document.createElement('link');
     css.rel = 'stylesheet';
-    css.href = 'reports-activity.css?v=20260905-interview-stable-v10';
+    css.href = 'reports-activity.css?v=20260906-ui-stability-v11';
     css.dataset.tssReports = '1';
     document.head.appendChild(css);
   }
   if (!document.querySelector('script[data-tss-reports]')) {
     const script = document.createElement('script');
-    script.src = 'reports-activity.js?v=20260905-interview-stable-v10';
+    script.src = 'reports-activity.js?v=20260906-ui-stability-v11';
     script.async = false;
     script.dataset.tssReports = '1';
     script.onload = () => {
       if (!document.querySelector('script[data-tss-daily-activity]')) {
         const daily = document.createElement('script');
-        daily.src = 'reports-daily-activity.js?v=20260905-interview-stable-v10';
+        daily.src = 'reports-daily-activity.js?v=20260906-ui-stability-v11';
         daily.async = false;
         daily.dataset.tssDailyActivity = '1';
         document.head.appendChild(daily);
@@ -31,7 +31,7 @@ window.TSS_SUPABASE_CONFIG = window.TSS_SUPABASE_CONFIG || {
 })();
 
 window.addEventListener('load', () => {
-  const BUILD = '20260905-interview-stable-v10';
+  const BUILD = '20260906-ui-stability-v11';
   const addCss = (href) => {
     const clean = href.split('?')[0];
     if ([...document.querySelectorAll('link[rel="stylesheet"]')].some(x => (x.getAttribute('href')||'').split('?')[0] === clean)) return;
@@ -45,8 +45,8 @@ window.addEventListener('load', () => {
   addCss('todo-ai-branding.css');
   addCss('login-perfect.css');
   addCss('reports-activity.css');
-  addCss('light-theme.css');
-  addCss('minimal-content-theme.css');
+  const professional=document.querySelector('link[href^="professional-ui.css"]');
+  if(professional)document.head.appendChild(professional);else addCss('professional-ui.css');
 
   const loadScript = (src, marker) => new Promise((resolve, reject) => {
     if (document.querySelector(`script[data-${marker}]`)) return resolve();
