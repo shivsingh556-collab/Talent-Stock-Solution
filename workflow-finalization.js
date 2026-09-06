@@ -7,10 +7,11 @@ const toast=m=>{try{window.toast?.(m)}catch{console.log(m)}};
 
 function normalizeNav(){
   const nav=$('#nav');if(!nav)return;
-  const admins=$$('.nav-item').filter(x=>x.textContent.trim().replace(/\s+/g,' ').toLowerCase()==='admin');
-  admins.slice(1).forEach(x=>x.remove());
+  const admins=[...nav.querySelectorAll('.nav-item')].filter(x=>['admin','adminView'].includes(x.dataset.view));
+  const primary=admins.find(x=>x.dataset.view==='admin')||admins.find(x=>x.id==='adminNavBtn')||admins[0];
+  admins.filter(x=>x!==primary).forEach(x=>x.remove());
   const reports=$('#reportsNav');if(reports)reports.innerHTML='<span>▤</span>Reports';
-  const admin=$('#adminNavBtn')||admins[0];
+  const admin=primary;
   if(reports&&admin&&reports.nextElementSibling!==admin)nav.insertBefore(reports,admin);
 }
 

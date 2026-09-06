@@ -56,18 +56,20 @@
   }
 
   function applyStatusFilter(){
-    const chosen=$('requirementStatusFilter')?.value||'Remaining';
+    const chosen=norm($('requirementStatusFilter')?.value||'Remaining');
+    const query=norm($('jobProfileSearch')?.value);
+    const client=norm($('clientFilter')?.value);
+    const location=norm($('locationFilter')?.value);
     document.querySelectorAll('#requirementCards .req-card').forEach(card=>{
       const r=requirementForCard(card);
-      if(!r) return;
-      const status=String(r.status||'').trim();
-      let statusMatch=false;
-      if(chosen==='Remaining') statusMatch=remainingStatus(status);
-      else statusMatch=status===chosen;
-      const baseHidden=card.dataset.statusHidden!=='1' && card.style.display==='none';
-      card.dataset.statusHidden=!statusMatch?'1':'0';
-      if(!statusMatch) card.style.display='none';
-      else if(!baseHidden) card.style.display='block';
+      if(!r)return;
+      const status=norm(r.status);
+      const statusMatch=chosen==='remaining'?remainingStatus(status):
+        chosen==='work in progress'?['active','work in progress'].includes(status):status===chosen;
+      const text=norm(`${r.id} ${r.requirementId||''} ${r.client} ${r.title} ${r.location} ${(r.skills||[]).join(' ')}`);
+      const matches=statusMatch&&(!query||text.includes(query))&&(!client||norm(r.client)===client)&&(!location||norm(r.location)===location);
+      const display=matches?'block':'none';
+      if(card.style.display!==display)card.style.display=display;
     });
     updateRemainingCount();
   }
@@ -81,35 +83,22 @@
     if($('activeReqChip'))$('activeReqChip').textContent=`${n} remaining requirements · ${positions} positions`;
   }
 
-  function wrapExistingFilter(){
-    if(typeof window.applyProfileFilter!=='function' || window.applyProfileFilter.__statusWrapped) return;
-    const original=window.applyProfileFilter;
-    const wrapped=function(){
-      document.querySelectorAll('#requirementCards .req-card[data-status-hidden="1"]').forEach(card=>{card.style.display='block';card.dataset.statusHidden='0'});
-      original.apply(this,arguments);
-      applyStatusFilter();
-    };
-    wrapped.__statusWrapped=true;
-    window.applyProfileFilter=wrapped;
-  }
-
   function refresh(){
     ensureStatusOptions();
     ensureFilter();
-    wrapExistingFilter();
     try{if(typeof renderAll==='function')renderAll()}catch(e){console.warn('TODO AI status visibility renderAll',e)}
     try{if(typeof renderOldSite==='function')renderOldSite()}catch(e){console.warn('TODO AI status visibility renderOldSite',e)}
-    setTimeout(()=>{ensureFilter();applyStatusFilter();updateRemainingCount()},20);
+    applyStatusFilter();
   }
 
   function observe(){
     const cards=$('requirementCards');
     if(!cards || cards.dataset.statusObserver==='1') return;
     cards.dataset.statusObserver='1';
-    new MutationObserver(()=>setTimeout(applyStatusFilter,0)).observe(cards,{childList:true});
+    new MutationObserver(applyStatusFilter).observe(cards,{childList:true});
   }
 
-  function boot(){refresh();observe();setTimeout(()=>{ensureFilter();wrapExistingFilter();applyStatusFilter();observe()},250)}
+  function boot(){refresh();observe();setTimeout(()=>{ensureFilter();applyStatusFilter();observe()},250)}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
 
   window.TSSRequirementStatusVisibility={openRequirements,refresh,applyStatusFilter,ensureFilter,updateRemainingCount};

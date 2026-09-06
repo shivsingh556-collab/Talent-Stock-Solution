@@ -117,3 +117,22 @@ dialog form{padding:28px}
 @media(max-width:900px){.sidebar{position:relative;width:100%;height:auto;padding:16px;gap:12px}.sidebar-logo{max-width:230px}.sidebar-caption,.client-header,.sidebar-search,.client-tree,.workspace-note{display:none}.sidebar nav{display:flex;overflow-x:auto;gap:8px;padding:3px 2px 8px}.nav-item{width:auto;flex:0 0 auto;white-space:nowrap}.add-client-btn{align-self:flex-start}.main-shell{margin:0;width:100%}.topbar{position:relative;padding:18px;gap:12px}.top-search{display:none}.page-brand{flex:1 1 180px}.requirement-switcher{max-width:none;flex:1 1 220px}.view{padding:22px 18px}.hero-dashboard-grid,.lower-dashboard-grid,.bottom-dashboard-grid{grid-template-columns:1fr}.profile-grid,.question-columns{grid-template-columns:1fr}.dashboard-title-row h1{font-size:28px}.login-left{padding:40px 28px}.login-shell{width:100%;min-height:0}.login-gate{padding:24px 16px}.login-right{display:none}.summary-box,.candidate-detail-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.todo-modal-head{padding:24px 60px 24px 24px}.todo-large{display:none}.form-grid{grid-template-columns:1fr}}
 @media(max-width:560px){.filter-row,.summary-box,.candidate-detail-grid{grid-template-columns:1fr}.ai-card-body{grid-template-columns:1fr;gap:24px}.quality-ring{margin:10px auto}.old-panel{padding:20px}.panel-title h3{font-size:17px}.health-grid-live{gap:8px}.todo-metrics{grid-template-columns:1fr;padding:18px}.todo-help{margin:0 18px 18px}.todo-modal-card{width:100%}.todo-modal{padding:12px}.todo-modal-head h2{font-size:22px}.todo-command{grid-template-columns:minmax(0,1fr) 52px}.login-primary{width:100%}.login-left{padding:30px 22px}.login-form{padding:14px}.wordmark{font-size:40px}.secure-pill{margin-top:30px;font-size:10px}.section-head .search-box{width:100%}.question-count{white-space:normal}.toast{max-width:calc(100vw - 32px);right:16px;bottom:16px}.steps i{display:none}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
+
+/* Reserve stable space for dynamic tools and prevent scrollbar-driven reflow. */
+html{scrollbar-gutter:stable}
+.main-shell{background:var(--bg)}
+.topbar{padding:16px 24px!important;gap:12px!important}
+.topbar .page-brand{min-width:180px!important;flex:1 1 190px!important}
+.topbar .requirement-switcher{min-width:180px!important;max-width:260px!important;flex:1 1 220px!important}
+.topbar .top-search{min-width:180px!important;flex:1 1 200px!important}
+.backend-indicator{min-width:132px}
+.sidebar{overflow-y:auto!important}
+.client-tree{flex:1 1 auto!important;min-height:160px!important;overflow-y:auto!important;max-height:none!important}
+#requirementCards .req-card{display:flex;flex-direction:column;align-self:stretch}
+#requirementCards .card-actions{min-height:92px;align-content:start;gap:8px;margin-top:16px}
+#requirementCards .card-actions button{flex:1 1 105px;min-height:42px;line-height:1.35}
+#requirementCards .workflow-strip{min-height:36px}
+#requirementCards .skill-cloud{max-height:92px;overflow:auto;align-content:start}
+#requirementCards .workflow-chip{font-size:12px;color:#c6d9ea}
+@media(max-width:1200px){.topbar .top-search{display:none!important}}
+@media(max-width:900px){.login-right{display:none!important}.topbar .page-brand{flex:1 1 100%!important}.topbar .requirement-switcher{max-width:none!important}.client-tree{display:none!important}}

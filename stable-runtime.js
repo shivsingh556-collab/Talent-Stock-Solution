@@ -39,11 +39,7 @@
       localStorage.setItem('tss_talent_buddy_v1',JSON.stringify(db));
       try{renderAll()}catch{}
       try{renderOldSite()}catch{}
-      const total=reqs.length;
-      const active=reqs.filter(r=>String(r.status||'').toLowerCase()==='active').length;
-      if($('navReqCount'))$('navReqCount').textContent=total;
-      if($('clientReqCount'))$('clientReqCount').textContent=total;
-      if($('activeReqChip'))$('activeReqChip').textContent=`${active} active · ${total-active} on hold`;
+      window.TSSRequirementStatusVisibility?.updateRemainingCount();
     }
   }
 

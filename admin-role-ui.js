@@ -27,12 +27,13 @@
     const nav=$('nav');if(!nav)return;
     [...nav.querySelectorAll('.nav-item')].forEach(btn=>{
       if(btn.id==='adminNavBtn')return;
-      if(String(btn.textContent||'').trim().toLowerCase()==='admin')btn.remove();
+      if(btn.dataset.view==='adminView')btn.remove();
     });
   }
 
   function ensureSection(){
     const nav=$('nav');const main=document.querySelector('.main-shell');if(!nav||!main)return null;
+    if(nav.querySelector('[data-view="admin"]')){$('adminNavBtn')?.remove();return null;}
     removeDuplicateAdminNav();
     let navBtn=$('adminNavBtn');
     if(!navBtn){

@@ -34,11 +34,7 @@
     };
   }
   function paint(rows){
-    const total=rows.length;
-    const active=rows.filter(r=>String(r.status||'').toLowerCase()==='active').length;
-    if($('navReqCount'))$('navReqCount').textContent=String(total);
-    if($('clientReqCount'))$('clientReqCount').textContent=String(total);
-    if($('activeReqChip'))$('activeReqChip').textContent=`${active} active · ${total-active} on hold`;
+    window.TSSRequirementStatusVisibility?.updateRemainingCount();
   }
   function rerender(){
     try{if(typeof renderAll==='function')renderAll()}catch(e){console.warn('TODO AI renderAll',e)}
@@ -80,5 +76,5 @@
 
   // Realtime coordinator owns startup and reconnect refreshes. Keeping this module
   // callable avoids competing fetch/render loops during page boot.
-  window.TSSRequirementsLiveSync={syncNow,boot};
+  window.TSSRequirementsLiveSync={syncNow,boot,mapRow};
 })();
