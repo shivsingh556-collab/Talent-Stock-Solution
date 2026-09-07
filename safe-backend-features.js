@@ -80,7 +80,7 @@
   }
 
   async function latestResume(c){const id=c.serverId||c.id;if(!C()||!id)return null;const {data,error}=await C().from('resume_versions').select('*').eq('candidate_id',id).order('uploaded_at',{ascending:false}).limit(1).maybeSingle();if(error)throw error;return data}
-  async function viewResume(c){try{const r=await latestResume(c);if(!r)return notify('No stored resume found');const {data,error}=await C().storage.from('candidate-resumes').createSignedUrl(r.storage_path,120);if(error)throw error;window.open(data.signedUrl,'_blank','noopener');await logAction('resume_viewed','candidate',c.serverId||c.id,{resume_version:r.id})}catch(e){notify('Unable to open resume: '+e.message)}}
+  async function viewResume(c){const resumeWindow=window.open('','_blank');if(resumeWindow)resumeWindow.opener=null;try{const r=await latestResume(c);if(!r){resumeWindow?.close();return notify('Resume unavailable for this candidate')}const {data,error}=await C().storage.from('candidate-resumes').createSignedUrl(r.storage_path,120);if(error)throw error;if(resumeWindow)resumeWindow.location.replace(data.signedUrl);else notify('Allow pop-ups to view the resume');await logAction('resume_viewed','candidate',c.serverId||c.id,{resume_version:r.id})}catch(e){resumeWindow?.close();notify('Unable to open resume: '+e.message)}}
   async function deleteEverywhere(c){
     const me=await getIdentity();
     if(me?.role!=='admin')return notify('Only admins can delete candidates');
@@ -90,13 +90,11 @@
     }catch(e){notify('Delete Everywhere failed: '+e.message)}
   }
 
-  function findCandidateFromRow(tr){const text=tr.innerText||'';const email=(text.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i)||[])[0];return (db.candidates||[]).find(c=>email&&c.email?.toLowerCase()===email.toLowerCase())||(db.candidates||[]).find(c=>c.name&&text.includes(c.name))}
   async function enhanceCandidateTable(){
     const wrap=$('candidateTableWrap');if(!wrap)return;
     const me=await getIdentity();
     const canDelete=me?.role==='admin';
-    const head=wrap.querySelector('thead tr');if(head&&!head.querySelector('.safe-actions-head')){const th=document.createElement('th');th.className='safe-actions-head';th.textContent='Actions';head.appendChild(th)}
-    wrap.querySelectorAll('tbody tr').forEach(tr=>{if(tr.querySelector('.safe-candidate-actions'))return;const c=findCandidateFromRow(tr);if(!c)return;const td=document.createElement('td');td.className='safe-candidate-actions';td.innerHTML=`<div class="safe-action-row"><button class="btn ghost" data-a="view">View Resume</button>${canDelete?'<button class="btn ghost safe-danger" data-a="delete">Delete Everywhere</button>':''}</div>`;tr.appendChild(td);td.querySelector('[data-a="view"]').onclick=()=>viewResume(c);const del=td.querySelector('[data-a="delete"]');if(del)del.onclick=()=>deleteEverywhere(c)})
+    wrap.querySelectorAll('tbody tr[data-candidate-id]').forEach(tr=>{const actions=tr.querySelector('.candidate-action-row');if(!actions)return;actions.querySelector('.safe-danger')?.remove();if(!canDelete)return;const c=(db.candidates||[]).find(x=>String(x.id)===tr.dataset.candidateId||String(x.serverId)===tr.dataset.candidateId);if(!c)return;const del=document.createElement('button');del.type='button';del.className='btn ghost safe-danger';del.textContent='Delete Everywhere';del.onclick=()=>deleteEverywhere(c);actions.appendChild(del)})
   }
 
   function ensureAdminUI(){
@@ -119,6 +117,6 @@
     if(document.querySelector('.nav-item.active')?.dataset.view==='candidates')setTimeout(enhanceCandidateTable,150);
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',wire,{once:true});else wire();
-  window.TSSSafeBackendFeatures={upsertLatestMatch,rematchRequirement,viewResume,deleteEverywhere,renderAdmin,logAction};
+  window.TSSSafeBackendFeatures={upsertLatestMatch,rematchRequirement,viewResume,deleteEverywhere,renderAdmin,logAction,enhanceCandidateTable};
 })();
 

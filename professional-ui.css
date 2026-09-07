@@ -271,3 +271,37 @@ dialog form{padding:20px}
 @media(min-width:1100px) and (max-width:1350px){.hero-dashboard-grid{grid-template-columns:minmax(0,1.05fr) minmax(0,1fr)}}
 @media(max-width:900px){.view{padding:14px!important}.topbar{padding:10px 14px!important}.sidebar{padding:10px 12px}.login-left{padding:28px 22px}}
 @media(max-width:560px){.old-panel,.req-card{padding:14px!important}.ai-card-body{gap:12px}}
+
+/* Candidate Records: stable columns, explicit missing states, and built-in actions. */
+#candidateTableWrap{padding:0!important;overflow:hidden}
+.candidate-table-scroll{overflow:auto;width:100%}
+.candidate-records-table{min-width:1180px;table-layout:fixed}
+.candidate-records-table th:nth-child(1){width:190px}
+.candidate-records-table th:nth-child(2){width:210px}
+.candidate-records-table th:nth-child(3){width:120px}
+.candidate-records-table th:nth-child(4){width:150px}
+.candidate-records-table th:nth-child(5){width:115px}
+.candidate-records-table th:nth-child(6){width:125px}
+.candidate-records-table th:nth-child(7){width:125px}
+.candidate-records-table th:nth-child(8){width:230px}
+.candidate-records-table td{vertical-align:top;line-height:1.4}
+.candidate-records-table td>span,.candidate-records-table td>small,.candidate-primary strong,.candidate-primary small,.candidate-contact span,.candidate-contact small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.candidate-primary strong{font-size:13px;color:#17293c}
+.candidate-records-table small{margin-top:4px;color:#6d8195}
+.candidate-contact span{color:#245f91}
+.candidate-action-row{display:flex;gap:6px;flex-wrap:wrap;align-items:flex-start}
+.candidate-action-row .btn{padding:7px 9px!important;font-size:11px!important;white-space:nowrap}
+.candidate-action-row .candidate-view-resume{color:#1f6fb8!important;border-color:#9cc4e4!important}
+.candidate-action-row .candidate-edit{color:#435a70!important}
+.candidate-action-row button:disabled{cursor:not-allowed!important;color:#8795a3!important;background:#f3f5f7!important;border-color:#dce2e8!important;opacity:1!important}
+#candidateDialog{width:min(900px,94vw);background:#fff;color:#17293c;border-color:#d4dee8}
+#candidateDialog form{padding:22px}
+#candidateDialog .dialog-head p{margin:5px 0 0;color:#6d8195;font-size:12px}
+#candidateDialog label{display:block;color:#526b82;font-size:11px;font-weight:700;margin:10px 0 5px}
+#candidateDialog input,#candidateDialog textarea{width:100%;background:#fff;color:#1b2d40;border:1px solid #cfd9e3;border-radius:8px;padding:10px}
+#candidateDialog input:focus,#candidateDialog textarea:focus{outline:none;border-color:#2b86df;box-shadow:0 0 0 3px rgba(43,134,223,.10)}
+#candidateDialog .candidate-edit-hint{min-height:18px;margin:10px 0 0;color:#66788a;font-size:11px}
+#candidateDialog .btn{background:#fff;color:#245f91;border:1px solid #b9d1e5}
+#candidateDialog .btn.primary{background:#1f7fe5;color:#fff;border-color:#1f7fe5}
+#candidateDialog .icon-btn{background:#fff;color:#36536d;border-color:#c3d2df}
+@media(max-width:700px){#candidateDialog .candidate-edit-grid{grid-template-columns:1fr}}
