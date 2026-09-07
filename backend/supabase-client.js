@@ -102,43 +102,84 @@
     return {synced,skipped};
   }
 
+  function normalizeCandidateEmail(value){
+    const email=String(value||'').trim().toLowerCase();
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)?email:'';
+  }
+
+  function normalizeCandidatePhone(value){
+    let phone=String(value||'').replace(/\D/g,'');
+    if(phone.length>10) phone=phone.slice(-10);
+    return /^[6-9]\d{9}$/.test(phone)?phone:'';
+  }
+
+  function candidatePayload(candidate,options={}){
+    const payload={
+      candidate_name:String(candidate?.name||'').trim(),
+      phone:normalizeCandidatePhone(candidate?.phone)||null,
+      current_location:String(candidate?.location||'').trim()||null,
+      preferred_location:String(candidate?.preferredLocation||'').trim()||null,
+      total_experience:candidate?.totalExperience===''||candidate?.totalExperience==null?null:Number(candidate.totalExperience),
+      relevant_experience:candidate?.relevantExperience===''||candidate?.relevantExperience==null?null:Number(candidate.relevantExperience),
+      current_company:String(candidate?.currentCompany||'').trim()||null,
+      current_designation:String(candidate?.designation||'').trim()||null,
+      skills:Array.isArray(candidate?.skills)?candidate.skills.filter(Boolean):[],
+      education:String(candidate?.education||'').trim()||null,
+      notice_period:String(candidate?.noticePeriod||'').trim()||null,
+      current_ctc:String(candidate?.currentCTC||'').trim()||null,
+      expected_ctc:String(candidate?.expectedCTC||'').trim()||null
+    };
+    const email=normalizeCandidateEmail(candidate?.email);
+    if(email) payload.email=email;
+    else if(!options.preserveExistingEmail) payload.email=null;
+    return payload;
+  }
+
   async function createOrUpdateCandidate(candidate){
     if(!client) throw new Error('Supabase is not configured');
     const user = await currentUser();
     if(!user) throw new Error('Not signed in');
+    const email=normalizeCandidateEmail(candidate?.email);
+    const phone=normalizeCandidatePhone(candidate?.phone);
     let existing = null;
-    if(candidate.email){
-      const { data } = await client.from('candidates').select('*').ilike('email',candidate.email).maybeSingle();
+    if(email){
+      const { data, error } = await client.from('candidates').select('*').ilike('email',email).limit(1).maybeSingle();
+      if(error) throw error;
       existing = data;
     }
-    if(!existing && candidate.phone){
-      const { data } = await client.from('candidates').select('*').eq('phone',candidate.phone).maybeSingle();
-      existing = data;
+    if(!existing && phone){
+      for(const value of [phone,`+91${phone}`,`91${phone}`]){
+        const { data, error } = await client.from('candidates').select('*').eq('phone',value).limit(1).maybeSingle();
+        if(error) throw error;
+        if(data){existing=data;break}
+      }
     }
     if(existing) return { duplicate:true, candidate:existing };
-    const payload = {
-      candidate_name:candidate.name,
-      email:candidate.email || null,
-      phone:candidate.phone || null,
-      current_location:candidate.location || null,
-      preferred_location:candidate.preferredLocation || null,
-      total_experience:candidate.totalExperience || null,
-      relevant_experience:candidate.relevantExperience || null,
-      current_company:candidate.currentCompany || null,
-      current_designation:candidate.designation || null,
-      skills:candidate.skills || [],
-      education:candidate.education || null,
-      notice_period:candidate.noticePeriod || null,
-      current_ctc:candidate.currentCTC || null,
-      expected_ctc:candidate.expectedCTC || null,
-      uploaded_by:user.id
-    };
+    const payload = {...candidatePayload(candidate),uploaded_by:user.id};
     const { data, error } = await client.from('candidates').insert(payload).select().single();
     if(error) throw error;
     return { duplicate:false, candidate:data };
   }
 
-  async function uploadResume(candidateId,file,hash){
+  async function updateCandidate(candidateId,candidate){
+    if(!client) throw new Error('Supabase is not configured');
+    if(!candidateId) throw new Error('Candidate ID is required');
+    const user=await currentUser();
+    if(!user) throw new Error('Not signed in');
+    const emailInput=String(candidate?.email||'').trim();
+    if(emailInput&&!normalizeCandidateEmail(emailInput)) throw new Error('Enter a valid email address');
+    const phoneInput=String(candidate?.phone||'').trim();
+    if(phoneInput&&!normalizeCandidatePhone(phoneInput)) throw new Error('Enter a valid 10-digit Indian phone number');
+    const {data:existing,error:readError}=await client.from('candidates').select('email').eq('id',candidateId).single();
+    if(readError) throw readError;
+    const payload=candidatePayload(candidate,{preserveExistingEmail:Boolean(existing?.email)&&!emailInput});
+    if(!payload.candidate_name) throw new Error('Candidate name is required');
+    const {data,error}=await client.from('candidates').update(payload).eq('id',candidateId).select().single();
+    if(error) throw error;
+    return data;
+  }
+
+  async function uploadResume(candidateId,file,hash,extractedText=''){
     if(!client) throw new Error('Supabase is not configured');
     const user = await currentUser();
     if(!user) throw new Error('Not signed in');
@@ -153,6 +194,7 @@
       mime_type:file.type,
       file_size:file.size,
       file_hash:hash || null,
+      extracted_text:String(extractedText||'').trim()||null,
       uploaded_by:user.id
     }).select().single();
     if(error) throw error;
@@ -202,6 +244,7 @@
     getActiveRequirements,
     syncMasterRequirements,
     createOrUpdateCandidate,
+    updateCandidate,
     uploadResume,
     saveScreening,
     candidateHistory,
