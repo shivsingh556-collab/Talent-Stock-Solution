@@ -4,14 +4,27 @@
   if(window.__TSS_REALTIME_PERFORMANCE__)return;
   window.__TSS_REALTIME_PERFORMANCE__=true;
   const backend=()=>window.TSSBackend;
-  let channel=null,refreshTimer=null,reconnectTimer=null;
-  let refreshing=false,refreshAgain=false,lastRefresh=0,reconnectAttempt=0,booted=false;
+  let channel=null,refreshTimer=null,reconnectTimer=null,stateTimer=null,subscribePromise=null;
+  let refreshing=false,refreshAgain=false,lastRefresh=0,reconnectAttempt=0,booted=false,channelReady=false;
   let online=navigator.onLine;
 
-  function setState(state){
+  function paintState(state){
     document.documentElement.dataset.tssLive=state;
+    const indicator=document.querySelector('#backendIndicator');
+    if(indicator)indicator.className='backend-indicator '+(state==='on'?'':'off');
     const label=document.querySelector('#backendIndicator span');
-    if(label)label.textContent=state==='on'?'Live updates on':state==='syncing'?'Syncing…':state==='offline'?'Offline · changes saved locally':'Reconnecting…';
+    if(label)label.textContent=state==='on'?'Live updates on':state==='offline'?'Offline · changes saved locally':'Reconnecting…';
+  }
+  function setState(state){
+    clearTimeout(stateTimer);stateTimer=null;
+    if(state==='on'||state==='offline'){paintState(state);return}
+    // Brief reconnects are normal during auth refreshes and tab wake-up.
+    stateTimer=setTimeout(()=>{if(!channelReady&&online)paintState('degraded')},1500);
+  }
+  function setSyncing(active){
+    if(active)document.documentElement.dataset.tssSyncing='true';else delete document.documentElement.dataset.tssSyncing;
+    const indicator=document.querySelector('#backendIndicator');
+    if(indicator)indicator.setAttribute('aria-busy',active?'true':'false');
   }
   function renderOnce(){
     try{if(typeof renderAll==='function')renderAll()}catch(e){console.warn('TODO AI render',e)}
@@ -28,13 +41,13 @@
     if(!online||document.visibilityState==='hidden')return false;
     if(refreshing){refreshAgain=true;return false}
     if(!force&&Date.now()-lastRefresh<1500)return false;
-    refreshing=true;setState('syncing');
+    refreshing=true;setSyncing(true);
     try{
       await window.TSSProduction?.hydrate?.();
-      lastRefresh=Date.now();setState(channel?'on':'degraded');
+      lastRefresh=Date.now();if(channelReady)setState('on');
       console.info('TODO AI sync complete',reason);return true;
     }catch(e){setState('degraded');console.warn('TODO AI sync failed',reason,e?.message||e);return false}
-    finally{refreshing=false;if(refreshAgain){refreshAgain=false;scheduleRefresh('queued',250,true)}}
+    finally{refreshing=false;setSyncing(false);if(refreshAgain){refreshAgain=false;scheduleRefresh('queued',250,true)}}
   }
   function scheduleRefresh(reason='change',delay=180,force=false){
     clearTimeout(refreshTimer);refreshTimer=setTimeout(()=>refresh(reason,force),delay);
@@ -45,22 +58,33 @@
     reconnectTimer=setTimeout(()=>{reconnectTimer=null;subscribe()},delay);
   }
   async function removeChannel(){
-    if(!channel)return;const current=channel;channel=null;
+    if(!channel)return;const current=channel;channel=null;channelReady=false;
     try{await backend()?.client?.removeChannel(current)}catch{}
   }
-  async function subscribe(){
+  async function subscribeOnce(){
     const b=backend();if(!b?.enabled||!b.client||!online)return false;
     const {data:{session}}=await b.client.auth.getSession();if(!session?.user)return false;
-    await removeChannel();channel=b.client.channel('tss-operational-live-v3');
-    ['requirements','candidates','screenings','interviews'].forEach(table=>channel.on('postgres_changes',{event:'*',schema:'public',table},()=>scheduleRefresh(table,180,true)));
-    channel.subscribe(status=>{
-      if(status==='SUBSCRIBED'){reconnectAttempt=0;setState('on');scheduleRefresh('reconnected',250,true)}
-      else if(status==='CHANNEL_ERROR'||status==='TIMED_OUT'||status==='CLOSED'){setState('degraded');scheduleReconnect()}
+    await removeChannel();
+    const next=b.client.channel('tss-operational-live-v3');channel=next;channelReady=false;
+    ['requirements','candidates','screenings','interviews'].forEach(table=>next.on('postgres_changes',{event:'*',schema:'public',table},()=>scheduleRefresh(table,180,true)));
+    next.subscribe((status,error)=>{
+      if(channel!==next)return;
+      if(status==='SUBSCRIBED'){
+        channelReady=true;reconnectAttempt=0;clearTimeout(reconnectTimer);reconnectTimer=null;
+        setState('on');scheduleRefresh('reconnected',250,true);
+      }else if(status==='CHANNEL_ERROR'||status==='TIMED_OUT'||status==='CLOSED'){
+        channelReady=false;console.warn('TODO AI realtime connection',status,error||'');setState('degraded');scheduleReconnect();
+      }
     });
     return true;
   }
+  function subscribe(){
+    if(subscribePromise)return subscribePromise;
+    subscribePromise=subscribeOnce().finally(()=>{subscribePromise=null});
+    return subscribePromise;
+  }
   function installLifecycle(){
-    window.addEventListener('online',()=>{online=true;setState('degraded');subscribe()},{passive:true});
+    window.addEventListener('online',()=>{online=true;subscribe()},{passive:true});
     window.addEventListener('offline',()=>{online=false;setState('offline');removeChannel()},{passive:true});
     window.addEventListener('focus',()=>scheduleRefresh('focus',150,false),{passive:true});
     document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')scheduleRefresh('visible',150,false)});
