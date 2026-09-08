@@ -3,7 +3,7 @@
   const $=id=>document.getElementById(id);
   const esc=v=>String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
   const norm=v=>String(v||'').trim().toLowerCase();
-  let open=false;
+  let open=false,submitting=false,pendingSubmission=null;
 
   function candidates(){
     const store=DB();
@@ -41,7 +41,7 @@
     </div>`;
     document.body.appendChild(wrap);
     const style=document.createElement('style');
-    style.textContent=`.tss-is-modal{position:fixed;inset:0;z-index:100000;background:rgba(2,11,20,.76);display:grid;place-items:center;padding:22px}.tss-is-modal.hidden{display:none}.tss-is-card{width:min(760px,96vw);max-height:92vh;overflow:auto;background:#0c2235;border:1px solid #2e5878;border-radius:18px;box-shadow:0 28px 80px rgba(0,0,0,.45);color:#eef7ff;padding:24px}.tss-is-head{display:flex;align-items:flex-start;justify-content:space-between;gap:20px;margin-bottom:20px}.tss-is-head small{color:#65bfff;font-weight:800;letter-spacing:1.4px}.tss-is-head h2{margin:6px 0 0;font-size:25px}.tss-is-head button{border:0;background:transparent;color:#bdd5e7;font-size:30px;cursor:pointer}.tss-is-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}.tss-is-grid label{display:flex;flex-direction:column;gap:7px}.tss-is-grid label span{font-weight:750;font-size:13px;color:#d5e7f5}.tss-is-grid label span b{color:#ff9b9b}.tss-is-grid input,.tss-is-grid select,.tss-is-grid textarea{width:100%;box-sizing:border-box;border:1px solid #315b79;border-radius:10px;background:#081a29;color:#f5fbff;padding:11px 12px;font:inherit;outline:none}.tss-is-grid input:focus,.tss-is-grid select:focus,.tss-is-grid textarea:focus{border-color:#35a8ff;box-shadow:0 0 0 3px rgba(53,168,255,.12)}.tss-is-grid label small{min-height:16px;color:#8fb2ca;font-size:11px}.tss-is-full{grid-column:1/-1}.tss-is-warning{margin-top:16px;padding:11px 13px;border-radius:10px;background:#102f46;border:1px solid #2e648b;color:#bcdcf2;font-size:12px;line-height:1.45}.tss-is-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:18px}.tss-is-actions button{border:1px solid #1987d8;background:#1987d8;color:white;border-radius:10px;padding:11px 16px;font-weight:800;cursor:pointer}.tss-is-actions button.secondary{background:transparent;border-color:#3a6079;color:#c6d9e7}@media(max-width:700px){.tss-is-grid{grid-template-columns:1fr}.tss-is-full{grid-column:auto}.tss-is-card{padding:18px}}`;
+    style.textContent=`.tss-is-modal{position:fixed;inset:0;z-index:100000;background:rgba(2,11,20,.76);display:grid;place-items:center;padding:22px}.tss-is-modal.hidden{display:none}.tss-is-card{width:min(760px,96vw);max-height:92vh;overflow:auto;background:#0c2235;border:1px solid #2e5878;border-radius:18px;box-shadow:0 28px 80px rgba(0,0,0,.45);color:#eef7ff;padding:24px}.tss-is-head{display:flex;align-items:flex-start;justify-content:space-between;gap:20px;margin-bottom:20px}.tss-is-head small{color:#65bfff;font-weight:800;letter-spacing:1.4px}.tss-is-head h2{margin:6px 0 0;font-size:25px}.tss-is-head button{border:0;background:transparent;color:#bdd5e7;font-size:30px;cursor:pointer}.tss-is-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}.tss-is-grid label{display:flex;flex-direction:column;gap:7px}.tss-is-grid label span{font-weight:750;font-size:13px;color:#d5e7f5}.tss-is-grid label span b{color:#ff9b9b}.tss-is-grid input,.tss-is-grid select,.tss-is-grid textarea{width:100%;box-sizing:border-box;border:1px solid #315b79;border-radius:10px;background:#081a29;color:#f5fbff;padding:11px 12px;font:inherit;outline:none}.tss-is-grid input:focus,.tss-is-grid select:focus,.tss-is-grid textarea:focus{border-color:#35a8ff;box-shadow:0 0 0 3px rgba(53,168,255,.12)}.tss-is-grid label small{min-height:16px;color:#8fb2ca;font-size:11px}.tss-is-full{grid-column:1/-1}.tss-is-warning{margin-top:16px;padding:11px 13px;border-radius:10px;background:#102f46;border:1px solid #2e648b;color:#bcdcf2;font-size:12px;line-height:1.45}.tss-is-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:18px}.tss-is-actions button{border:1px solid #1987d8;background:#1987d8;color:white;border-radius:10px;padding:11px 16px;font-weight:800;cursor:pointer}.tss-is-actions button:disabled{opacity:.6;cursor:wait}.tss-is-actions button.secondary{background:transparent;border-color:#3a6079;color:#c6d9e7}@media(max-width:700px){.tss-is-grid{grid-template-columns:1fr}.tss-is-full{grid-column:auto}.tss-is-card{padding:18px}}`;
     document.head.appendChild(style);
     wrap.addEventListener('click',e=>{if(e.target===wrap||e.target.closest('[data-is-close]'))closeModal()});
     $('tssIsCandidate')?.addEventListener('change',updateCandidateMeta);
@@ -63,10 +63,11 @@
   function selectedRequirement(){const key=$('tssIsRequirement')?.value;return requirements().find(r=>reqKey(r)===key)}
   function updateCandidateMeta(){const c=selectedCandidate();$('tssIsCandidateMeta').textContent=c?`${emailOf(c)||'No email saved'}${c.phone?` · ${c.phone}`:''}`:'Choose a candidate already saved in Candidate Records.'}
   function updateReqMeta(){const r=selectedRequirement();$('tssIsReqMeta').textContent=r?`${r.status||''}${r.location?` · ${r.location}`:''}${r.positionsCount||r.positions_count?` · ${r.positionsCount||r.positions_count} position(s)`:''}`:'The selected requirement controls the role/client shown in the email.'}
-  function openModal(){ensureModal();populate();$('tssInterviewSchedulerModal').classList.remove('hidden');open=true}
+  function openModal(){ensureModal();populate();pendingSubmission=null;$('tssInterviewSchedulerModal').classList.remove('hidden');open=true}
   function closeModal(){$('tssInterviewSchedulerModal')?.classList.add('hidden');open=false}
   function localTimeLabel(value){if(!value)return'';const [h0,m='00']=value.split(':');let h=Number(h0),ap=h>=12?'PM':'AM';h=h%12||12;return `${h}:${m} ${ap}`}
   async function submit(){
+    if(submitting)return;
     const c=selectedCandidate(),r=selectedRequirement();
     const date=$('tssIsDate').value,time=$('tssIsTime').value;
     if(!c)return alert('Please select a saved candidate.');
@@ -75,14 +76,29 @@
     if(!emailOf(c))return alert('This candidate has no email saved. Add the candidate email first so confirmation can be sent.');
     const store=DB(); if(!store)return;
     const item={candidate:nameOf(c),email:emailOf(c),candidateId:c.serverId||c.id||null,date,time:localTimeLabel(time),position:r.title||'',client:r.client||'',requirementId:r.id||'',requirementServerId:r.serverId||null,mode:$('tssIsMode').value||'Client Interview',interviewer:$('tssIsInterviewer').value.trim(),locationOrLink:$('tssIsLocation').value.trim(),notes:$('tssIsNotes').value.trim()};
+    const submissionKey=JSON.stringify([item.candidateId,item.requirementServerId,item.date,item.time,item.mode,item.interviewer,item.locationOrLink,item.notes]);
+    if(pendingSubmission?.submissionKey===submissionKey)item.clientRequestId=pendingSubmission.item.clientRequestId;
+    else item.clientRequestId=window.TSSInterviewSync?.newRequestId?.();
     const confirmation=`Schedule interview?\n\nCandidate: ${item.candidate}\nPosition: ${item.position}\nClient: ${item.client}\nDate: ${item.date}\nTime: ${item.time}\n\nThe email will be sent using THIS exact position.`;
     if(!confirm(confirmation))return;
-    store.interviews=store.interviews||[];store.interviews.push(item);
-    try{saveDB()}catch{try{localStorage.setItem('tss_talent_buddy_v1',JSON.stringify(store))}catch{}}
-    closeModal();
-    try{window.renderOldSite?.()}catch{}
-    try{toast('Interview scheduled · syncing exact candidate + position')}catch{}
-    setTimeout(()=>window.TSSInterviewSync?.persistLatest?.(),120);
+    const button=$('tssIsSubmit'),originalText=button?.textContent||'Schedule & Send Confirmation';
+    submitting=true;pendingSubmission={submissionKey,item};
+    if(button){button.disabled=true;button.textContent='Scheduling…'}
+    try{
+      if(!window.TSSInterviewSync?.persistItem)throw new Error('Interview sync is not ready. Please refresh and try again.');
+      await window.TSSInterviewSync.persistItem(item);
+      store.interviews=store.interviews||[];
+      if(!store.interviews.some(existing=>String(existing.serverId||existing.id)===String(item.serverId)))store.interviews.push(item);
+      localStorage.setItem('tss_talent_buddy_v1',JSON.stringify(store));
+      pendingSubmission=null;closeModal();
+      try{window.TSSInterviewActions?.renderStable?.(true)}catch{}
+      try{toast(`Interview scheduled for ${item.position} · confirmation + reminders queued`)}catch{}
+    }catch(error){
+      item.syncState='failed';item.syncError=error?.message||String(error);console.warn(error);
+      try{toast('Interview was not scheduled: '+item.syncError)}catch{}
+    }finally{
+      submitting=false;if(button){button.disabled=false;button.textContent=originalText}
+    }
   }
 
   function intercept(e){
