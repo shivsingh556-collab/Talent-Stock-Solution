@@ -274,15 +274,20 @@ dialog form{padding:20px}
 
 /* Candidate Records: stable columns, explicit missing states, and built-in actions. */
 #candidateTableWrap{padding:0!important;overflow:hidden}
+.candidate-review-filter{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px 18px;background:#eef7ff;border-bottom:1px solid #cfe2f3}
+.candidate-review-filter strong,.candidate-review-filter small{display:block}
+.candidate-review-filter strong{color:#173b5c;font-size:14px}
+.candidate-review-filter small{margin-top:4px;color:#607c94;font-size:11px}
+.candidate-review-filter .btn{flex:0 0 auto;background:#fff!important;color:#1f6fb8!important;border-color:#9cc4e4!important}
 .candidate-table-scroll{overflow:auto;width:100%}
-.candidate-records-table{min-width:1180px;table-layout:fixed}
+.candidate-records-table{min-width:1280px;table-layout:fixed}
 .candidate-records-table th:nth-child(1){width:190px}
 .candidate-records-table th:nth-child(2){width:210px}
 .candidate-records-table th:nth-child(3){width:120px}
 .candidate-records-table th:nth-child(4){width:150px}
 .candidate-records-table th:nth-child(5){width:115px}
 .candidate-records-table th:nth-child(6){width:125px}
-.candidate-records-table th:nth-child(7){width:125px}
+.candidate-records-table th:nth-child(7){width:220px}
 .candidate-records-table th:nth-child(8){width:230px}
 .candidate-records-table td{vertical-align:top;line-height:1.4}
 .candidate-records-table td>span,.candidate-records-table td>small,.candidate-primary strong,.candidate-primary small,.candidate-contact span,.candidate-contact small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
