@@ -13,7 +13,7 @@ const {chromium}=require('playwright');
       {id:'C-JAYESH',name:'JAYESH WAGHELA',email:'',phone:'9867741866',designation:'Executive',location:'Mumbai',totalExperience:'5.6',noticePeriod:'30 days',resumeAvailable:true,resumePath:'user/C-JAYESH/resume.pdf',resumeFilename:'resume.pdf',lastScreenedDate:'2026-09-07T06:21:11.474Z'},
       {id:'C-NO-CV',name:'NO RESUME CANDIDATE',email:'candidate@example.com',phone:'',designation:'Analyst',location:'Pune',totalExperience:'2',resumeAvailable:false}
     ];
-    db.screenings=[{candidateId:'C-JAYESH',date:'2026-09-07T06:21:11.474Z',recommendation:'Review Recommended'}];
+    db.screenings=[{candidateId:'C-JAYESH',requirementId:'TSS001',date:'2026-09-07T06:21:11.474Z',score:63,recommendation:'Review Recommended'}];
     renderAll();
     document.getElementById('loginGate').classList.add('hidden');
     document.getElementById('workspace').classList.remove('hidden');
@@ -33,6 +33,17 @@ const {chromium}=require('playwright');
   await page.locator('#saveCandidateBtn').click();
   await page.waitForFunction(()=>!document.getElementById('candidateDialog').open);
   assert.match(await rows.first().locator('.candidate-contact').innerText(),/jayesh\.updated@example\.com/);
+
+  await page.evaluate(()=>gotoView('dashboard'));
+  await page.locator('.ai-card [data-open-screening]').click();
+  await page.locator('#candidates.view.active').waitFor();
+  assert.equal(await rows.count(),1,'Review Candidates shows only the candidates represented by the dashboard count');
+  assert.match(await rows.first().locator('.candidate-primary').innerText(),/JAYESH WAGHELA/);
+  assert.match(await rows.first().locator('td').nth(6).innerText(),/63\/100/);
+  assert.match(await rows.first().locator('td').nth(6).innerText(),/63\/100 · .+ — .+/s);
+  assert.match(await page.locator('.candidate-review-filter').innerText(),/1 candidate worth reviewing/);
+  await page.locator('.candidate-clear-review').click();
+  assert.equal(await rows.count(),2,'Show All Candidates restores the complete candidate library');
   assert.equal(errors.length,0,errors.join('\n'));
   await browser.close();
   console.log('candidate records browser test passed');

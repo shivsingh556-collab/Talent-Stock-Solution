@@ -17,7 +17,7 @@
     const candidates=s.candidates||[],screenings=s.screenings||[],interviews=(s.interviews||[]).filter(i=>!i.archivedAt);
     const total=candidates.length;
     const screened=Math.min(total,uniqueIds(screenings).size);
-    const reviewable=Math.min(screened,uniqueIds(screenings,x=>['Strong Match','Review Recommended'].includes(x.recommendation)).size);
+    const reviewable=Math.min(screened,window.TSSCandidateRecords?.reviewableIds?.().size??uniqueIds(screenings,x=>['Strong Match','Review Recommended'].includes(x.recommendation)).size);
     const interviewCandidates=uniqueIds(interviews).size;
     const interviewCount=interviewCandidates||interviews.length;
     const offerIds=uniqueIds(screenings,x=>/(offer|final select|joined-tss)/i.test(String(x.recruiterDecision||'')));
@@ -49,6 +49,11 @@
 
   function wire(){
     wrapRenderer();
+    const review=document.querySelector('.ai-card [data-open-screening]');
+    if(review&&!review.dataset.reviewCandidatesWired){
+      review.dataset.reviewCandidatesWired='1';
+      review.addEventListener('click',e=>{e.preventDefault();e.stopImmediatePropagation();window.TSSCandidateRecords?.showReviewCandidates?.()},true);
+    }
     const pipeline=[...document.querySelectorAll('.pipeline-card .text-btn')]
       .find(b=>(b.textContent||'').trim().toLowerCase().includes('view full pipeline'));
     if(pipeline && !pipeline.dataset.pipelineWired){
