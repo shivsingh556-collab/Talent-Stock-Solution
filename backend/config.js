@@ -31,7 +31,7 @@ window.TSS_SUPABASE_CONFIG = window.TSS_SUPABASE_CONFIG || {
 })();
 
 window.addEventListener('load', () => {
-  const BUILD = '20260911-talent-discovery-v1';
+  const BUILD = '20260911-talent-discovery-v2';
   const addCss = (href) => {
     const clean = href.split('?')[0];
     if ([...document.querySelectorAll('link[rel="stylesheet"]')].some(x => (x.getAttribute('href')||'').split('?')[0] === clean)) return;
@@ -94,6 +94,7 @@ window.addEventListener('load', () => {
     .then(() => loadScript('realtime-performance.js','tssRealtimePerformance'))
     .then(() => loadScript('workflow-finalization.js','tssWorkflowFinalization'))
     .then(() => loadScript('requirement-screening-selection-fix.js','tssRequirementScreeningSelectionFix'))
+    .then(() => loadScript('talent-discovery-bridge.js','tssTalentDiscoveryBridge'))
     .then(() => loadScript('talent-discovery.js','tssTalentDiscovery'))
     .then(() => loadScript('todo-ai-branding.js','tssTodoAiBranding'))
     .then(() => loadScript('profile-logout.js','tssProfileLogout'))
