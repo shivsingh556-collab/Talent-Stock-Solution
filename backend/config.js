@@ -90,6 +90,7 @@ window.addEventListener('load', () => {
     .then(() => loadScript('admin-role-ui.js','tssAdminRoleUi'))
     .then(() => loadScript('screening-cleanup.js','tssScreeningCleanup'))
     .then(() => loadScript('quick-screening.js','tssQuickScreening'))
+    .then(() => loadScript('n8n-hybrid-screening.js','tssN8NHybridScreening'))
     .then(() => loadScript('todo-chatbot-upgrade.js','tssTodoChatbotUpgrade'))
     .then(() => loadScript('role-visibility.js','tssRoleVisibility'))
     .then(() => loadScript('realtime-performance.js','tssRealtimePerformance'))
