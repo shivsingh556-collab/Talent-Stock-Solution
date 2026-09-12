@@ -8,19 +8,19 @@ window.TSS_SUPABASE_CONFIG = window.TSS_SUPABASE_CONFIG || {
   if (!document.querySelector('link[data-tss-reports]')) {
     const css = document.createElement('link');
     css.rel = 'stylesheet';
-    css.href = 'reports-activity.css?v=20260911-quick-screen-v18';
+    css.href = 'reports-activity.css?v=20260912-copilot-v19';
     css.dataset.tssReports = '1';
     document.head.appendChild(css);
   }
   if (!document.querySelector('script[data-tss-reports]')) {
     const script = document.createElement('script');
-    script.src = 'reports-activity.js?v=20260911-quick-screen-v18';
+    script.src = 'reports-activity.js?v=20260912-copilot-v19';
     script.async = false;
     script.dataset.tssReports = '1';
     script.onload = () => {
       if (!document.querySelector('script[data-tss-daily-activity]')) {
         const daily = document.createElement('script');
-        daily.src = 'reports-daily-activity.js?v=20260911-quick-screen-v18';
+        daily.src = 'reports-daily-activity.js?v=20260912-copilot-v19';
         daily.async = false;
         daily.dataset.tssDailyActivity = '1';
         document.head.appendChild(daily);
@@ -31,7 +31,7 @@ window.TSS_SUPABASE_CONFIG = window.TSS_SUPABASE_CONFIG || {
 })();
 
 window.addEventListener('load', () => {
-  const BUILD = '20260911-quick-screen-v18';
+  const BUILD = '20260912-copilot-v19';
   const addCss = (href) => {
     const clean = href.split('?')[0];
     if ([...document.querySelectorAll('link[rel="stylesheet"]')].some(x => (x.getAttribute('href')||'').split('?')[0] === clean)) return;
@@ -46,6 +46,7 @@ window.addEventListener('load', () => {
   addCss('login-perfect.css');
   addCss('reports-activity.css');
   addCss('quick-screening.css');
+  addCss('quick-screening-next.css');
   const professional=document.querySelector('link[href^="professional-ui.css"]');
   if(professional)document.head.appendChild(professional);else addCss('professional-ui.css');
 
@@ -91,6 +92,7 @@ window.addEventListener('load', () => {
     .then(() => loadScript('screening-cleanup.js','tssScreeningCleanup'))
     .then(() => loadScript('quick-screening.js','tssQuickScreening'))
     .then(() => loadScript('n8n-hybrid-screening.js','tssN8NHybridScreening'))
+    .then(() => loadScript('quick-screening-next.js','tssQuickScreeningNext'))
     .then(() => loadScript('todo-chatbot-upgrade.js','tssTodoChatbotUpgrade'))
     .then(() => loadScript('role-visibility.js','tssRoleVisibility'))
     .then(() => loadScript('realtime-performance.js','tssRealtimePerformance'))
