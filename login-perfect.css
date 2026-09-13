@@ -12,7 +12,7 @@
 .authorized{margin-top:20px}
 .login-right{position:relative;padding:76px 48px;background:linear-gradient(145deg,#10365d,#0d4f88)!important;overflow:hidden;isolation:isolate}
 .login-right:before,.login-right:after{opacity:.7}
-.welcome-card{position:relative;z-index:5;border:1px solid #2a5d85;background:#09223a;padding:24px 26px;border-radius:16px}
+.welcome-card{position:relative;top:-16px!important;z-index:5;border:1px solid #2a5d85;background:#09223a;padding:24px 26px;border-radius:16px}
 .welcome-card span{font-size:11px}.welcome-card h2{font-size:20px;margin:12px 0 7px}.welcome-card p{font-size:14px}
 .todo-figure{position:absolute!important;z-index:4!important;left:50%!important;bottom:0!important;transform:translateX(-50%)!important;width:min(430px,88%)!important;height:510px!important;min-width:0!important;min-height:0!important;padding:0!important;margin:0!important;border:0!important;outline:0!important;border-radius:0!important;background-color:transparent!important;background-image:url('assets/todo-login-v2.webp')!important;background-repeat:no-repeat!important;background-position:center bottom!important;background-size:contain!important;box-shadow:none!important;filter:none!important;backdrop-filter:none!important;display:flex!important;align-items:flex-end!important;justify-content:center!important;overflow:visible!important;font-size:0!important;color:transparent!important;opacity:1!important;visibility:visible!important}
 .todo-figure:before,.todo-figure:after{content:none!important;display:none!important;border:0!important;background:none!important;box-shadow:none!important}
