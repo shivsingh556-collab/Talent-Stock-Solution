@@ -7,7 +7,10 @@
   async function currentUser(){
     if(!client) return null;
     const { data, error } = await client.auth.getUser();
-    if(error) throw error;
+    if(error){
+      if(error.name==='AuthSessionMissingError'||/auth session missing/i.test(error.message||''))return null;
+      throw error;
+    }
     return data.user || null;
   }
 
