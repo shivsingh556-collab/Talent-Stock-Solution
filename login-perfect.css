@@ -1,6 +1,6 @@
 /* TODO AI login screen — stable approved layout */
 .login-gate{min-height:100vh;display:grid;place-items:center;padding:4vh 3vw;background:#030b14!important}
-.login-shell{width:min(1140px,90vw);min-height:690px;display:grid;grid-template-columns:1.02fr 1fr;border:1px solid #17334b;border-radius:28px;overflow:hidden;background:#071522;box-shadow:0 28px 80px rgba(0,0,0,.34)}
+.login-shell{width:min(1140px,90vw);min-height:690px!important;display:grid;grid-template-columns:1.02fr 1fr;border:1px solid #17334b;border-radius:28px;overflow:hidden;background:#071522;box-shadow:0 28px 80px rgba(0,0,0,.34)}
 .login-left{padding:64px 66px;display:flex;flex-direction:column;justify-content:center;background:#071522}
 .login-left .talent-logo{width:min(330px,100%);margin-bottom:12px}
 .login-left .todoai-logo-frame{background:#fff!important;border-radius:0!important;padding:0!important;border:0!important;box-shadow:none!important;overflow:hidden}
