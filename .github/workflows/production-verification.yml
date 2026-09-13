@@ -1,0 +1,40 @@
+name: Production verification
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [production-hardening-v2]
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install browser test runtime
+        run: |
+          npm install --no-save playwright@1.55.0
+          npx playwright install --with-deps chromium
+      - name: Verify source and logic
+        run: |
+          node --check auth-bootstrap.js
+          node --check app-core.js
+          node --check app-runtime.js
+          node --test evidence-screening.test.cjs candidate-records.test.cjs realtime-performance.test.cjs
+      - name: Verify signed-out and authenticated boot
+        run: |
+          python3 -m http.server 4173 --bind 127.0.0.1 >/tmp/todo-ai-http.log 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid"' EXIT
+          for attempt in 1 2 3 4 5; do
+            curl --fail --silent http://127.0.0.1:4173/ >/dev/null && break
+            sleep 1
+          done
+          TSS_BASE_URL=http://127.0.0.1:4173/ node browser-smoke.test.cjs

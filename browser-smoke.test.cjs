@@ -16,7 +16,8 @@ const signedInBackend=`
   const profile={id:'user-1',full_name:'Test Recruiter',email:'test@talent-stock.com',role:'recruiter',is_active:true,is_super_admin:false};
   const terminal={data:[],error:null};
   function query(){return new Proxy({}, {get(_t,key){if(key==='then')return resolve=>resolve(terminal);if(key==='maybeSingle'||key==='single')return async()=>({data:profile,error:null});return()=>query()}})}
-  const client={auth:{onAuthStateChange:()=>({data:{subscription:{unsubscribe(){}}}})},from:()=>query()};
+  const channel={on(){return this},subscribe(callback){callback?.('SUBSCRIBED');return this}};
+  const client={auth:{onAuthStateChange:()=>({data:{subscription:{unsubscribe(){}}}})},from:()=>query(),channel:()=>channel,removeChannel:async()=>{}};
   window.TSSBackend={enabled:true,client,currentUser:async()=>({id:'user-1',email:profile.email}),signIn:async()=>({}),signOut:async()=>{},getActiveRequirements:async()=>[],syncMasterRequirements:async()=>({synced:0,skipped:0}),createOrUpdateCandidate:async()=>({}),updateCandidate:async()=>({}),uploadResume:async()=>({}),saveScreening:async()=>({}),candidateHistory:async()=>[],existingMatches:async()=>[]};
 })();`;
 
