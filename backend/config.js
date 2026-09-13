@@ -4,23 +4,33 @@ window.TSS_SUPABASE_CONFIG = window.TSS_SUPABASE_CONFIG || {
   anonKey: 'sb_publishable_qx9Xf31udLMuRWmqNAjBFQ_I7woPxap'
 };
 
+// Paint-time access gate. Legacy localStorage can no longer reveal the workspace
+// before a verified Supabase session has been checked by auth-session-guard.js.
+(function installAuthPaintGate(){
+  if(document.getElementById('tssAuthPaintGate'))return;
+  const style=document.createElement('style');
+  style.id='tssAuthPaintGate';
+  style.textContent='body:not([data-auth-verified="true"]) #workspace{display:none!important}body:not([data-quick-screening-access="allowed"]) #quickScreenCard{display:none!important}';
+  document.head.appendChild(style);
+})();
+
 (function loadReportingModule(){
   if (!document.querySelector('link[data-tss-reports]')) {
     const css = document.createElement('link');
     css.rel = 'stylesheet';
-    css.href = 'reports-activity.css?v=20260912-light-screen-v21';
+    css.href = 'reports-activity.css?v=20260913-hardening-v22';
     css.dataset.tssReports = '1';
     document.head.appendChild(css);
   }
   if (!document.querySelector('script[data-tss-reports]')) {
     const script = document.createElement('script');
-    script.src = 'reports-activity.js?v=20260912-light-screen-v21';
+    script.src = 'reports-activity.js?v=20260913-hardening-v22';
     script.async = false;
     script.dataset.tssReports = '1';
     script.onload = () => {
       if (!document.querySelector('script[data-tss-daily-activity]')) {
         const daily = document.createElement('script');
-        daily.src = 'reports-daily-activity.js?v=20260912-light-screen-v21';
+        daily.src = 'reports-daily-activity.js?v=20260913-hardening-v22';
         daily.async = false;
         daily.dataset.tssDailyActivity = '1';
         document.head.appendChild(daily);
@@ -31,7 +41,7 @@ window.TSS_SUPABASE_CONFIG = window.TSS_SUPABASE_CONFIG || {
 })();
 
 window.addEventListener('load', () => {
-  const BUILD = '20260912-light-screen-v21';
+  const BUILD = '20260913-hardening-v22';
   const addCss = (href) => {
     const clean = href.split('?')[0];
     if ([...document.querySelectorAll('link[rel="stylesheet"]')].some(x => (x.getAttribute('href')||'').split('?')[0] === clean)) return;
@@ -60,8 +70,11 @@ window.addEventListener('load', () => {
     document.body.appendChild(s);
   });
 
-  loadScript('brand-assets.js','tssBrandAssets')
+  loadScript('auth-session-guard.js','tssAuthSessionGuard')
+    .then(() => loadScript('brand-assets.js','tssBrandAssets'))
     .then(() => loadScript('login-todo-exact.js','tssLoginTodoExact'))
+    .then(() => loadScript('login-todo-visible.js','tssLoginTodoVisible'))
+    .then(() => window.TSSLoginTodoVisible?.apply?.())
     .then(() => loadScript('todo-exact.js','tssExactTodo'))
     .then(() => loadScript('extraction-accuracy.js','tssExtractionAccuracy'))
     .then(() => loadScript('candidate-enrichment.js','tssCandidateEnrichment'))
@@ -100,8 +113,5 @@ window.addEventListener('load', () => {
     .then(() => loadScript('requirement-screening-selection-fix.js','tssRequirementScreeningSelectionFix'))
     .then(() => loadScript('todo-ai-branding.js','tssTodoAiBranding'))
     .then(() => loadScript('profile-logout.js','tssProfileLogout'))
-    .then(() => loadScript('login-final-guard.js','tssLoginFinalGuard'))
-    .then(() => loadScript('login-todo-visible.js','tssLoginTodoVisible'))
-    .then(() => window.TSSLoginTodoVisible?.schedule?.())
     .catch(err => console.warn('TODO AI production layer load issue', err));
 });
