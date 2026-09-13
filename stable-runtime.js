@@ -44,17 +44,11 @@
   }
 
   async function logout(){
-    try{await backend()?.signOut?.()}catch(e){console.warn(e)}
-    localStorage.removeItem('tss_user_session');
-    localStorage.removeItem('tss_demo_auth');
-    $('workspace')?.classList.add('hidden');
-    $('loginGate')?.classList.remove('hidden');
-    if($('loginPassword'))$('loginPassword').value='';
-    location.reload();
+    return window.TSSAuth?.signOut?.();
   }
 
   function ensureLogout(){
-    const top=$('signOutBtn');if(top){top.onclick=e=>{e.preventDefault();logout()};top.title='Logout'}
+    const top=$('signOutBtn');if(top)top.title='Logout';
     if(!$('sidebarLogout')){
       const b=document.createElement('button');b.id='sidebarLogout';b.className='add-client-btn';b.style.marginTop='4px';b.textContent='↪  Logout';b.onclick=logout;
       const note=document.querySelector('.workspace-note');note?.after(b);

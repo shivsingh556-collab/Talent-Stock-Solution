@@ -13,14 +13,9 @@
   ];
 
   function nameFromEmail(email){const raw=(email||'Recruiter').split('@')[0].replace(/[._-]+/g,' ');return raw.replace(/\b\w/g,c=>c.toUpperCase())||'Recruiter'}
-  function getSession(){try{return JSON.parse(localStorage.getItem('tss_user_session')||'null')}catch{return null}}
-  function setSession(s){if(s)localStorage.setItem('tss_user_session',JSON.stringify(s));else localStorage.removeItem('tss_user_session')}
+  function getSession(){const ctx=window.TSS_AUTH_CONTEXT;return ctx?{email:ctx.email,name:ctx.name,role:ctx.role,verified:true}:null}
   function showWorkspace(session){$('loginGate')?.classList.add('hidden');$('workspace')?.classList.remove('hidden');const name=session?.name||nameFromEmail(session?.email);$('profileName').textContent=name;$('welcomeLine').textContent=`Welcome back, ${name}. Here's what's happening today.`;$('todoGreeting').textContent=`Hi ${name}! 👋`;$('todoModalGreeting').textContent=`Good evening, ${name}.`;renderOldSite()}
   function showLogin(){ $('workspace')?.classList.add('hidden');$('loginGate')?.classList.remove('hidden') }
-
-  $('showLoginForm')?.addEventListener('click',()=>{$('showLoginForm').classList.add('hidden');$('loginForm').classList.remove('hidden');$('loginEmail').focus()});
-  $('loginForm')?.addEventListener('submit',async e=>{e.preventDefault();const email=$('loginEmail').value.trim().toLowerCase(),password=$('loginPassword').value;const err=$('loginError');err.textContent='';if(!email.endsWith(domain)){err.textContent=`Access is restricted to ${domain} email addresses.`;return}try{if(window.TSSBackend?.enabled){await window.TSSBackend.signIn(email,password)}const s={email,name:nameFromEmail(email),role:'recruiter'};setSession(s);showWorkspace(s)}catch(ex){err.textContent=ex?.message||'Unable to sign in.'}});
-  $('signOutBtn')?.addEventListener('click',async()=>{try{if(window.TSSBackend?.enabled)await window.TSSBackend.signOut()}catch{}setSession(null);showLogin()});
 
   function groupedRequirements(filter=''){const q=filter.toLowerCase();const grouped={};activeReqs().filter(r=>!q||`${r.id} ${r.client} ${r.title} ${r.location}`.toLowerCase().includes(q)).forEach(r=>(grouped[r.client]??=[]).push(r));return grouped}
   function renderClientTree(filter=''){const grouped=groupedRequirements(filter);$('clientRequirementTree').innerHTML=Object.entries(grouped).map(([client,rs])=>`<div class="client-group"><div class="client-group-title"><span>⌄</span>${esc2(client)}<b>${rs.length}</b></div>${rs.map(r=>`<div class="client-role" data-req="${r.id}"><strong><i>${r.id}</i>${esc2(r.title)}</strong><small>${esc2(r.location||'Not provided')}</small></div>`).join('')}</div>`).join('');document.querySelectorAll('.client-role').forEach(el=>el.onclick=()=>selectRequirement(el.dataset.req,true))}
@@ -55,5 +50,5 @@
 
   try{const coreSave=saveDB;saveDB=function(){coreSave();setTimeout(renderOldSite,0)}}catch{}
   window.renderOldSite=renderOldSite;
-  setTimeout(()=>{const s=getSession();if(s&&s.email?.endsWith(domain))showWorkspace(s);else showLogin();renderOldSite()},120);
+  setTimeout(()=>{const s=getSession();if(s&&s.email?.endsWith(domain)){showWorkspace(s);renderOldSite()}},0);
 })();
