@@ -27,17 +27,17 @@
   function forceTodo(){
     const figure=document.querySelector('.todo-figure');
     if(!figure)return;
-    const src=window.TSS_LOGIN_TODO_EXACT||window.TSS_ASSETS?.todo;
+    const src='assets/todo-login-v2.webp';
     if(!src)return;
     figure.innerHTML='';
     ['background','border','box-shadow','outline','filter'].forEach(p=>figure.style.setProperty(p,'none','important'));
     figure.style.setProperty('overflow','visible','important');
     figure.style.setProperty('position','absolute','important');
-    figure.style.setProperty('left','58%','important');
-    figure.style.setProperty('bottom','34px','important');
+    figure.style.setProperty('left','50%','important');
+    figure.style.setProperty('bottom','0','important');
     figure.style.setProperty('transform','translateX(-50%)','important');
-    figure.style.setProperty('width','340px','important');
-    figure.style.setProperty('height','430px','important');
+    figure.style.setProperty('width','min(430px, 88%)','important');
+    figure.style.setProperty('height','510px','important');
     figure.style.setProperty('display','flex','important');
     figure.style.setProperty('align-items','flex-end','important');
     figure.style.setProperty('justify-content','center','important');
@@ -45,7 +45,7 @@
     img.src=src;
     img.alt='TODO AI mascot';
     img.className='login-todo-photo';
-    img.style.cssText='display:block!important;width:auto!important;height:410px!important;max-width:100%!important;object-fit:contain!important;object-position:center bottom!important;opacity:1!important;visibility:visible!important;background:transparent!important;filter:drop-shadow(0 18px 24px rgba(0,0,0,.22))!important;';
+    img.style.cssText='display:block!important;width:auto!important;height:490px!important;max-width:100%!important;object-fit:contain!important;object-position:center bottom!important;opacity:1!important;visibility:visible!important;background:transparent!important;filter:drop-shadow(0 18px 24px rgba(0,0,0,.22))!important;';
     figure.appendChild(img);
   }
 

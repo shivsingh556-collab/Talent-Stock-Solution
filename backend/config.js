@@ -100,8 +100,8 @@ window.addEventListener('load', () => {
     .then(() => loadScript('requirement-screening-selection-fix.js','tssRequirementScreeningSelectionFix'))
     .then(() => loadScript('todo-ai-branding.js','tssTodoAiBranding'))
     .then(() => loadScript('profile-logout.js','tssProfileLogout'))
-    .then(() => loadScript('login-final-guard.js','tssLoginFinalGuard'))
-    .then(() => loadScript('login-todo-visible.js','tssLoginTodoVisible'))
+    .then(() => loadScript('login-final-guard.js?v=todo-centered-6','tssLoginFinalGuard'))
+    .then(() => loadScript('login-todo-visible.js?v=todo-centered-6','tssLoginTodoVisible'))
     .then(() => window.TSSLoginTodoVisible?.schedule?.())
     .catch(err => console.warn('TODO AI production layer load issue', err));
 });
