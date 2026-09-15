@@ -8,13 +8,25 @@
     }catch{return null}
   }
   function payload(r){return{id:r.id,title:r.title||'',client:r.client||'',location:r.location||'',experience:r.experience||'',skills:Array.isArray(r.skills)?r.skills:[],preferred:Array.isArray(r.preferred)?r.preferred:[],qualification:r.qualification||'',responsibilities:r.responsibilities||''}}
+  function queryFor(r){
+    const top=[...(Array.isArray(r.skills)?r.skills:[]),...(Array.isArray(r.preferred)?r.preferred:[])].filter(Boolean).slice(0,5);
+    return [r.title,...top,r.location,'open to work'].filter(Boolean).join(' ');
+  }
   function notify(msg){if(window.toast)window.toast(msg);else console.info(msg)}
   function launch(){
     if(document.documentElement.dataset.auth!=='verified')return;
     const r=currentRequirement();
     if(!r){notify('Select a requirement first');return}
+
+    // Store the exact requirement in the extension when available so scoring/import
+    // can use the same requirement, but never depend on the extension to open search.
     window.postMessage({source:'todo-ai',type:'SET_LINKEDIN_REQUIREMENT',detail:payload(r)},location.origin);
-    notify(`Opening LinkedIn sourcing for ${r.title||'selected role'}`);
+
+    const q=encodeURIComponent(queryFor(r));
+    const url=`https://www.linkedin.com/search/results/people/?keywords=${q}`;
+    const opened=window.open(url,'_blank','noopener,noreferrer');
+    if(!opened)location.href=url;
+    notify(`Searching LinkedIn for ${r.title||'selected role'}`);
   }
   function mount(){
     if(document.documentElement.dataset.auth!=='verified')return;
