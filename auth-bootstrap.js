@@ -4,7 +4,7 @@
   'use strict';
 
   const DOMAIN='talent-stock.com';
-  const BUILD='20260915-linkedin-1';
+  const BUILD='20260915-linkedin-2';
   const gate=document.getElementById('loginGate');
   const mount=document.getElementById('workspaceMount');
   const form=document.getElementById('loginForm');
@@ -29,8 +29,8 @@
     document.querySelectorAll('[data-view="automation"]').forEach(node=>node.remove());
     document.getElementById('automation')?.remove();
     let accessStyle=document.getElementById('roleAccessHotfix');
-    if(!accessStyle){ accessStyle=document.createElement('style'); accessStyle.id='roleAccessHotfix'; accessStyle.textContent='html:not([data-user-role="recruiter"]) #quickScreenCard,html:not([data-user-role="recruiter"]) #findLinkedInCandidates{display:none!important}'; document.head.appendChild(accessStyle); }
-    const clean=()=>{ document.querySelectorAll('[data-view="automation"]').forEach(node=>node.remove()); document.getElementById('automation')?.remove(); if(!recruiter){document.getElementById('quickScreenCard')?.remove();document.getElementById('findLinkedInCandidates')?.remove();} };
+    if(!accessStyle){ accessStyle=document.createElement('style'); accessStyle.id='roleAccessHotfix'; accessStyle.textContent='html:not([data-user-role="recruiter"]) #quickScreenCard{display:none!important}'; document.head.appendChild(accessStyle); }
+    const clean=()=>{ document.querySelectorAll('[data-view="automation"]').forEach(node=>node.remove()); document.getElementById('automation')?.remove(); if(!recruiter)document.getElementById('quickScreenCard')?.remove(); };
     clean(); roleObserver?.disconnect(); roleObserver=new MutationObserver(clean); const target=document.getElementById('workspace')||mount; if(target)roleObserver.observe(target,{childList:true,subtree:true});
   }
 
@@ -57,7 +57,7 @@
     await loadScript(`app-runtime.js?v=${BUILD}`);
     loadStyle(`reports-activity.css?v=${BUILD}`,'tssReports');
     await loadLateBootScript(`reports-activity.js?v=${BUILD}`);
-    if(identity.role==='recruiter') await loadScript(`linkedin-sourcing.js?v=${BUILD}`);
+    await loadScript(`linkedin-sourcing.js?v=${BUILD}`);
     enforceRoleAccess(identity);
     appLoaded=true; gate?.classList.add('hidden'); document.getElementById('workspace')?.classList.remove('hidden'); document.documentElement.dataset.auth='verified'; bindSignOut();
     window.dispatchEvent(new CustomEvent('tss:auth-ready',{detail:{id:identity.id,role:identity.role,isSuperAdmin:identity.isSuperAdmin}}));
