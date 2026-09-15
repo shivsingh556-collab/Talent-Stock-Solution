@@ -4,7 +4,7 @@
   'use strict';
 
   const DOMAIN='talent-stock.com';
-  const BUILD='20260913-hardening-1';
+  const BUILD='20260915-hotfix-1';
   const gate=document.getElementById('loginGate');
   const mount=document.getElementById('workspaceMount');
   const form=document.getElementById('loginForm');
@@ -12,6 +12,7 @@
   const errorNode=document.getElementById('loginError');
   let bootPromise=null;
   let appLoaded=false;
+  let roleObserver=null;
 
   function setError(message=''){
     if(errorNode) errorNode.textContent=message;
@@ -29,6 +30,7 @@
     gate?.classList.remove('hidden');
     mount?.replaceChildren();
     document.documentElement.dataset.auth='signed-out';
+    delete document.documentElement.dataset.userRole;
     localStorage.removeItem('tss_user_session');
     sessionStorage.removeItem('tss_user_session');
   }
@@ -44,13 +46,48 @@
     });
   }
 
-  function loadRuntimeStyles(){
-    if(document.querySelector('link[data-tss-runtime]'))return;
+  function loadStyle(src,key){
+    if(key&&document.querySelector(`link[data-${key}]`))return;
     const link=document.createElement('link');
     link.rel='stylesheet';
-    link.href=`app-runtime.css?v=${BUILD}`;
-    link.dataset.tssRuntime='true';
+    link.href=src;
+    if(key)link.dataset[key]='true';
     document.head.appendChild(link);
+  }
+
+  function loadRuntimeStyles(){
+    loadStyle(`app-runtime.css?v=${BUILD}`,'tssRuntime');
+  }
+
+  function enforceRoleAccess(identity){
+    const role=String(identity?.role||'').trim().toLowerCase();
+    const recruiter=role==='recruiter';
+    document.documentElement.dataset.userRole=role||'unknown';
+
+    // Automation was intentionally removed from the live recruiter workflow.
+    // Keeping a dead nav item produced a blank screen, so remove it everywhere.
+    document.querySelectorAll('[data-view="automation"]').forEach(node=>node.remove());
+    document.getElementById('automation')?.remove();
+
+    // Quick Screening is a recruiter-only daily-work tool. Admins and super admins
+    // keep the detailed workspace, reports and management views but never see it.
+    let accessStyle=document.getElementById('roleAccessHotfix');
+    if(!accessStyle){
+      accessStyle=document.createElement('style');
+      accessStyle.id='roleAccessHotfix';
+      accessStyle.textContent='html:not([data-user-role="recruiter"]) #quickScreenCard{display:none!important}';
+      document.head.appendChild(accessStyle);
+    }
+    const clean=()=>{
+      document.querySelectorAll('[data-view="automation"]').forEach(node=>node.remove());
+      document.getElementById('automation')?.remove();
+      if(!recruiter)document.getElementById('quickScreenCard')?.remove();
+    };
+    clean();
+    roleObserver?.disconnect();
+    roleObserver=new MutationObserver(clean);
+    const target=document.getElementById('workspace')||mount;
+    if(target)roleObserver.observe(target,{childList:true,subtree:true});
   }
 
   async function verifiedIdentity(){
@@ -75,7 +112,7 @@
       id:user.id,
       email,
       name:profile.full_name||email.split('@')[0],
-      role:profile.role||'recruiter',
+      role:String(profile.role||'recruiter').toLowerCase(),
       isSuperAdmin:profile.is_super_admin===true,
       verifiedAt:new Date().toISOString()
     });
@@ -96,9 +133,17 @@
     isolateBrowserCache(identity.id);
     window.TSS_AUTH_CONTEXT=identity;
     mount.innerHTML=shell;
+    enforceRoleAccess(identity);
     loadRuntimeStyles();
     await loadScript(`app-core.js?v=${BUILD}`);
     await loadScript(`app-runtime.js?v=${BUILD}`);
+
+    // Restore the reporting workspace for recruiters/admins. The script itself
+    // renders Daily Submissions for recruiters and Reports & Activity for admins.
+    loadStyle(`reports-activity.css?v=${BUILD}`,'tssReports');
+    await loadScript(`reports-activity.js?v=${BUILD}`);
+    enforceRoleAccess(identity);
+
     appLoaded=true;
     gate?.classList.add('hidden');
     document.getElementById('workspace')?.classList.remove('hidden');
