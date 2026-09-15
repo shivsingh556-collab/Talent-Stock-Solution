@@ -4,7 +4,7 @@
   'use strict';
 
   const DOMAIN='talent-stock.com';
-  const BUILD='20260915-hotfix-1';
+  const BUILD='20260915-hotfix-2';
   const gate=document.getElementById('loginGate');
   const mount=document.getElementById('workspaceMount');
   const form=document.getElementById('loginForm');
@@ -46,6 +46,27 @@
     });
   }
 
+  // Some legacy modules register their startup only on window.load. The secure
+  // workspace is intentionally loaded after authentication, often after the real
+  // load event has already fired. Capture that late load registration and run it
+  // immediately so management reports actually mount for admins.
+  async function loadLateBootScript(src){
+    if(document.readyState!=='complete')return loadScript(src);
+    const originalAdd=window.addEventListener;
+    window.addEventListener=function(type,listener,options){
+      if(type==='load'&&typeof listener==='function'){
+        setTimeout(()=>listener.call(window,new Event('load')),0);
+        return;
+      }
+      return originalAdd.call(window,type,listener,options);
+    };
+    try{
+      await loadScript(src);
+    }finally{
+      window.addEventListener=originalAdd;
+    }
+  }
+
   function loadStyle(src,key){
     if(key&&document.querySelector(`link[data-${key}]`))return;
     const link=document.createElement('link');
@@ -65,12 +86,11 @@
     document.documentElement.dataset.userRole=role||'unknown';
 
     // Automation was intentionally removed from the live recruiter workflow.
-    // Keeping a dead nav item produced a blank screen, so remove it everywhere.
     document.querySelectorAll('[data-view="automation"]').forEach(node=>node.remove());
     document.getElementById('automation')?.remove();
 
-    // Quick Screening is a recruiter-only daily-work tool. Admins and super admins
-    // keep the detailed workspace, reports and management views but never see it.
+    // Quick Screening is strictly recruiter-only. Admins and super admins retain
+    // detailed screening plus management reports, but do not receive Quick Mode.
     let accessStyle=document.getElementById('roleAccessHotfix');
     if(!accessStyle){
       accessStyle=document.createElement('style');
@@ -93,8 +113,6 @@
   async function verifiedIdentity(){
     const backend=window.TSSBackend;
     if(!backend?.enabled||!backend.client)throw new Error('Secure sign-in is temporarily unavailable.');
-    // getUser() validates the access token with the Supabase Auth server. Never
-    // infer authorization from localStorage or user_metadata.
     const user=await backend.currentUser();
     if(!user)return null;
     const email=String(user.email||'').trim().toLowerCase();
@@ -106,13 +124,14 @@
     if(!profile)throw new Error('Your employee profile is not provisioned. Contact an administrator.');
     if(profile.is_active!==true)throw new Error('Your account is inactive. Contact an administrator.');
     if(String(profile.email||email).toLowerCase().split('@')[1]!==DOMAIN)throw new Error('This profile is not a TalentStock company account.');
+    const normalizedRole=String(profile.role||'recruiter').trim().toLowerCase();
     return Object.freeze({
       user:Object.freeze({id:user.id,email}),
       profile:Object.freeze({...profile}),
       id:user.id,
       email,
       name:profile.full_name||email.split('@')[0],
-      role:String(profile.role||'recruiter').toLowerCase(),
+      role:normalizedRole,
       isSuperAdmin:profile.is_super_admin===true,
       verifiedAt:new Date().toISOString()
     });
@@ -138,10 +157,10 @@
     await loadScript(`app-core.js?v=${BUILD}`);
     await loadScript(`app-runtime.js?v=${BUILD}`);
 
-    // Restore the reporting workspace for recruiters/admins. The script itself
-    // renders Daily Submissions for recruiters and Reports & Activity for admins.
+    // Restore reporting as an authenticated late-loaded module.
+    // Recruiter -> Daily Submissions; Admin/Super Admin -> Reports & Activity.
     loadStyle(`reports-activity.css?v=${BUILD}`,'tssReports');
-    await loadScript(`reports-activity.js?v=${BUILD}`);
+    await loadLateBootScript(`reports-activity.js?v=${BUILD}`);
     enforceRoleAccess(identity);
 
     appLoaded=true;
@@ -149,7 +168,7 @@
     document.getElementById('workspace')?.classList.remove('hidden');
     document.documentElement.dataset.auth='verified';
     bindSignOut();
-    window.dispatchEvent(new CustomEvent('tss:auth-ready',{detail:{id:identity.id,role:identity.role}}));
+    window.dispatchEvent(new CustomEvent('tss:auth-ready',{detail:{id:identity.id,role:identity.role,isSuperAdmin:identity.isSuperAdmin}}));
   }
 
   async function verifyAndBoot(){
