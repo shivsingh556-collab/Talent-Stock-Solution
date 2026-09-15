@@ -4,7 +4,7 @@
   'use strict';
 
   const DOMAIN='talent-stock.com';
-  const BUILD='20260915-linkedin-2';
+  const BUILD='20260915-linkedin-perf-1';
   const gate=document.getElementById('loginGate');
   const mount=document.getElementById('workspaceMount');
   const form=document.getElementById('loginForm');
@@ -12,7 +12,6 @@
   const errorNode=document.getElementById('loginError');
   let bootPromise=null;
   let appLoaded=false;
-  let roleObserver=null;
 
   function setError(message=''){ if(errorNode) errorNode.textContent=message; }
   function setSubmitting(active){ const button=form?.querySelector('button[type="submit"]'); if(!button)return; button.disabled=active; button.firstChild.textContent=active?'Verifying… ':'Continue securely '; }
@@ -24,14 +23,18 @@
 
   function enforceRoleAccess(identity){
     const role=String(identity?.role||'').trim().toLowerCase();
-    const recruiter=role==='recruiter';
     document.documentElement.dataset.userRole=role||'unknown';
+    let accessStyle=document.getElementById('roleAccessHotfix');
+    if(!accessStyle){
+      accessStyle=document.createElement('style');
+      accessStyle.id='roleAccessHotfix';
+      accessStyle.textContent='[data-view="automation"],#automation{display:none!important}html:not([data-user-role="recruiter"]) #quickScreenCard{display:none!important}';
+      document.head.appendChild(accessStyle);
+    }
+    // One-time cleanup only. The previous whole-workspace MutationObserver ran on
+    // every DOM change and caused visible jank on large Screening/Requirements pages.
     document.querySelectorAll('[data-view="automation"]').forEach(node=>node.remove());
     document.getElementById('automation')?.remove();
-    let accessStyle=document.getElementById('roleAccessHotfix');
-    if(!accessStyle){ accessStyle=document.createElement('style'); accessStyle.id='roleAccessHotfix'; accessStyle.textContent='html:not([data-user-role="recruiter"]) #quickScreenCard{display:none!important}'; document.head.appendChild(accessStyle); }
-    const clean=()=>{ document.querySelectorAll('[data-view="automation"]').forEach(node=>node.remove()); document.getElementById('automation')?.remove(); if(!recruiter)document.getElementById('quickScreenCard')?.remove(); };
-    clean(); roleObserver?.disconnect(); roleObserver=new MutationObserver(clean); const target=document.getElementById('workspace')||mount; if(target)roleObserver.observe(target,{childList:true,subtree:true});
   }
 
   async function verifiedIdentity(){
@@ -48,6 +51,20 @@
 
   function isolateBrowserCache(userId){ const owner=localStorage.getItem('tss_cache_owner'); if(owner!==userId)localStorage.removeItem('tss_talent_buddy_v1'); localStorage.setItem('tss_cache_owner',userId); }
 
+  function loadNonCriticalModules(){
+    const run=async()=>{
+      try{
+        loadStyle(`reports-activity.css?v=${BUILD}`,'tssReports');
+        await loadLateBootScript(`reports-activity.js?v=${BUILD}`);
+      }catch(error){console.error('Reports module failed to load',error)}
+      try{ await loadScript(`linkedin-sourcing.js?v=${BUILD}`); }
+      catch(error){ console.error('LinkedIn sourcing module failed to load',error); }
+      window.dispatchEvent(new CustomEvent('tss:hydrated'));
+    };
+    if('requestIdleCallback' in window)requestIdleCallback(run,{timeout:700});
+    else setTimeout(run,80);
+  }
+
   async function loadApplication(identity){
     if(appLoaded)return;
     const response=await fetch(`workspace-shell.html?v=${BUILD}`,{credentials:'same-origin',cache:'no-store'}); if(!response.ok)throw new Error('Secure workspace could not be loaded.');
@@ -55,12 +72,17 @@
     isolateBrowserCache(identity.id); window.TSS_AUTH_CONTEXT=identity; mount.innerHTML=shell; enforceRoleAccess(identity); loadRuntimeStyles();
     await loadScript(`app-core.js?v=${BUILD}`);
     await loadScript(`app-runtime.js?v=${BUILD}`);
-    loadStyle(`reports-activity.css?v=${BUILD}`,'tssReports');
-    await loadLateBootScript(`reports-activity.js?v=${BUILD}`);
-    await loadScript(`linkedin-sourcing.js?v=${BUILD}`);
+
+    // Show the core workspace immediately after core runtime is ready. Reports and
+    // LinkedIn sourcing are loaded after first paint to prevent login-to-workspace lag.
     enforceRoleAccess(identity);
-    appLoaded=true; gate?.classList.add('hidden'); document.getElementById('workspace')?.classList.remove('hidden'); document.documentElement.dataset.auth='verified'; bindSignOut();
+    appLoaded=true;
+    gate?.classList.add('hidden');
+    document.getElementById('workspace')?.classList.remove('hidden');
+    document.documentElement.dataset.auth='verified';
+    bindSignOut();
     window.dispatchEvent(new CustomEvent('tss:auth-ready',{detail:{id:identity.id,role:identity.role,isSuperAdmin:identity.isSuperAdmin}}));
+    requestAnimationFrame(()=>loadNonCriticalModules());
   }
 
   async function verifyAndBoot(){ if(appLoaded)return true; if(bootPromise)return bootPromise; bootPromise=(async()=>{ const identity=await verifiedIdentity(); if(!identity){lock();return false;} await loadApplication(identity); return true; })().catch(async error=>{ console.error('Authentication bootstrap failed',error); lock(); setError(error?.message||'Unable to verify your account.'); try{await window.TSSBackend?.signOut?.()}catch{} return false; }).finally(()=>{bootPromise=null;setSubmitting(false)}); return bootPromise; }
