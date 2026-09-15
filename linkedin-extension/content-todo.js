@@ -11,7 +11,6 @@
     });
   });
   function fillTodo(candidate){
-    if(document.documentElement.dataset.userRole!=='recruiter')return;
     const set=(id,v)=>{const el=document.getElementById(id);if(el&&v!=null){el.value=String(v);el.dispatchEvent(new Event('input',{bubbles:true}));el.dispatchEvent(new Event('change',{bubbles:true}))}};
     const req=candidate.requirement;
     const quickReq=document.getElementById('quickRequirement');
@@ -21,8 +20,15 @@
     set('candidateDesignation',candidate.headline);
     set('resumeText',candidate.profileText);
     set('quickResumeText',candidate.profileText);
-    const card=document.getElementById('quickScreenCard');
-    if(card){card.scrollIntoView({behavior:'smooth',block:'start'});const st=document.getElementById('quickScreenStatus');if(st)st.textContent=`LinkedIn profile ready · Job-search signal: ${candidate.jobSearchSignal||'Unknown'}`}
+    const quickCard=document.getElementById('quickScreenCard');
+    if(quickCard){
+      quickCard.scrollIntoView({behavior:'smooth',block:'start'});
+      const st=document.getElementById('quickScreenStatus');
+      if(st)st.textContent=`LinkedIn profile ready · Job-search signal: ${candidate.jobSearchSignal||'Unknown'}`;
+    }else{
+      const screening=document.getElementById('screening');
+      screening?.scrollIntoView({behavior:'smooth',block:'start'});
+    }
     sendPage('LINKEDIN_CANDIDATE_IMPORTED',{name:candidate.name,matchScore:candidate.matchScore,jobSearchSignal:candidate.jobSearchSignal});
   }
   chrome.storage.local.get(['todoPendingCandidate'],res=>{
