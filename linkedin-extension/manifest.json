@@ -1,14 +1,15 @@
 {
   "manifest_version": 3,
   "name": "Todo AI LinkedIn Candidate Finder",
-  "version": "0.1.0",
-  "description": "Recruiter-driven LinkedIn sourcing for Todo AI. Scores visible profiles against the selected requirement and sends chosen candidates to Todo AI.",
+  "version": "0.1.1",
+  "description": "LinkedIn sourcing for Todo AI. Scores visible profiles against the selected requirement and sends chosen candidates to Todo AI.",
   "permissions": ["storage", "tabs", "activeTab", "scripting"],
   "host_permissions": [
     "https://www.linkedin.com/*",
     "https://linkedin.com/*",
     "https://todo-resume-intelligence.vercel.app/*",
-    "https://todo.talent-stock.com/*"
+    "https://todo.talent-stock.com/*",
+    "https://todo-resume-intelligence-git-a52e9c-shivsingh556-6346s-projects.vercel.app/*"
   ],
   "background": {"service_worker": "background.js"},
   "action": {"default_popup": "popup.html", "default_title": "Todo AI Candidate Finder"},
@@ -19,7 +20,11 @@
       "run_at": "document_idle"
     },
     {
-      "matches": ["https://todo-resume-intelligence.vercel.app/*", "https://todo.talent-stock.com/*"],
+      "matches": [
+        "https://todo-resume-intelligence.vercel.app/*",
+        "https://todo.talent-stock.com/*",
+        "https://todo-resume-intelligence-git-a52e9c-shivsingh556-6346s-projects.vercel.app/*"
+      ],
       "js": ["content-todo.js"],
       "run_at": "document_idle"
     }
