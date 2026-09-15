@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Todo AI LinkedIn Candidate Finder",
-  "version": "0.1.2",
-  "description": "LinkedIn sourcing for Todo AI. Scores visible profiles against the selected requirement and sends chosen candidates to Todo AI.",
+  "version": "0.1.3",
+  "description": "LinkedIn sourcing for Todo AI. Scores visible profiles against the selected requirement and sends chosen candidates back to the active Todo AI workspace.",
   "permissions": ["storage", "tabs", "activeTab", "scripting"],
   "host_permissions": [
     "https://www.linkedin.com/*",
