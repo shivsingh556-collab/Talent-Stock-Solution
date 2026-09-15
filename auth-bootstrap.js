@@ -4,7 +4,7 @@
   'use strict';
 
   const DOMAIN='talent-stock.com';
-  const BUILD='20260915-linkedin-perf-1';
+  const BUILD='20260915-post-linkedin-cleanup-1';
   const gate=document.getElementById('loginGate');
   const mount=document.getElementById('workspaceMount');
   const form=document.getElementById('loginForm');
@@ -31,8 +31,6 @@
       accessStyle.textContent='[data-view="automation"],#automation{display:none!important}html:not([data-user-role="recruiter"]) #quickScreenCard{display:none!important}';
       document.head.appendChild(accessStyle);
     }
-    // One-time cleanup only. The previous whole-workspace MutationObserver ran on
-    // every DOM change and caused visible jank on large Screening/Requirements pages.
     document.querySelectorAll('[data-view="automation"]').forEach(node=>node.remove());
     document.getElementById('automation')?.remove();
   }
@@ -57,8 +55,6 @@
         loadStyle(`reports-activity.css?v=${BUILD}`,'tssReports');
         await loadLateBootScript(`reports-activity.js?v=${BUILD}`);
       }catch(error){console.error('Reports module failed to load',error)}
-      try{ await loadScript(`linkedin-sourcing.js?v=${BUILD}`); }
-      catch(error){ console.error('LinkedIn sourcing module failed to load',error); }
       window.dispatchEvent(new CustomEvent('tss:hydrated'));
     };
     if('requestIdleCallback' in window)requestIdleCallback(run,{timeout:700});
@@ -72,9 +68,6 @@
     isolateBrowserCache(identity.id); window.TSS_AUTH_CONTEXT=identity; mount.innerHTML=shell; enforceRoleAccess(identity); loadRuntimeStyles();
     await loadScript(`app-core.js?v=${BUILD}`);
     await loadScript(`app-runtime.js?v=${BUILD}`);
-
-    // Show the core workspace immediately after core runtime is ready. Reports and
-    // LinkedIn sourcing are loaded after first paint to prevent login-to-workspace lag.
     enforceRoleAccess(identity);
     appLoaded=true;
     gate?.classList.add('hidden');
