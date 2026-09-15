@@ -10,14 +10,14 @@
   function payload(r){return{id:r.id,title:r.title||'',client:r.client||'',location:r.location||'',experience:r.experience||'',skills:Array.isArray(r.skills)?r.skills:[],preferred:Array.isArray(r.preferred)?r.preferred:[],qualification:r.qualification||'',responsibilities:r.responsibilities||''}}
   function notify(msg){if(window.toast)window.toast(msg);else console.info(msg)}
   function launch(){
-    if(document.documentElement.dataset.userRole!=='recruiter')return;
+    if(document.documentElement.dataset.auth!=='verified')return;
     const r=currentRequirement();
     if(!r){notify('Select a requirement first');return}
     window.postMessage({source:'todo-ai',type:'SET_LINKEDIN_REQUIREMENT',detail:payload(r)},location.origin);
     notify(`Opening LinkedIn sourcing for ${r.title||'selected role'}`);
   }
   function mount(){
-    if(document.documentElement.dataset.userRole!=='recruiter')return;
+    if(document.documentElement.dataset.auth!=='verified')return;
     const card=document.querySelector('.selected-requirement-card .panel-title');
     if(!card||document.getElementById('findLinkedInCandidates'))return;
     const btn=document.createElement('button');
