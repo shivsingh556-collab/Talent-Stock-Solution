@@ -6,8 +6,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
   if (message?.type === 'OPEN_TODO') {
-    chrome.tabs.create({ url: 'https://todo-resume-intelligence.vercel.app/' });
-    sendResponse({ ok: true });
+    chrome.storage.local.get(['todoAppOrigin'], res => {
+      const url = res.todoAppOrigin || 'https://todo-resume-intelligence.vercel.app/';
+      chrome.tabs.create({ url });
+      sendResponse({ ok: true, url });
+    });
     return true;
   }
 });
