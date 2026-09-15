@@ -4,7 +4,7 @@
     if(e.source!==window||e.origin!==location.origin)return;
     if(e.data?.source!=='todo-ai'||e.data?.type!=='SET_LINKEDIN_REQUIREMENT')return;
     const requirement=e.data.detail||null;
-    chrome.storage.local.set({todoRequirement:requirement});
+    chrome.storage.local.set({todoRequirement:requirement,todoAppOrigin:location.origin+'/'});
   });
   function fillTodo(candidate){
     const set=(id,v)=>{const el=document.getElementById(id);if(el&&v!=null){el.value=String(v);el.dispatchEvent(new Event('input',{bubbles:true}));el.dispatchEvent(new Event('change',{bubbles:true}))}};
@@ -22,8 +22,7 @@
       const st=document.getElementById('quickScreenStatus');
       if(st)st.textContent=`LinkedIn profile ready · Job-search signal: ${candidate.jobSearchSignal||'Unknown'}`;
     }else{
-      const screening=document.getElementById('screening');
-      screening?.scrollIntoView({behavior:'smooth',block:'start'});
+      document.getElementById('screening')?.scrollIntoView({behavior:'smooth',block:'start'});
     }
     sendPage('LINKEDIN_CANDIDATE_IMPORTED',{name:candidate.name,matchScore:candidate.matchScore,jobSearchSignal:candidate.jobSearchSignal});
   }
