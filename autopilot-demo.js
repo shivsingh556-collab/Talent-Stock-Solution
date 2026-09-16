@@ -1,0 +1,15 @@
+const candidates=[
+{name:'Aarav Shah',exp:'4.8 yrs',location:'Mumbai',notice:'Immediate',score:94,type:'strong',skills:['Flutter','Dart','REST API','BLoC','Insurance'],missing:[],risk:'Previously screened · strong technical fit'},
+{name:'Neha Verma',exp:'5.2 yrs',location:'Navi Mumbai',notice:'15 days',score:91,type:'strong',skills:['Flutter','Dart','REST API','Riverpod','BFSI'],missing:[],risk:'Rediscovered from previous BFSI requirement'},
+{name:'Rohan Iyer',exp:'3.9 yrs',location:'Mumbai',notice:'30 days',score:86,type:'strong',skills:['Flutter','Dart','REST API','Provider'],missing:['Insurance'],risk:'Notice period slightly above target'},
+{name:'Meera Nair',exp:'4.1 yrs',location:'Thane',notice:'Immediate',score:78,type:'review',skills:['Flutter','Dart','REST API'],missing:['BLoC/Riverpod','BFSI'],risk:'Good core fit · domain check needed'},
+{name:'Kunal Patil',exp:'6.0 yrs',location:'Pune',notice:'15 days',score:74,type:'review',skills:['Flutter','Dart','Riverpod','REST API'],missing:['Mumbai'],risk:'Location mismatch · otherwise relevant'}
+];
+const state={selected:new Set(),filter:'all'};
+const $=id=>document.getElementById(id);
+function card(c,i){const selected=state.selected.has(i);return `<article class="candidate ${selected?'selected':''}" data-i="${i}"><button class="checkBox" aria-label="Select candidate">${selected?'✓':''}</button><div class="candidate-main"><div class="candidate-top"><h3>${c.name}</h3><span class="tag ${c.type}">${c.type==='strong'?'Strong Match':'Review Recommended'}</span></div><div class="meta">${c.exp} · ${c.location} · Notice: ${c.notice}</div><div class="skills">${c.skills.map(s=>`<span class="skill">✓ ${s}</span>`).join('')}${c.missing.map(s=>`<span class="skill miss">△ ${s}</span>`).join('')}</div><div class="risk">${c.risk}</div></div><div class="score"><b>${c.score}%</b><span>Todo Match</span></div></article>`}
+function render(){const list=candidates.map((c,i)=>({c,i})).filter(x=>state.filter==='all'||x.c.type===state.filter);$('cards').innerHTML=list.map(x=>card(x.c,x.i)).join('');document.querySelectorAll('.candidate').forEach(el=>el.querySelector('.checkBox').onclick=()=>{const i=Number(el.dataset.i);state.selected.has(i)?state.selected.delete(i):state.selected.add(i);render();});$('selectedCount').textContent=state.selected.size;$('prepare').disabled=!state.selected.size;}
+$('run').onclick=()=>{const b=$('run');b.disabled=true;b.innerHTML='Analyzing requirement…';setTimeout(()=>{b.innerHTML='Autopilot Complete ✓';$('results').classList.remove('hidden');$('results').scrollIntoView({behavior:'smooth',block:'start'});render();},850)};
+document.querySelectorAll('.chip').forEach(btn=>btn.onclick=()=>{document.querySelectorAll('.chip').forEach(x=>x.classList.remove('active'));btn.classList.add('active');state.filter=btn.dataset.filter;render();});
+$('selectTop').onclick=()=>{state.selected=new Set([0,1,2]);render();};
+$('prepare').onclick=()=>{$('outreach').classList.remove('hidden');$('outreach').scrollIntoView({behavior:'smooth',block:'start'});};
