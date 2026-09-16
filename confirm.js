@@ -1,0 +1,9 @@
+const API='https://wbclpjdjhlsuspojtner.supabase.co/functions/v1/interview-response';
+const token=new URLSearchParams(location.search).get('token')||'';
+const $=id=>document.getElementById(id);
+function alertMsg(t){$('alertHost').innerHTML='<div class="alert">'+String(t).replace(/[&<>]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[m]))+'</div>'}
+function fmt(iso){try{return new Intl.DateTimeFormat('en-IN',{timeZone:'Asia/Kolkata',dateStyle:'full',timeStyle:'short'}).format(new Date(iso))}catch{return iso||'—'}}
+async function details(){if(!token){alertMsg('Invalid interview link. Please use the link from your email.');$('confirmBtn').disabled=true;return}try{const r=await fetch(API+'?format=json&action=details&token='+encodeURIComponent(token),{cache:'no-store'});const j=await r.json();if(!r.ok||!j.ok)throw new Error(j.error||'Interview unavailable');const d=j.interview;$('candidateName').textContent=d.candidate_name||'candidate';$('candidate').textContent=d.candidate_name||'—';$('position').textContent=d.position||'—';$('client').textContent=d.client_name||'—';$('slot').textContent=fmt(d.scheduled_at);$('mode').textContent=d.mode||'Client Interview';$('rescheduleLink').href='/reschedule.html?token='+encodeURIComponent(token);if(d.candidate_response==='Confirmed')showSuccess()}catch(e){alertMsg(e.message||e);$('confirmBtn').disabled=true}}
+function showSuccess(){$('formBlock').classList.add('hidden');$('successBlock').classList.remove('hidden')}
+$('confirmBtn').addEventListener('click',async()=>{const b=$('confirmBtn');b.disabled=true;b.textContent='Confirming…';try{const r=await fetch(API+'?format=json&token='+encodeURIComponent(token),{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({action:'confirm'})});const j=await r.json();if(!r.ok||!j.ok)throw new Error(j.error||'Could not confirm');showSuccess()}catch(e){b.disabled=false;b.textContent='Yes, I confirm I am available';alertMsg(e.message||e)}});
+details();
