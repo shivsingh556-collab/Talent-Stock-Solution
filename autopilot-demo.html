@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Todo AI · Requirement-to-Shortlist Autopilot</title>
+<link rel="stylesheet" href="/autopilot-demo.css" />
+</head>
+<body>
+<div class="shell">
+  <aside class="side">
+    <div class="brand"><div class="logo">T</div><div><strong>TODO AI</strong><span>Autopilot Lab</span></div></div>
+    <div class="lab">Prototype · Separate from production</div>
+    <nav>
+      <button class="nav active">Requirement Autopilot</button>
+      <button class="nav">Talent Rediscovery</button>
+      <button class="nav">Outreach Queue</button>
+      <button class="nav">Recruiter Copilot</button>
+    </nav>
+    <div class="mini"><span>Goal</span><b>Requirement → shortlist in minutes</b></div>
+  </aside>
+
+  <main>
+    <header class="top">
+      <div><p class="eyebrow">REQUIREMENT-TO-SHORTLIST AUTOPILOT</p><h1>Give Todo a requirement. Let it do the first 80%.</h1></div>
+      <div class="status"><i></i> Demo Mode</div>
+    </header>
+
+    <section class="hero-grid">
+      <div class="panel input-panel">
+        <div class="panel-head"><div><span class="kicker">STEP 1</span><h2>Drop the requirement</h2></div><span class="badge">AI parse</span></div>
+        <div class="field-row"><label>Role<input id="role" value="Flutter Developer" /></label><label>Location<input id="location" value="Mumbai" /></label></div>
+        <div class="field-row"><label>Experience<input id="experience" value="3–6 years" /></label><label>Notice period<input id="notice" value="Immediate – 15 days" /></label></div>
+        <label>Job Description<textarea id="jd">Build Flutter mobile and web apps for a BFSI/Insurance platform. Must have Dart, Flutter, REST APIs and state management using BLoC, Riverpod or Provider. Strong responsive UI, Git and API integration. BFSI/NBFC/Insurance background preferred.</textarea></label>
+        <button id="run" class="primary">Run Autopilot <span>→</span></button>
+      </div>
+
+      <div class="panel ai-panel">
+        <div class="panel-head"><div><span class="kicker">TODO'S READ</span><h2>Requirement intelligence</h2></div><span class="pulse">Live</span></div>
+        <div id="intelligence" class="intel-grid">
+          <div class="intel"><small>Mandatory</small><b>Flutter, Dart, REST API</b></div>
+          <div class="intel"><small>Preferred</small><b>BLoC, Riverpod, Provider</b></div>
+          <div class="intel"><small>Domain</small><b>BFSI / Insurance</b></div>
+          <div class="intel"><small>Risk</small><b class="warn">Notice period constraint</b></div>
+        </div>
+        <div class="ai-note"><span>✦</span><p><b>Todo insight:</b> Search your existing database first. This role has a reusable skill pattern and should not require fresh sourcing immediately.</p></div>
+      </div>
+    </section>
+
+    <section id="results" class="results hidden">
+      <div class="result-head">
+        <div><p class="eyebrow">STEP 2 · TALENT REDISCOVERY</p><h2>Todo found <span id="count">5</span> candidates worth looking at</h2><p class="muted">Ranked by skills, experience, location, notice period and previous screening signals.</p></div>
+        <div class="summary"><div><b id="strong">3</b><span>Strong</span></div><div><b id="review">2</b><span>Review</span></div><div><b>84</b><span>Database</span></div></div>
+      </div>
+
+      <div class="toolbar"><button class="chip active" data-filter="all">All</button><button class="chip" data-filter="strong">Strong Match</button><button class="chip" data-filter="review">Review</button><div class="spacer"></div><button id="selectTop" class="ghost">Select top 3</button></div>
+      <div id="cards" class="cards"></div>
+
+      <div class="action-dock">
+        <div><span id="selectedCount">0</span> candidates selected <small>Todo can prepare outreach + screening questions next.</small></div>
+        <button id="prepare" class="primary small" disabled>Prepare Outreach</button>
+      </div>
+    </section>
+
+    <section id="outreach" class="panel outreach hidden">
+      <div class="panel-head"><div><span class="kicker">STEP 3</span><h2>Autopilot action plan</h2></div><span class="badge">Ready for recruiter approval</span></div>
+      <div class="timeline">
+        <div class="step done"><span>1</span><div><b>Rediscovery complete</b><small>Existing database checked first.</small></div></div>
+        <div class="step"><span>2</span><div><b>Generate candidate-specific screening questions</b><small>Based on missing skills and risk flags.</small></div></div>
+        <div class="step"><span>3</span><div><b>Prepare email + WhatsApp outreach</b><small>One-click recruiter approval before anything is sent.</small></div></div>
+        <div class="step"><span>4</span><div><b>Auto-track response and interview readiness</b><small>Confirmed / no response / follow-up needed.</small></div></div>
+      </div>
+      <div class="command"><span>Ask Todo</span><input value="Show me candidates rejected earlier only because of notice period" readonly /><button>Run</button></div>
+    </section>
+  </main>
+</div>
+<script src="/autopilot-demo.js" defer></script>
+</body>
+</html>
