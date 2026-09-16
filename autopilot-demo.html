@@ -22,34 +22,36 @@
 
   <main>
     <header class="top">
-      <div><p class="eyebrow">REQUIREMENT-TO-SHORTLIST AUTOPILOT</p><h1>Give Todo a requirement. Let it do the first 80%.</h1></div>
-      <div class="status"><i></i> Demo Mode</div>
+      <div><p class="eyebrow">REQUIREMENT-TO-SHORTLIST AUTOPILOT</p><h1>Select a live requirement. Todo handles the first 80%.</h1></div>
+      <div class="status"><i></i> Connected to WIP requirements</div>
     </header>
 
     <section class="hero-grid">
       <div class="panel input-panel">
-        <div class="panel-head"><div><span class="kicker">STEP 1</span><h2>Drop the requirement</h2></div><span class="badge">AI parse</span></div>
-        <div class="field-row"><label>Role<input id="role" value="Flutter Developer" /></label><label>Location<input id="location" value="Mumbai" /></label></div>
-        <div class="field-row"><label>Experience<input id="experience" value="3–6 years" /></label><label>Notice period<input id="notice" value="Immediate – 15 days" /></label></div>
-        <label>Job Description<textarea id="jd">Build Flutter mobile and web apps for a BFSI/Insurance platform. Must have Dart, Flutter, REST APIs and state management using BLoC, Riverpod or Provider. Strong responsive UI, Git and API integration. BFSI/NBFC/Insurance background preferred.</textarea></label>
-        <button id="run" class="primary">Run Autopilot <span>→</span></button>
+        <div class="panel-head"><div><span class="kicker">STEP 1</span><h2>Select active requirement</h2></div><span id="wipCount" class="badge">Loading…</span></div>
+        <p class="selector-help">No copy-paste. Todo loads every <b>Work In Progress</b> requirement from your database.</p>
+        <label>Search requirements
+          <div class="search-wrap"><span>⌕</span><input id="requirementSearch" placeholder="Search by TSS ID, role or location" autocomplete="off" /></div>
+        </label>
+        <label>Requirement
+          <select id="requirementSelect" disabled><option>Loading active requirements…</option></select>
+        </label>
+        <div id="requirementMeta" class="requirement-meta hidden"></div>
+        <button id="run" class="primary" disabled>Run Autopilot <span>→</span></button>
+        <div id="loadError" class="load-error hidden"><span>Could not load active requirements.</span><button id="retryLoad" type="button">Retry</button></div>
       </div>
 
       <div class="panel ai-panel">
-        <div class="panel-head"><div><span class="kicker">TODO'S READ</span><h2>Requirement intelligence</h2></div><span class="pulse">Live</span></div>
-        <div id="intelligence" class="intel-grid">
-          <div class="intel"><small>Mandatory</small><b>Flutter, Dart, REST API</b></div>
-          <div class="intel"><small>Preferred</small><b>BLoC, Riverpod, Provider</b></div>
-          <div class="intel"><small>Domain</small><b>BFSI / Insurance</b></div>
-          <div class="intel"><small>Risk</small><b class="warn">Notice period constraint</b></div>
-        </div>
-        <div class="ai-note"><span>✦</span><p><b>Todo insight:</b> Search your existing database first. This role has a reusable skill pattern and should not require fresh sourcing immediately.</p></div>
+        <div class="panel-head"><div><span class="kicker">TODO'S READ</span><h2>Requirement intelligence</h2></div><span id="intelStatus" class="pulse">Waiting</span></div>
+        <div id="emptyIntel" class="empty-intel">Select a WIP requirement to let Todo read the role, skills, experience and sourcing risks automatically.</div>
+        <div id="intelligence" class="intel-grid hidden"></div>
+        <div id="aiNote" class="ai-note hidden"><span>✦</span><p id="aiInsight"></p></div>
       </div>
     </section>
 
     <section id="results" class="results hidden">
       <div class="result-head">
-        <div><p class="eyebrow">STEP 2 · TALENT REDISCOVERY</p><h2>Todo found <span id="count">5</span> candidates worth looking at</h2><p class="muted">Ranked by skills, experience, location, notice period and previous screening signals.</p></div>
+        <div><p class="eyebrow">STEP 2 · TALENT REDISCOVERY</p><h2>Todo found <span id="count">5</span> candidates worth looking at</h2><p class="muted">Prototype ranking preview. Production candidate data remains untouched.</p></div>
         <div class="summary"><div><b id="strong">3</b><span>Strong</span></div><div><b id="review">2</b><span>Review</span></div><div><b>84</b><span>Database</span></div></div>
       </div>
 
