@@ -8,71 +8,25 @@
 </head>
 <body>
 <div class="shell">
-  <aside class="side">
-    <div class="brand"><div class="logo">T</div><div><strong>TODO AI</strong><span>Autopilot Lab</span></div></div>
-    <div class="lab">Prototype · Separate from production</div>
-    <nav>
-      <button class="nav active">Requirement Autopilot</button>
-      <button class="nav">Talent Rediscovery</button>
-      <button class="nav">Outreach Queue</button>
-      <button class="nav">Recruiter Copilot</button>
-    </nav>
-    <div class="mini"><span>Goal</span><b>Requirement → shortlist in minutes</b></div>
-  </aside>
-
+  <aside class="side"><div class="brand"><div class="logo">T</div><div><strong>TODO AI</strong><span>Autopilot Lab</span></div></div><div class="lab">Prototype · Separate from production</div><nav><button class="nav active">Requirement Autopilot</button><button class="nav">Talent Rediscovery</button><button class="nav">Outreach Queue</button><button class="nav">Recruiter Copilot</button></nav><div class="mini"><span>Goal</span><b>Requirement → shortlist in minutes</b></div></aside>
   <main>
-    <header class="top">
-      <div><p class="eyebrow">REQUIREMENT-TO-SHORTLIST AUTOPILOT</p><h1>Select a live requirement. Todo handles the first 80%.</h1></div>
-      <div class="status"><i></i> Connected to WIP requirements</div>
-    </header>
-
+    <header class="top"><div><p class="eyebrow">REQUIREMENT-TO-SHORTLIST AUTOPILOT</p><h1>Select a live requirement. Todo handles the first 80%.</h1></div><div class="status"><i></i> Connected to WIP requirements</div></header>
     <section class="hero-grid">
-      <div class="panel input-panel">
-        <div class="panel-head"><div><span class="kicker">STEP 1</span><h2>Select active requirement</h2></div><span id="wipCount" class="badge">Loading…</span></div>
-        <p class="selector-help">No copy-paste. Todo loads every <b>Work In Progress</b> requirement from your database.</p>
-        <label>Search requirements
-          <div class="search-wrap"><span>⌕</span><input id="requirementSearch" placeholder="Search by TSS ID, role or location" autocomplete="off" /></div>
-        </label>
-        <label>Requirement
-          <select id="requirementSelect" disabled><option>Loading active requirements…</option></select>
-        </label>
-        <div id="requirementMeta" class="requirement-meta hidden"></div>
-        <button id="run" class="primary" disabled>Run Autopilot <span>→</span></button>
-        <div id="loadError" class="load-error hidden"><span>Could not load active requirements.</span><button id="retryLoad" type="button">Retry</button></div>
-      </div>
-
-      <div class="panel ai-panel">
-        <div class="panel-head"><div><span class="kicker">TODO'S READ</span><h2>Requirement intelligence</h2></div><span id="intelStatus" class="pulse">Waiting</span></div>
-        <div id="emptyIntel" class="empty-intel">Select a WIP requirement to let Todo read the role, skills, experience and sourcing risks automatically.</div>
-        <div id="intelligence" class="intel-grid hidden"></div>
-        <div id="aiNote" class="ai-note hidden"><span>✦</span><p id="aiInsight"></p></div>
-      </div>
+      <div class="panel input-panel"><div class="panel-head"><div><span class="kicker">STEP 1</span><h2>Select active requirement</h2></div><span id="wipCount" class="badge">Loading…</span></div><p class="selector-help">No copy-paste. Todo loads every <b>Work In Progress</b> requirement from your database.</p><label>Search requirements<div class="search-wrap"><span>⌕</span><input id="requirementSearch" placeholder="Search by TSS ID, role or location" autocomplete="off" /></div></label><label>Requirement<select id="requirementSelect" disabled><option>Loading active requirements…</option></select></label><div id="requirementMeta" class="requirement-meta hidden"></div><button id="run" class="primary" disabled>Run Autopilot <span>→</span></button><div id="loadError" class="load-error hidden"><span>Could not load active requirements.</span><button id="retryLoad" type="button">Retry</button></div></div>
+      <div class="panel ai-panel"><div class="panel-head"><div><span class="kicker">TODO'S READ</span><h2>Requirement intelligence</h2></div><span id="intelStatus" class="pulse">Waiting</span></div><div id="emptyIntel" class="empty-intel">Select a WIP requirement to let Todo read the role, skills, experience and sourcing risks automatically.</div><div id="intelligence" class="intel-grid hidden"></div><div id="aiNote" class="ai-note hidden"><span>✦</span><p id="aiInsight"></p></div></div>
     </section>
-
-    <section id="results" class="results hidden">
-      <div class="result-head">
-        <div><p class="eyebrow">STEP 2 · TALENT REDISCOVERY</p><h2>Todo found <span id="count">5</span> candidates worth looking at</h2><p class="muted">Prototype ranking preview. Production candidate data remains untouched.</p></div>
-        <div class="summary"><div><b id="strong">3</b><span>Strong</span></div><div><b id="review">2</b><span>Review</span></div><div><b>84</b><span>Database</span></div></div>
-      </div>
-
-      <div class="toolbar"><button class="chip active" data-filter="all">All</button><button class="chip" data-filter="strong">Strong Match</button><button class="chip" data-filter="review">Review</button><div class="spacer"></div><button id="selectTop" class="ghost">Select top 3</button></div>
-      <div id="cards" class="cards"></div>
-
-      <div class="action-dock">
-        <div><span id="selectedCount">0</span> candidates selected <small>Todo can prepare outreach + screening questions next.</small></div>
-        <button id="prepare" class="primary small" disabled>Prepare Outreach</button>
-      </div>
-    </section>
-
+    <section id="results" class="results hidden"><div class="result-head"><div><p class="eyebrow">STEP 2 · TALENT REDISCOVERY</p><h2>Todo found <span id="count">5</span> candidates worth looking at</h2><p class="muted">Prototype ranking preview. Production candidate data remains untouched.</p></div><div class="summary"><div><b id="strong">3</b><span>Strong</span></div><div><b id="review">2</b><span>Review</span></div><div><b>84</b><span>Database</span></div></div></div><div class="toolbar"><button class="chip active" data-filter="all">All</button><button class="chip" data-filter="strong">Strong Match</button><button class="chip" data-filter="review">Review</button><div class="spacer"></div><button id="selectTop" class="ghost">Select top 3</button></div><div id="cards" class="cards"></div><div class="action-dock"><div><span id="selectedCount">0</span> candidates selected <small>Todo can prepare outreach + screening questions next.</small></div><button id="prepare" class="primary small" disabled>Prepare Outreach</button></div></section>
     <section id="outreach" class="panel outreach hidden">
-      <div class="panel-head"><div><span class="kicker">STEP 3</span><h2>Autopilot action plan</h2></div><span class="badge">Ready for recruiter approval</span></div>
-      <div class="timeline">
-        <div class="step done"><span>1</span><div><b>Rediscovery complete</b><small>Existing database checked first.</small></div></div>
-        <div class="step"><span>2</span><div><b>Generate candidate-specific screening questions</b><small>Based on missing skills and risk flags.</small></div></div>
-        <div class="step"><span>3</span><div><b>Prepare email + WhatsApp outreach</b><small>One-click recruiter approval before anything is sent.</small></div></div>
-        <div class="step"><span>4</span><div><b>Auto-track response and interview readiness</b><small>Confirmed / no response / follow-up needed.</small></div></div>
-      </div>
-      <div class="command"><span>Ask Todo</span><input value="Show me candidates rejected earlier only because of notice period" readonly /><button>Run</button></div>
+      <div class="panel-head"><div><span class="kicker">STEP 3 · RECRUITER APPROVAL</span><h2>Autopilot action workspace</h2></div><span id="outreachStatus" class="badge">Draft</span></div>
+      <div id="selectedSummary" class="selected-summary"></div>
+      <div class="outreach-tabs"><button class="outreach-tab active" data-tab="questions">Screening Questions</button><button class="outreach-tab" data-tab="email">Email Preview</button><button class="outreach-tab" data-tab="whatsapp">WhatsApp Preview</button></div>
+      <div id="questionsPane" class="outreach-pane"></div>
+      <div id="emailPane" class="outreach-pane hidden"></div>
+      <div id="whatsappPane" class="outreach-pane hidden"></div>
+      <div class="approval-bar"><div><b>No message will be sent from this prototype.</b><small>Review the generated content, then simulate adding it to the outreach queue.</small></div><button id="approveOutreach" class="primary small">Approve & Add to Queue</button></div>
+      <div id="approvalSuccess" class="approval-success hidden">✓ Outreach package approved and queued in prototype mode.</div>
+      <div class="command"><span>Ask Todo</span><input id="copilotCommand" value="Show me candidates rejected earlier only because of notice period" /><button id="commandRun">Run</button></div>
+      <div id="commandResult" class="command-result hidden"></div>
     </section>
   </main>
 </div>
