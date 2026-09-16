@@ -1,15 +1,60 @@
-const candidates=[
-{name:'Aarav Shah',exp:'4.8 yrs',location:'Mumbai',notice:'Immediate',score:94,type:'strong',skills:['Flutter','Dart','REST API','BLoC','Insurance'],missing:[],risk:'Previously screened · strong technical fit'},
-{name:'Neha Verma',exp:'5.2 yrs',location:'Navi Mumbai',notice:'15 days',score:91,type:'strong',skills:['Flutter','Dart','REST API','Riverpod','BFSI'],missing:[],risk:'Rediscovered from previous BFSI requirement'},
-{name:'Rohan Iyer',exp:'3.9 yrs',location:'Mumbai',notice:'30 days',score:86,type:'strong',skills:['Flutter','Dart','REST API','Provider'],missing:['Insurance'],risk:'Notice period slightly above target'},
-{name:'Meera Nair',exp:'4.1 yrs',location:'Thane',notice:'Immediate',score:78,type:'review',skills:['Flutter','Dart','REST API'],missing:['BLoC/Riverpod','BFSI'],risk:'Good core fit · domain check needed'},
-{name:'Kunal Patil',exp:'6.0 yrs',location:'Pune',notice:'15 days',score:74,type:'review',skills:['Flutter','Dart','Riverpod','REST API'],missing:['Mumbai'],risk:'Location mismatch · otherwise relevant'}
-];
-const state={selected:new Set(),filter:'all'};
+const API='https://wbclpjdjhlsuspojtner.supabase.co/functions/v1/autopilot-wip-requirements';
 const $=id=>document.getElementById(id);
-function card(c,i){const selected=state.selected.has(i);return `<article class="candidate ${selected?'selected':''}" data-i="${i}"><button class="checkBox" aria-label="Select candidate">${selected?'✓':''}</button><div class="candidate-main"><div class="candidate-top"><h3>${c.name}</h3><span class="tag ${c.type}">${c.type==='strong'?'Strong Match':'Review Recommended'}</span></div><div class="meta">${c.exp} · ${c.location} · Notice: ${c.notice}</div><div class="skills">${c.skills.map(s=>`<span class="skill">✓ ${s}</span>`).join('')}${c.missing.map(s=>`<span class="skill miss">△ ${s}</span>`).join('')}</div><div class="risk">${c.risk}</div></div><div class="score"><b>${c.score}%</b><span>Todo Match</span></div></article>`}
-function render(){const list=candidates.map((c,i)=>({c,i})).filter(x=>state.filter==='all'||x.c.type===state.filter);$('cards').innerHTML=list.map(x=>card(x.c,x.i)).join('');document.querySelectorAll('.candidate').forEach(el=>el.querySelector('.checkBox').onclick=()=>{const i=Number(el.dataset.i);state.selected.has(i)?state.selected.delete(i):state.selected.add(i);render();});$('selectedCount').textContent=state.selected.size;$('prepare').disabled=!state.selected.size;}
-$('run').onclick=()=>{const b=$('run');b.disabled=true;b.innerHTML='Analyzing requirement…';setTimeout(()=>{b.innerHTML='Autopilot Complete ✓';$('results').classList.remove('hidden');$('results').scrollIntoView({behavior:'smooth',block:'start'});render();},850)};
-document.querySelectorAll('.chip').forEach(btn=>btn.onclick=()=>{document.querySelectorAll('.chip').forEach(x=>x.classList.remove('active'));btn.classList.add('active');state.filter=btn.dataset.filter;render();});
-$('selectTop').onclick=()=>{state.selected=new Set([0,1,2]);render();};
+const state={requirements:[],visible:[],selectedRequirement:null,selected:new Set(),filter:'all'};
+
+const demoCandidates=[
+{name:'Aarav Shah',exp:'4.8 yrs',location:'Mumbai',notice:'Immediate',score:94,type:'strong',skills:['Core skills fit','Relevant experience','Location fit'],missing:[],risk:'Previously screened · strong fit'},
+{name:'Neha Verma',exp:'5.2 yrs',location:'Navi Mumbai',notice:'15 days',score:91,type:'strong',skills:['Mandatory skills','Domain relevance','Recent screening'],missing:[],risk:'Rediscovered from an earlier similar requirement'},
+{name:'Rohan Iyer',exp:'3.9 yrs',location:'Mumbai',notice:'30 days',score:86,type:'strong',skills:['Core stack','Experience','Location'],missing:['Notice period'],risk:'Notice period slightly above target'},
+{name:'Meera Nair',exp:'4.1 yrs',location:'Thane',notice:'Immediate',score:78,type:'review',skills:['Core skills','Experience'],missing:['Domain confirmation'],risk:'Good fit · recruiter review recommended'},
+{name:'Kunal Patil',exp:'6.0 yrs',location:'Pune',notice:'15 days',score:74,type:'review',skills:['Skills','Experience','Notice period'],missing:['Location'],risk:'Location mismatch · otherwise relevant'}
+];
+
+function esc(v=''){return String(v).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));}
+function arr(v){return Array.isArray(v)?v.filter(Boolean):[];}
+function fmtExp(r){if(r.experience_text) return r.experience_text; if(r.experience_min!=null&&r.experience_max!=null)return `${r.experience_min}–${r.experience_max} yrs`; if(r.experience_min!=null)return `${r.experience_min}+ yrs`; return 'Not specified';}
+function title(r){return `${r.tss_id||'REQ'} · ${r.job_title||'Untitled Role'}`;}
+function renderSelect(){
+ const s=$('requirementSelect');
+ const q=$('requirementSearch').value.trim().toLowerCase();
+ state.visible=state.requirements.filter(r=>!q||[r.tss_id,r.job_title,r.location,r.industry].some(x=>String(x||'').toLowerCase().includes(q)));
+ s.innerHTML='<option value="">Select a Work In Progress requirement</option>'+state.visible.map(r=>`<option value="${esc(r.id)}">${esc(title(r))}${r.location?' · '+esc(r.location):''}</option>`).join('');
+ s.disabled=false;
+ if(state.selectedRequirement && state.visible.some(r=>r.id===state.selectedRequirement.id)) s.value=state.selectedRequirement.id;
+}
+function showRequirement(r){
+ state.selectedRequirement=r||null; state.selected.clear(); state.filter='all';
+ $('results').classList.add('hidden'); $('outreach').classList.add('hidden');
+ if(!r){$('requirementMeta').classList.add('hidden');$('intelligence').classList.add('hidden');$('aiNote').classList.add('hidden');$('emptyIntel').classList.remove('hidden');$('intelStatus').textContent='Waiting';$('run').disabled=true;return;}
+ const mandatory=arr(r.mandatory_skills), preferred=arr(r.preferred_skills);
+ $('requirementMeta').innerHTML=`<div><small>Role</small><b>${esc(r.job_title||'—')}</b></div><div><small>Location</small><b>${esc(r.location||'—')}</b></div><div><small>Experience</small><b>${esc(fmtExp(r))}</b></div><div><small>Openings</small><b>${esc(r.positions_count||'—')}</b></div><div class="meta-wide"><small>Requirement</small><b>${esc(r.tss_id||'—')}</b></div>`;
+ $('requirementMeta').classList.remove('hidden');
+ $('emptyIntel').classList.add('hidden');
+ const skillText=mandatory.length?mandatory.join(', '):'No mandatory skills structured yet';
+ const prefText=preferred.length?preferred.join(', '):'No preferred skills structured yet';
+ const risk=!mandatory.length?'Structured skills missing':(!r.location?'Location not specified':(!r.experience_min&&!r.experience_text?'Experience not structured':'Ready for rediscovery'));
+ $('intelligence').innerHTML=`<div class="intel"><small>Mandatory</small><b>${esc(skillText)}</b></div><div class="intel"><small>Preferred</small><b>${esc(prefText)}</b></div><div class="intel"><small>Domain</small><b>${esc(r.industry||'Not specified')}</b></div><div class="intel"><small>Risk</small><b class="${risk==='Ready for rediscovery'?'':'warn'}">${esc(risk)}</b></div>`;
+ $('intelligence').classList.remove('hidden');
+ $('aiInsight').innerHTML=`<b>Todo insight:</b> ${mandatory.length?'This requirement has structured criteria and can be matched against your existing talent pool immediately.':'Todo can still rediscover candidates, but adding mandatory skills will improve ranking quality.'}`;
+ $('aiNote').classList.remove('hidden'); $('intelStatus').textContent='Ready'; $('run').disabled=false; $('run').innerHTML='Run Autopilot <span>→</span>';
+}
+async function loadRequirements(){
+ $('loadError').classList.add('hidden'); $('requirementSelect').disabled=true; $('requirementSelect').innerHTML='<option>Loading active requirements…</option>'; $('wipCount').textContent='Loading…';
+ try{
+   const r=await fetch(API,{cache:'no-store'}); const j=await r.json(); if(!r.ok||!j.ok) throw new Error(j.error||'Load failed');
+   state.requirements=j.requirements||[]; state.visible=[...state.requirements]; $('wipCount').textContent=`${state.requirements.length} WIP`;
+   renderSelect();
+ }catch(e){ $('wipCount').textContent='Unavailable'; $('requirementSelect').innerHTML='<option>Requirements unavailable</option>'; $('loadError').classList.remove('hidden'); }
+}
+function card(c,i){const selected=state.selected.has(i);return `<article class="candidate ${selected?'selected':''}" data-i="${i}"><button class="checkBox" aria-label="Select candidate">${selected?'✓':''}</button><div class="candidate-main"><div class="candidate-top"><h3>${esc(c.name)}</h3><span class="tag ${c.type}">${c.type==='strong'?'Strong Match':'Review Recommended'}</span></div><div class="meta">${esc(c.exp)} · ${esc(c.location)} · Notice: ${esc(c.notice)}</div><div class="skills">${c.skills.map(s=>`<span class="skill">✓ ${esc(s)}</span>`).join('')}${c.missing.map(s=>`<span class="skill miss">△ ${esc(s)}</span>`).join('')}</div><div class="risk">${esc(c.risk)}</div></div><div class="score"><b>${c.score}%</b><span>Todo Match</span></div></article>`}
+function renderCandidates(){const list=demoCandidates.map((c,i)=>({c,i})).filter(x=>state.filter==='all'||x.c.type===state.filter);$('cards').innerHTML=list.map(x=>card(x.c,x.i)).join('');document.querySelectorAll('.candidate').forEach(el=>el.querySelector('.checkBox').onclick=()=>{const i=Number(el.dataset.i);state.selected.has(i)?state.selected.delete(i):state.selected.add(i);renderCandidates();});$('selectedCount').textContent=state.selected.size;$('prepare').disabled=!state.selected.size;}
+
+$('requirementSearch').addEventListener('input',renderSelect);
+$('requirementSelect').addEventListener('change',()=>showRequirement(state.requirements.find(r=>r.id===$('requirementSelect').value)));
+$('retryLoad').onclick=loadRequirements;
+$('run').onclick=()=>{if(!state.selectedRequirement)return;const b=$('run');b.disabled=true;b.innerHTML='Analyzing '+esc(state.selectedRequirement.tss_id||'requirement')+'…';setTimeout(()=>{b.innerHTML='Autopilot Complete ✓';$('results').classList.remove('hidden');$('results').scrollIntoView({behavior:'smooth',block:'start'});renderCandidates();b.disabled=false;},650)};
+document.querySelectorAll('.chip').forEach(btn=>btn.onclick=()=>{document.querySelectorAll('.chip').forEach(x=>x.classList.remove('active'));btn.classList.add('active');state.filter=btn.dataset.filter;renderCandidates();});
+$('selectTop').onclick=()=>{state.selected=new Set([0,1,2]);renderCandidates();};
 $('prepare').onclick=()=>{$('outreach').classList.remove('hidden');$('outreach').scrollIntoView({behavior:'smooth',block:'start'});};
+
+loadRequirements();
