@@ -49,7 +49,7 @@
       const {data:{session},error:sessionError}=await c.auth.getSession();
       if(sessionError||!session?.user)return false;
       // Keep Active and On Hold requirements in the workspace. Closed requirements are excluded.
-      const {data:reqs,error}=await c.from('requirements').select('*,clients(name)').neq('status','Closed').order('tss_id',{ascending:true});
+      const {data:reqs,error}=await c.from('requirements').select('*,clients(name)').neq('status','Closed').order('created_at',{ascending:false}).order('tss_id',{ascending:false});
       if(error)throw error;
       if(!Array.isArray(reqs))return false;
       console.info('TODO AI non-closed requirements returned:',reqs.length);
