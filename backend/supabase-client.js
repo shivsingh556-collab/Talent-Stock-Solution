@@ -142,6 +142,10 @@
     if(!client) throw new Error('Supabase is not configured');
     const user = await currentUser();
     if(!user) throw new Error('Not signed in');
+    const candidateName=String(candidate?.name||'').trim();
+    if(!candidateName || /^(candidate|unknown|n\/?a|not provided)$/i.test(candidateName)){
+      throw new Error('Candidate name could not be identified. Review the parsed resume before saving.');
+    }
     const email=normalizeCandidateEmail(candidate?.email);
     const phone=normalizeCandidatePhone(candidate?.phone);
     let existing = null;
