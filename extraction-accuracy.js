@@ -2,7 +2,7 @@
 'use strict';
 let pdf,mammoth,xlsx,ocr;
 const load=(s,i)=>new Promise((r,j)=>{if([...document.scripts].some(x=>x.src===s))return r();const e=document.createElement('script');e.src=s;if(i){e.integrity=i;e.crossOrigin='anonymous'}e.referrerPolicy='no-referrer';e.onload=r;e.onerror=j;document.head.appendChild(e)});
-const clean=s=>String(s||'').replace(/\u00a0/g,' ').replace(/[\t ]+/g,' ').replace(/\s*\n\s*/g,'\n').trim();
+const clean=s=>String(s||'').replace(/\u00a0/g,' ').replace(/\b0ct\b/gi,'Oct').replace(/[\t ]+/g,' ').replace(/\s*\n\s*/g,'\n').trim();
 const line=s=>String(s||'').replace(/\s+/g,' ').trim();
 const lines=s=>String(s||'').split(/\r?\n/).map(line).filter(Boolean);
 const uniq=a=>[...new Set((a||[]).filter(Boolean))];
