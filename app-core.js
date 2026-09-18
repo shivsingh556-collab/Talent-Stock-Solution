@@ -29,8 +29,9 @@ function reviewableCandidateIds(){return new Set((db.candidates||[]).filter(c=>[
 function screeningRequirementLabel(screening){if(!screening)return'';const id=String(screening.requirementId||screening.requirement_id||''),r=(db.requirements||[]).find(x=>[x.id,x.serverId,x.profileKey,x.requirementId].filter(Boolean).map(String).includes(id));return r?[r.client,r.title].filter(Boolean).join(' — '):''}
 function showReviewCandidates(){candidateReviewOnly=true;if(candidateSearch)candidateSearch.value='';gotoView('candidates');renderCandidates('')}
 function showAllCandidates(){candidateReviewOnly=false;renderCandidates(candidateSearch?.value||'')}
+function candidateSearchText(c){return norm([c.id,c.serverId,c.name,c.email,c.phone,c.designation,c.currentCompany,c.location,c.preferredLocation,c.noticePeriod,c.education,(c.skills||[]).join(' ')].filter(Boolean).join(' '))}
 function renderCandidates(filter=''){
-  const q=norm(filter),reviewIds=reviewableCandidateIds(),allRows=(db.candidates||[]).filter(c=>!q||norm([c.name,c.email,c.phone,c.designation,c.currentCompany,c.location,c.preferredLocation,c.noticePeriod,(c.skills||[]).join(' ')].join(' ')).includes(q)),rows=candidateReviewOnly?allRows.filter(c=>[c.id,c.serverId].filter(Boolean).some(id=>reviewIds.has(String(id)))):allRows;
+  const q=norm(filter).trim(),reviewIds=reviewableCandidateIds(),allRows=(db.candidates||[]).filter(c=>!q||candidateSearchText(c).includes(q)),rows=candidateReviewOnly?allRows.filter(c=>[c.id,c.serverId].filter(Boolean).some(id=>reviewIds.has(String(id)))):allRows;
   const reviewHead=candidateReviewOnly?`<div class="candidate-review-filter"><div><strong>${rows.length} candidate${rows.length===1?'':'s'} worth reviewing</strong><small>Showing candidates whose latest screening is Strong Match or Review Recommended.</small></div><button type="button" class="btn ghost candidate-clear-review">Show All Candidates</button></div>`:'';
   const table=rows.length?`<div class="candidate-table-scroll"><table class="data-table candidate-records-table"><thead><tr><th>Candidate</th><th>Contact</th><th>Experience</th><th>Location</th><th>Notice</th><th>Last Screened</th><th>Status</th><th>Actions</th></tr></thead><tbody>${rows.map(c=>{const history=candidateScreenings(c),last=history.at(-1),role=screeningRequirementLabel(last),hasResume=Boolean(c.resumeAvailable||c.resumePath||c.resumeVersionId),experience=c.totalExperience!==''&&c.totalExperience!=null?`${esc(c.totalExperience)} yrs`:'Not provided',relevant=c.relevantExperience!==''&&c.relevantExperience!=null?`Relevant: ${esc(c.relevantExperience)} yrs`:'';return `<tr data-candidate-id="${esc(c.id)}"><td class="candidate-primary"><strong title="${esc(c.name||'Candidate')}">${esc(c.name||'Candidate')}</strong><small title="${esc(c.designation||'Designation not provided')}">${esc(c.designation||'Designation not provided')}</small><small title="${esc(c.currentCompany||'')}">${esc(c.currentCompany||'')}</small></td><td class="candidate-contact"><span title="${esc(c.email||'Email not provided')}">${esc(c.email||'Email not provided')}</span><small title="${esc(c.phone||'Phone not provided')}">${esc(c.phone||'Phone not provided')}</small></td><td><span>${experience}</span>${relevant?`<small>${relevant}</small>`:''}</td><td><span title="${esc(c.location||'Location not provided')}">${esc(c.location||'Not provided')}</span>${c.preferredLocation?`<small title="Preferred: ${esc(c.preferredLocation)}">Preferred: ${esc(c.preferredLocation)}</small>`:''}</td><td>${esc(c.noticePeriod||'Not provided')}</td><td>${candidateDate(last?.date||c.lastScreenedDate)}${history.length?`<small>${history.length} screening${history.length===1?'':'s'}</small>`:''}</td><td>${last?`${statusBadge(last.recommendation)}<small title="${esc(role||'Latest screening score')}">${esc(last.score??0)}/100${role?` · ${esc(role)}`:''}</small>`:'<span class="badge blue">Stored</span>'}</td><td class="candidate-actions"><div class="candidate-action-row"><button type="button" class="btn ghost candidate-view-resume" ${hasResume?'':`disabled title="Resume unavailable"`} data-candidate-id="${esc(c.id)}">${hasResume?'View Resume':'Resume Unavailable'}</button><button type="button" class="btn ghost candidate-edit" data-candidate-id="${esc(c.id)}">Edit Profile</button></div></td></tr>`}).join('')}</tbody></table></div>`:`<div class="empty-state">${candidateReviewOnly?'No candidates currently need review.':'No candidates match this search.'}</div>`;
   candidateTableWrap.innerHTML=reviewHead+table;
@@ -42,6 +43,42 @@ function openCandidateEditor(id){const c=candidateById(id),dialog=document.getEl
 function applyCandidateRow(target,row){Object.assign(target,{id:row.id||target.id,serverId:row.id||target.serverId,name:row.candidate_name||target.name,email:row.email||target.email||'',phone:row.phone||'',location:row.current_location||'',preferredLocation:row.preferred_location||'',totalExperience:row.total_experience??'',relevantExperience:row.relevant_experience??'',currentCompany:row.current_company||'',designation:row.current_designation||'',skills:row.skills||[],education:row.education||'',noticePeriod:row.notice_period||'',currentCTC:row.current_ctc||'',expectedCTC:row.expected_ctc||''})}
 async function saveCandidateEdits(){const id=document.getElementById('candidateEditId')?.value,c=candidateById(id),button=document.getElementById('saveCandidateBtn');if(!c)return;const email=document.getElementById('candidateEditEmail').value.trim().toLowerCase();if(email&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){toast('Enter a valid email address');return}const phone=document.getElementById('candidateEditPhone').value.trim();const payload={name:document.getElementById('candidateEditName').value.trim(),email:email||c.email||'',phone,designation:document.getElementById('candidateEditDesignation').value.trim(),currentCompany:document.getElementById('candidateEditCompany').value.trim(),location:document.getElementById('candidateEditLocation').value.trim(),preferredLocation:document.getElementById('candidateEditPreferredLocation').value.trim(),totalExperience:document.getElementById('candidateEditExperience').value,relevantExperience:document.getElementById('candidateEditRelevantExperience').value,noticePeriod:document.getElementById('candidateEditNotice').value.trim(),currentCTC:document.getElementById('candidateEditCTC').value.trim(),expectedCTC:document.getElementById('candidateEditExpectedCTC').value.trim(),skills:splitSkills(document.getElementById('candidateEditSkills').value),education:document.getElementById('candidateEditEducation').value.trim()};if(!payload.name){toast('Candidate name is required');return}button.disabled=true;button.textContent='Saving…';try{if(window.TSSBackend?.enabled&&c.serverId){const row=await window.TSSBackend.updateCandidate(c.serverId,payload);applyCandidateRow(c,row)}else Object.assign(c,payload);localStorage.setItem(DB_KEY,JSON.stringify(db));renderAll();document.getElementById('candidateDialog').close();toast('Candidate profile saved')}catch(error){console.error(error);toast('Candidate update failed: '+(error.message||error))}finally{button.disabled=false;button.textContent='Save Candidate'}}
 candidateSearch.oninput=e=>renderCandidates(e.target.value);
+function runGlobalSearch(value=''){
+  const raw=String(value||'').trim(),q=norm(raw).trim();
+  if(!q)return;
+  const candidateMatches=(db.candidates||[]).filter(c=>candidateSearchText(c).includes(q));
+  if(candidateMatches.length){
+    candidateReviewOnly=false;
+    if(candidateSearch)candidateSearch.value=raw;
+    gotoView('candidates');
+    renderCandidates(raw);
+    return;
+  }
+  const requirementMatches=(db.requirements||[]).filter(r=>norm([r.id,r.serverId,r.profileKey,r.client,r.title,r.location,r.industry,r.experience,r.qualification,(r.skills||[]).join(' '),(r.preferred||[]).join(' ')].filter(Boolean).join(' ')).includes(q));
+  if(requirementMatches.length){
+    gotoView('requirements');
+    const input=document.getElementById('jobProfileSearch');
+    if(input){
+      input.value=raw;
+      input.dispatchEvent(new Event('input',{bubbles:true}));
+    }
+    return;
+  }
+  toast('No matching candidate or job profile found');
+}
+const globalSearchInput=document.getElementById('globalSearch');
+let globalSearchTimer=null;
+globalSearchInput?.addEventListener('input',e=>{
+  clearTimeout(globalSearchTimer);
+  const value=e.target.value;
+  if(!String(value||'').trim()){
+    if(document.getElementById('candidates')?.classList.contains('active')){if(candidateSearch)candidateSearch.value='';renderCandidates('')}
+    return;
+  }
+  globalSearchTimer=setTimeout(()=>{if(String(value).trim().length>=2)runGlobalSearch(value)},250);
+});
+globalSearchInput?.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();clearTimeout(globalSearchTimer);runGlobalSearch(e.target.value)}});
+document.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&String(e.key).toLowerCase()==='k'){e.preventDefault();globalSearchInput?.focus();globalSearchInput?.select()}});
 candidateTableWrap.addEventListener('click',event=>{const view=event.target.closest('.candidate-view-resume'),edit=event.target.closest('.candidate-edit'),clear=event.target.closest('.candidate-clear-review');if(view&&!view.disabled){const c=candidateById(view.dataset.candidateId);if(c)window.TSSSafeBackendFeatures?.viewResume?.(c)}if(edit)openCandidateEditor(edit.dataset.candidateId);if(clear)showAllCandidates()});
 window.TSSCandidateRecords={showReviewCandidates,showAllCandidates,reviewableIds:reviewableCandidateIds};
 document.getElementById('saveCandidateBtn')?.addEventListener('click',saveCandidateEdits);
