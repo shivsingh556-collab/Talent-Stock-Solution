@@ -42,6 +42,39 @@ function loadBackend(existingEmail='manual@example.com'){
   assert.equal(parser.extractResume('JAYESH WAGHELA\nEmail: jayesh.waghela @ gmail. com\nMobile: 9867741866').email,'jayesh.waghela@gmail.com');
   assert.equal(parser.extractResume('Email: Candidate.Name@Example.COM').email,'candidate.name@example.com');
 
+  const resumeSample=[
+    'RUSHIKESH APPASAHEB GAIKWAD',
+    'rushikeshg061@gmail.com',
+    '7028336692',
+    'EDUCATION',
+    'MBA in MARKETING Nov 2022 - July 2024',
+    'Bachelor Of Science (BSc) Sep 2018 - Oct 2022',
+    'SKILLS (Technology & Functional)',
+    'Good communication Skills',
+    'sales Skills',
+    'Marketing Skills',
+    'Knowledge of MS Office, Excel, Power point',
+    'INTERNSHIP EXPERIENCE',
+    'Company Name: - HDFC Bank',
+    'Job Role: - Personal loan trainee.',
+    'Duration: - 1 Aug 2023 to 1 Oct 2023',
+    'EXPERIENCE',
+    'Company Name: - Bajaj finance Ltd.',
+    'Job Role: - Sales executive.',
+    'Duration: - 27 Sep 2023 to Oct 2024',
+    'Company Name: - Icici Prudential Life Insurance.',
+    'Job Role: - Senior Agency Manager',
+    'Duration: - 19 Nov 2024 to Till Date'
+  ].join('\n');
+  const parsedSample=parser.extractResume(resumeSample);
+  assert.equal(parsedSample.name,'Rushikesh Appasaheb Gaikwad');
+  assert.equal(parsedSample.email,'rushikeshg061@gmail.com');
+  assert.equal(parsedSample.phone,'7028336692');
+  assert.match(parsedSample.designation,/Senior Agency Manager/i);
+  assert.match(parsedSample.currentCompany,/Icici Prudential Life Insurance/i);
+  assert.ok(Number(parsedSample.totalExperience)>=1.8&&Number(parsedSample.totalExperience)<=3.5,'experience should exclude education ranges');
+  assert.ok(parsedSample.skills.some(s=>/sales/i.test(s)),'explicit skills section should be captured');
+
   const preserve=loadBackend('saved@example.com');
   await preserve.backend.updateCandidate('candidate-1',{name:'Jayesh Waghela',email:'',phone:'9867741866'});
   assert.equal(Object.hasOwn(preserve.getUpdatedPayload(),'email'),false,'blank parser/form email must not overwrite a saved email');
