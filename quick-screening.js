@@ -126,20 +126,31 @@
     syncRequirementToCore();
     const previous=byId('resumeText')?.value||'';
     if(pasted){byId('resumeText').value=pasted}
+    let fallbackName='';
     if(quickFile){
-      const quickName=deriveNameFromFilename(quickFile.name);
-      if(byId('candidateName')&&!byId('candidateName').value.trim()&&quickName)byId('candidateName').value=quickName;
+      fallbackName=deriveNameFromFilename(quickFile.name);
       await feedFileToCore(quickFile);
       setStatus('Extracting CV details…','busy');
       await waitForExtraction(previous);
+      // candidate-enrichment intentionally clears stale identity when a new file is handed off.
+      // Apply the filename fallback only AFTER parsing has had a chance to populate the real name.
+      if(byId('candidateName')&&!byId('candidateName').value.trim()&&fallbackName)byId('candidateName').value=fallbackName;
     }
     if(pasted && byId('candidateName')&&!byId('candidateName').value.trim()){
       const first=pasted.split(/\r?\n/).map(x=>x.trim()).find(Boolean)||'';
-      if(first.length<70)byId('candidateName').value=first;
+      if(first.length<70&&!/@/.test(first))byId('candidateName').value=first;
     }
     const text=byId('resumeText')?.value?.trim()||'';
     if(!text){button.disabled=false;button.textContent='Analyse Candidate';setStatus('Resume text could not be extracted. Paste the resume text once and try again.','bad');return}
-    if(byId('candidateName')&&!byId('candidateName').value.trim())byId('candidateName').value='Candidate';
+    if(byId('candidateName')&&!byId('candidateName').value.trim()){
+      const first=text.split(/\r?\n/).map(x=>x.trim()).find(Boolean)||'';
+      if(first&&first.length<70&&!/@/.test(first))byId('candidateName').value=first;
+    }
+    if(byId('candidateName')&&!byId('candidateName').value.trim()){
+      button.disabled=false;button.textContent='Analyse Candidate';
+      setStatus('Candidate name could not be identified. Enter the name once, then analyse again.','bad');
+      return;
+    }
     const before=(()=>{try{return (db.screenings||[]).length}catch{return 0}})();
     setStatus('Matching skills, experience and role fit…','busy');
     byId('screenBtn')?.click();
