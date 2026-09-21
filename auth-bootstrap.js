@@ -4,7 +4,7 @@
   'use strict';
 
   const DOMAIN='talent-stock.com';
-  const BUILD='20260921-newest-requirements-1';
+  const BUILD='20260921-screening-accuracy-2';
   const gate=document.getElementById('loginGate');
   const mount=document.getElementById('workspaceMount');
   const form=document.getElementById('loginForm');
@@ -155,6 +155,9 @@
     enforceRoleAccess(identity);
     loadRuntimeStyles();
     await loadScript(`app-core.js?v=${BUILD}`);
+    // Keep the accuracy engine independently testable and load it after the
+    // legacy core so v2 is the only scorer used by detailed and Quick Screening.
+    await loadScript(`evidence-screening.js?v=${BUILD}`);
     await loadScript(`app-runtime.js?v=${BUILD}`);
 
     // Restore reporting as an authenticated late-loaded module.

@@ -40,7 +40,7 @@ const signedInBackend=`
     const legacy=await page.evaluate(()=>localStorage.getItem('tss_user_session'));
     check(legacy===null,`${width}px forged localStorage session is discarded`);
     const resources=await page.evaluate(()=>performance.getEntriesByType('resource').map(x=>x.name));
-    check(!resources.some(url=>/app-(?:core|runtime)\.js/.test(url)),`${width}px feature bundles are not requested signed out`);
+    check(!resources.some(url=>/(?:app-(?:core|runtime)|evidence-screening)\.js/.test(url)),`${width}px feature bundles are not requested signed out`);
     const mascot=await page.locator('.login-todo-photo').boundingBox();
     const panel=await page.locator('.login-right').boundingBox();
     check(Boolean(mascot&&panel&&mascot.x>=panel.x-1&&mascot.x+mascot.width<=panel.x+panel.width+1&&mascot.y>=panel.y-1&&mascot.y+mascot.height<=panel.y+panel.height+1),`${width}px mascot is fully visible inside its panel`);
@@ -60,12 +60,14 @@ const signedInBackend=`
   await page.waitForSelector('#workspace:not(.hidden)',{timeout:15000});
   check(await page.locator('#workspace').isVisible(),'verified session mounts and reveals the workspace');
   check(await page.locator('script[src*="app-core.js"]').count()===1,'core bundle loads exactly once');
+  check(await page.locator('script[src*="evidence-screening.js"]').count()===1,'accuracy engine loads exactly once');
   check(await page.locator('script[src*="app-runtime.js"]').count()===1,'runtime bundle loads exactly once');
   check(await page.locator('link[data-tss-runtime]').count()===1,'runtime stylesheet loads exactly once');
   check((await page.locator('#profileName').innerText()).includes('Test Recruiter'),'verified profile identity reaches the workspace');
   check(errors.length===0,`authenticated bootstrap has no page errors: ${errors.join(' | ')}`);
   await page.reload({waitUntil:'networkidle'});
   check(await page.locator('script[src*="app-core.js"]').count()===1,'reload still has one core bundle');
+  check(await page.locator('script[src*="evidence-screening.js"]').count()===1,'reload still has one accuracy engine');
   check(await page.locator('.login-todo-photo').count()===1,'reload keeps one mascot renderer');
 
   await browser.close();

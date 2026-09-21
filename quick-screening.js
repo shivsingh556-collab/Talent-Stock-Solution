@@ -59,18 +59,19 @@
   function summaryFor(s,c,r){
     const m=s?.metrics||{};
     const strengths=[]; const risks=[];
+    const requiredGaps=m.missingRequired||s?.missing||[];
     if((m.mandatoryPct||0)>=75)strengths.push(`${m.mandatoryPct}% mandatory skill coverage`);
     if((m.expPct||0)>=90)strengths.push('experience meets the role requirement');
     if((m.domainPct||0)>=55)strengths.push('good role/domain overlap');
     if((m.locPct||0)>=80)strengths.push('location alignment');
-    if((s?.missing||[]).length)risks.push(`${s.missing.length} mandatory skill${s.missing.length===1?'':'s'} not clearly evidenced`);
+    if(requiredGaps.length)risks.push(`${requiredGaps.length} mandatory skill${requiredGaps.length===1?'':'s'} not clearly evidenced`);
     if((m.expPct||100)<75)risks.push('experience depth needs verification');
     if((m.locPct||100)<60)risks.push('location/work-mode fit needs confirmation');
     const opening=s?.recommendation==='Strong Match'?'This profile is a strong shortlist candidate.':s?.recommendation==='Review Recommended'?'This profile is worth a recruiter review before submission.':'This profile has meaningful gaps against the selected requirement.';
     return `${opening} The candidate scored ${s?.score??0}/100 for ${r?.title||'the selected role'}. ${strengths.length?`Key strengths: ${strengths.join(', ')}. `:''}${risks.length?`Verify before submission: ${risks.join('; ')}.`:'No major mandatory gap is visible from the available resume evidence.'}`;
   }
   function screeningQuestion(s,r){
-    const missing=(s?.missing||[])[0];
+    const missing=(s?.metrics?.missingRequired||s?.missing||[])[0];
     if(missing)return `Can you describe your hands-on experience with ${missing}?`;
     const skill=(r?.skills||[])[0];
     return skill?`Can you describe a recent project where you used ${skill}?`:`Can you walk me through your most relevant experience for ${r?.title||'this role'}?`;
