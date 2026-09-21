@@ -22,6 +22,7 @@
       client:row.clients?.name||local.client||'Client',clientOwner:row.client_owner||'',
       requirementHandler:row.requirement_handler||local.requirementHandler||'',
       assignedRecruiters:Array.isArray(row.assigned_recruiters)?row.assigned_recruiters:[],
+      createdAt:row.created_at||local.createdAt||null,updatedAt:row.updated_at||local.updatedAt||null,
       submittedAt:row.submitted_at||null,submittedBy:row.submitted_by||null,
       title:row.job_title||local.title||'Untitled Requirement',location:row.location||local.location||'Not provided',
       experience:row.experience_text||local.experience||'Not provided',positionsCount:row.positions_count??local.positionsCount??null,
