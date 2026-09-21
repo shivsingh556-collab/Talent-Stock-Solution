@@ -18,7 +18,8 @@ The browser UI is not the authorization boundary. Supabase RLS remains authorita
 
 The repository keeps the feature sources readable, then emits three production assets:
 
-- `app-core.js` — core application and screening logic
+- `app-core.js` — core application workflow
+- `evidence-screening.js` — independently tested canonical skill matching and explainable scoring engine
 - `app-runtime.js` — post-auth feature modules
 - `app-runtime.css` — application styles
 
@@ -31,6 +32,8 @@ node scripts/build-production.mjs
 ```
 
 The build also rewrites `index.html` as the public login-only shell and extracts the TalentStock logo asset.
+
+The JD parser automatically captures catalogue skills, structured skill sections and custom skills found in requirement cues. Recruiters can edit or add any skill manually; the matching engine does not require that skill to exist in the built-in alias catalogue.
 
 ## Verification
 

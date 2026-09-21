@@ -14,7 +14,7 @@ const cssFiles=[
   'minimal-content-theme.css','ui-overrides.css','todoai-brand.css'
 ];
 
-const coreFiles=['app.js','evidence-screening.js','master-data.js','old-site.js'];
+const coreFiles=['app.js','master-data.js','old-site.js'];
 const runtimeFiles=[
   'brand-assets.js','todo-exact.js','extraction-accuracy.js','candidate-enrichment.js',
   'production.js','candidate-resume-hydration.js','interview-sync.js','interview-actions.js',
