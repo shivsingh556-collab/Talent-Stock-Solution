@@ -27,6 +27,21 @@
     if(error) throw error;
   }
 
+  async function requestPasswordReset(email,redirectTo){
+    if(!client) throw new Error('Supabase is not configured');
+    const options=redirectTo?{redirectTo}:undefined;
+    const {data,error}=await client.auth.resetPasswordForEmail(email,options);
+    if(error) throw error;
+    return data;
+  }
+
+  async function updatePassword(password){
+    if(!client) throw new Error('Supabase is not configured');
+    const {data,error}=await client.auth.updateUser({password});
+    if(error) throw error;
+    return data;
+  }
+
   async function getActiveRequirements(){
     if(!client) return [];
     const { data, error } = await client
@@ -248,6 +263,8 @@
     currentUser,
     signIn,
     signOut,
+    requestPasswordReset,
+    updatePassword,
     getActiveRequirements,
     syncMasterRequirements,
     createOrUpdateCandidate,

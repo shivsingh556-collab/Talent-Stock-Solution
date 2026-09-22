@@ -10,12 +10,59 @@
   const form=document.getElementById('loginForm');
   const showButton=document.getElementById('showLoginForm');
   const errorNode=document.getElementById('loginError');
+  const forgotButton=document.getElementById('forgotPasswordButton');
+  const forgotForm=document.getElementById('forgotPasswordForm');
+  const forgotMessage=document.getElementById('forgotPasswordMessage');
+  const backToLoginButton=document.getElementById('backToLoginButton');
+  const newPasswordForm=document.getElementById('newPasswordForm');
+  const newPasswordMessage=document.getElementById('newPasswordMessage');
   let bootPromise=null;
   let appLoaded=false;
   let roleObserver=null;
+  let passwordRecoveryActive=/(?:^|[?#&])type=recovery(?:&|$)/.test(location.href);
 
   function setError(message=''){
-    if(errorNode) errorNode.textContent=message;
+    if(errorNode){errorNode.textContent=message;errorNode.dataset.tone='error';}
+  }
+
+  function setFormMessage(node,message='',tone='error'){
+    if(!node)return;
+    node.textContent=message;
+    node.dataset.tone=tone;
+  }
+
+  function showLoginForm(message=''){
+    passwordRecoveryActive=false;
+    showButton?.classList.add('hidden');
+    forgotForm?.classList.add('hidden');
+    newPasswordForm?.classList.add('hidden');
+    form?.classList.remove('hidden');
+    setError(message);
+    document.getElementById('loginEmail')?.focus();
+  }
+
+  function showForgotPasswordForm(){
+    setError('');
+    setFormMessage(forgotMessage);
+    showButton?.classList.add('hidden');
+    form?.classList.add('hidden');
+    newPasswordForm?.classList.add('hidden');
+    forgotForm?.classList.remove('hidden');
+    const forgotEmail=document.getElementById('forgotPasswordEmail');
+    const loginEmail=String(document.getElementById('loginEmail')?.value||'').trim();
+    if(forgotEmail&&!forgotEmail.value)forgotEmail.value=loginEmail;
+    forgotEmail?.focus();
+  }
+
+  function showNewPasswordForm(){
+    passwordRecoveryActive=true;
+    setError('');
+    setFormMessage(newPasswordMessage);
+    showButton?.classList.add('hidden');
+    form?.classList.add('hidden');
+    forgotForm?.classList.add('hidden');
+    newPasswordForm?.classList.remove('hidden');
+    document.getElementById('newPassword')?.focus();
   }
 
   function setSubmitting(active){
@@ -214,9 +261,60 @@
   }
 
   showButton?.addEventListener('click',()=>{
-    form?.classList.remove('hidden');
-    showButton.classList.add('hidden');
-    document.getElementById('loginEmail')?.focus();
+    showLoginForm();
+  });
+
+  forgotButton?.addEventListener('click',showForgotPasswordForm);
+  backToLoginButton?.addEventListener('click',()=>showLoginForm());
+
+  forgotForm?.addEventListener('submit',async event=>{
+    event.preventDefault();
+    setFormMessage(forgotMessage);
+    const email=String(document.getElementById('forgotPasswordEmail')?.value||'').trim().toLowerCase();
+    if(email.split('@')[1]!==DOMAIN){
+      setFormMessage(forgotMessage,'Use your @talent-stock.com company email.');
+      return;
+    }
+    const button=forgotForm.querySelector('button[type="submit"]');
+    button.disabled=true;
+    button.firstChild.textContent='Sending… ';
+    try{
+      const redirectTo=`${location.origin}${location.pathname}`;
+      await window.TSSBackend.requestPasswordReset(email,redirectTo);
+      setFormMessage(forgotMessage,'If this account exists, a secure reset link has been sent. Check your inbox and spam folder.','success');
+    }catch(error){
+      const rateLimited=/rate limit|too many/i.test(error?.message||'');
+      setFormMessage(forgotMessage,rateLimited?'Too many requests. Please wait a few minutes and try again.':'Unable to send the reset email right now. Please try again.');
+    }finally{
+      button.disabled=false;
+      button.firstChild.textContent='Send reset link ';
+    }
+  });
+
+  newPasswordForm?.addEventListener('submit',async event=>{
+    event.preventDefault();
+    setFormMessage(newPasswordMessage);
+    const password=String(document.getElementById('newPassword')?.value||'');
+    const confirmation=String(document.getElementById('confirmNewPassword')?.value||'');
+    if(password.length<8){setFormMessage(newPasswordMessage,'Password must contain at least 8 characters.');return;}
+    if(password!==confirmation){setFormMessage(newPasswordMessage,'Passwords do not match.');return;}
+    const button=newPasswordForm.querySelector('button[type="submit"]');
+    button.disabled=true;
+    button.firstChild.textContent='Updating… ';
+    try{
+      await window.TSSBackend.updatePassword(password);
+      await window.TSSBackend.signOut();
+      history.replaceState(null,'',location.pathname);
+      document.getElementById('newPassword').value='';
+      document.getElementById('confirmNewPassword').value='';
+      showLoginForm('Password updated successfully. You can now sign in.');
+      if(errorNode)errorNode.dataset.tone='success';
+    }catch(error){
+      setFormMessage(newPasswordMessage,/session|expired|invalid/i.test(error?.message||'')?'This reset link is invalid or has expired. Request a new link.':(error?.message||'Unable to update your password.'));
+    }finally{
+      button.disabled=false;
+      button.firstChild.textContent='Update password ';
+    }
   });
 
   form?.addEventListener('submit',async event=>{
@@ -241,8 +339,14 @@
   lock();
   window.TSSAuth=Object.freeze({verify:verifyAndBoot,signOut});
   window.TSSBackend?.client?.auth.onAuthStateChange(event=>{
+    if(event==='PASSWORD_RECOVERY'){
+      passwordRecoveryActive=true;
+      setTimeout(showNewPasswordForm,0);
+      return;
+    }
     if(event==='SIGNED_OUT'){if(appLoaded)location.reload();else lock();return;}
-    if(event==='SIGNED_IN'||event==='TOKEN_REFRESHED')setTimeout(verifyAndBoot,0);
+    if(!passwordRecoveryActive&&(event==='SIGNED_IN'||event==='TOKEN_REFRESHED'))setTimeout(verifyAndBoot,0);
   });
-  verifyAndBoot();
+  if(passwordRecoveryActive)showNewPasswordForm();
+  else setTimeout(()=>{if(!passwordRecoveryActive)verifyAndBoot()},0);
 })();

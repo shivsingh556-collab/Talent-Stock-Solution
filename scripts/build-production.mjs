@@ -44,8 +44,8 @@ if(workspaceStart>=0&&scriptsStart>=0){
   workspace=html.slice(workspaceStart,scriptsStart).trim();
   await writeFile(join(root,'workspace-shell.html'),`${workspace}\n`);
   let publicShell=html.slice(0,workspaceStart);
-  publicShell=publicShell.replace(/(?:\s*<link rel="stylesheet"[^>]*>\s*)+/m,'\n  <link rel="stylesheet" href="login-shell.css?v=20260913-hardening-1" />\n');
-  publicShell+=`  <main id="workspaceMount"></main>\n\n  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.109.0"></script>\n  <script src="backend/config.js?v=20260913-hardening-1"></script>\n  <script src="backend/supabase-client.js?v=20260913-hardening-1"></script>\n  <script src="auth-bootstrap.js?v=20260913-hardening-1"></script>\n</body>\n</html>\n`;
+  publicShell=publicShell.replace(/(?:\s*<link rel="stylesheet"[^>]*>\s*)+/m,'\n  <link rel="stylesheet" href="login-shell.css?v=20260922-forgot-password-1" />\n');
+  publicShell+=`  <main id="workspaceMount"></main>\n\n  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.109.0"></script>\n  <script src="backend/config.js?v=20260913-hardening-1"></script>\n  <script src="backend/supabase-client.js?v=20260922-forgot-password-1"></script>\n  <script src="auth-bootstrap.js?v=20260922-forgot-password-1"></script>\n</body>\n</html>\n`;
   await writeFile(join(root,'index.html'),publicShell);
 }else{
   workspace=(await read('workspace-shell.html')).trim();

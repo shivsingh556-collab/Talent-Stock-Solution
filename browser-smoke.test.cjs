@@ -7,7 +7,7 @@ function check(value,message){assert.ok(value,message);checks++;console.log(`✓
 
 const signedOutSdk=`
 window.supabase={createClient(){return{
-  auth:{getUser:async()=>({data:{user:null},error:null}),signInWithPassword:async()=>({data:{},error:null}),signOut:async()=>({error:null}),onAuthStateChange:()=>({data:{subscription:{unsubscribe(){}}}})},
+  auth:{getUser:async()=>({data:{user:null},error:null}),signInWithPassword:async()=>({data:{},error:null}),signOut:async()=>{window.__signedOut=true;return {error:null}},resetPasswordForEmail:async(email,options)=>{(window.__resetCalls??=[]).push({email,options});return {data:{},error:null}},updateUser:async attributes=>{(window.__updateCalls??=[]).push(attributes);return {data:{},error:null}},onAuthStateChange:()=>({data:{subscription:{unsubscribe(){}}}})},
   from(){throw new Error('signed-out page queried application data')}
 }}};`;
 
@@ -49,6 +49,38 @@ const signedInBackend=`
     check(errors.length===0,`${width}px has no page errors`);
     await page.close();
   }
+
+  const recoveryPage=await browser.newPage({viewport:{width:1366,height:900}});
+  const recoveryErrors=[];
+  recoveryPage.on('pageerror',error=>recoveryErrors.push(String(error)));
+  await recoveryPage.route('https://cdn.jsdelivr.net/**',route=>route.fulfill({status:200,contentType:'application/javascript',body:signedOutSdk}));
+  await recoveryPage.goto(baseUrl,{waitUntil:'networkidle',timeout:30000});
+  await recoveryPage.click('#showLoginForm');
+  await recoveryPage.click('#forgotPasswordButton');
+  check(await recoveryPage.locator('#forgotPasswordForm').isVisible(),'forgot-password form opens from sign in');
+  await recoveryPage.fill('#forgotPasswordEmail','person@gmail.com');
+  await recoveryPage.click('#forgotPasswordForm button[type="submit"]');
+  check((await recoveryPage.locator('#forgotPasswordMessage').innerText()).includes('@talent-stock.com'),'personal email is rejected before a reset request');
+  await recoveryPage.fill('#forgotPasswordEmail','shraddha.s@talent-stock.com');
+  await recoveryPage.click('#forgotPasswordForm button[type="submit"]');
+  check((await recoveryPage.locator('#forgotPasswordMessage').innerText()).includes('secure reset link'),'valid company email gets a privacy-safe confirmation');
+  const resetCall=await recoveryPage.evaluate(()=>window.__resetCalls?.[0]);
+  check(resetCall?.email==='shraddha.s@talent-stock.com','reset request uses the normalized company email');
+  check(resetCall?.options?.redirectTo===new URL(baseUrl).origin+'/', 'reset request returns to the Todo login page');
+
+  await recoveryPage.goto(`${baseUrl}#type=recovery`,{waitUntil:'networkidle',timeout:30000});
+  check(await recoveryPage.locator('#newPasswordForm').isVisible(),'recovery link opens the new-password form');
+  await recoveryPage.fill('#newPassword','password-one');
+  await recoveryPage.fill('#confirmNewPassword','password-two');
+  await recoveryPage.click('#newPasswordForm button[type="submit"]');
+  check((await recoveryPage.locator('#newPasswordMessage').innerText()).includes('do not match'),'mismatched passwords are rejected');
+  await recoveryPage.fill('#confirmNewPassword','password-one');
+  await recoveryPage.click('#newPasswordForm button[type="submit"]');
+  check(await recoveryPage.locator('#loginForm').isVisible(),'successful password update returns to sign in');
+  check(await recoveryPage.evaluate(()=>window.__updateCalls?.[0]?.password)==='password-one','new password is submitted through Supabase Auth');
+  check(await recoveryPage.evaluate(()=>window.__signedOut===true),'recovery session is signed out after password change');
+  check(recoveryErrors.length===0,`password recovery has no page errors: ${recoveryErrors.join(' | ')}`);
+  await recoveryPage.close();
 
   const page=await browser.newPage({viewport:{width:1366,height:900}});
   const errors=[];
