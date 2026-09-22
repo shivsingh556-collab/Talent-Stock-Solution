@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Todo AI | Talent Stock Recruitment Workspace</title>
-  <link rel="stylesheet" href="login-shell.css?v=20260913-hardening-1" />
+  <link rel="stylesheet" href="login-shell.css?v=20260922-forgot-password-1" />
 </head>
 <body>
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
@@ -23,7 +23,27 @@
           <label for="loginPassword">Password</label>
           <input id="loginPassword" type="password" autocomplete="current-password" placeholder="••••••••" required />
           <button class="login-primary" type="submit">Continue securely <span>→</span></button>
+          <button id="forgotPasswordButton" class="login-link" type="button">Forgot password?</button>
           <div id="loginError" class="login-error"></div>
+        </form>
+        <form id="forgotPasswordForm" class="login-form hidden">
+          <div class="login-form-heading">Reset your password</div>
+          <p class="login-form-copy">Enter your TalentStock email and we’ll send you a secure reset link.</p>
+          <label for="forgotPasswordEmail">Company email</label>
+          <input id="forgotPasswordEmail" type="email" autocomplete="email" placeholder="name@talent-stock.com" required />
+          <button class="login-primary" type="submit">Send reset link <span>→</span></button>
+          <button id="backToLoginButton" class="login-link" type="button">Back to sign in</button>
+          <div id="forgotPasswordMessage" class="login-error" role="status" aria-live="polite"></div>
+        </form>
+        <form id="newPasswordForm" class="login-form hidden">
+          <div class="login-form-heading">Choose a new password</div>
+          <p class="login-form-copy">Use at least 8 characters. Your reset link works only once.</p>
+          <label for="newPassword">New password</label>
+          <input id="newPassword" type="password" autocomplete="new-password" minlength="8" required />
+          <label for="confirmNewPassword">Confirm new password</label>
+          <input id="confirmNewPassword" type="password" autocomplete="new-password" minlength="8" required />
+          <button class="login-primary" type="submit">Update password <span>→</span></button>
+          <div id="newPasswordMessage" class="login-error" role="status" aria-live="polite"></div>
         </form>
         <div class="authorized"><b>✓</b><span><strong>Authorized access</strong><small>TalentStock team workspace</small></span></div>
       </div>
@@ -40,7 +60,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.109.0"></script>
   <script src="backend/config.js?v=20260913-hardening-1"></script>
-  <script src="backend/supabase-client.js?v=20260913-hardening-1"></script>
-  <script src="auth-bootstrap.js?v=20260921-screening-accuracy-2"></script>
+  <script src="backend/supabase-client.js?v=20260922-forgot-password-1"></script>
+  <script src="auth-bootstrap.js?v=20260922-forgot-password-1"></script>
 </body>
 </html>
