@@ -110,7 +110,6 @@
     styles();ensureAdminUI();
     document.addEventListener('click',e=>{
       const nav=e.target.closest('.nav-item');if(nav?.dataset.view==='candidates')setTimeout(enhanceCandidateTable,120);
-      if(e.target.closest('#screenBtn'))setTimeout(()=>{upsertLatestMatch();logAction('screening_saved','screening',(db.screenings||[]).at(-1)?.serverId||'',{})},800);
       if(e.target.closest('.decision,#approveAi,#editScore'))setTimeout(()=>{syncLatestNote();logAction('screening_decision_updated','screening',(db.screenings||[]).at(-1)?.serverId||'',{})},500);
       if(e.target.closest('#saveRequirementBtn'))setTimeout(()=>{const id=$('reqId')?.value;const r=(db.requirements||[]).find(x=>x.id===id||x.profileKey===id||x.requirementId===id);if(r)rematchRequirement(r)},900);
     },false);
