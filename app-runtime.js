@@ -139,7 +139,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
   const $=id=>document.getElementById(id);
   const backend=()=>window.TSSBackend;
   const assets=()=>window.TSS_ASSETS||{};
-  let hydrating=false,hydrated=false,savingScreening=false;
+  let hydrating=false,hydrated=false,screeningSavePromise=null;
   function status(text,type='on'){let el=document.getElementById('backendIndicator');if(!el){el=document.createElement('div');el.id='backendIndicator';el.className='backend-indicator';el.innerHTML='<i></i><span></span>';document.querySelector('.profile-box')?.before(el)}el.className='backend-indicator '+(type==='on'?'':type);el.querySelector('span').textContent=text}
   function busy(text){let e=document.getElementById('savingOverlay');if(!e){e=document.createElement('div');e.id='savingOverlay';e.className='saving-overlay';document.body.appendChild(e)}e.textContent=text;e.hidden=false;return()=>e.hidden=true}
   function applyBrand(){const a=assets();if(a.logo){document.querySelectorAll('.talent-logo').forEach(el=>{el.innerHTML=`<img class="brand-image ${el.classList.contains('small')?'sidebar-logo-image':'login-logo-image'}" src="${a.logo}" alt="TalentStock Solutions">`})}if(a.todo){const hero=document.querySelector('.todo-figure');if(hero)hero.innerHTML=`<img class="todo-photo login-todo-photo" src="${a.todo}" alt="Todo - Talent Buddy">`;const mini=document.querySelector('.mini-todo');if(mini)mini.outerHTML=`<img class="todo-photo mini-todo-photo" src="${a.todo}" alt="Todo">`;const large=document.querySelector('.todo-large');if(large)large.outerHTML=`<img class="todo-photo modal-todo-photo" src="${a.todo}" alt="Todo Recruiter Assistant">`}}
@@ -152,7 +152,8 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
   async function fileHash(file){if(!file||!crypto?.subtle)return null;const buf=await file.arrayBuffer();const h=await crypto.subtle.digest('SHA-256',buf);return[...new Uint8Array(h)].map(b=>b.toString(16).padStart(2,'0')).join('')}
   function hasCandidateValue(v){return !(v==null||v===''||(Array.isArray(v)&&!v.length))}
   function mergeCandidateData(base={},parsed={},local={}){const pick=(...v)=>v.find(hasCandidateValue);return{name:pick(parsed.name,local.name,base.candidate_name,'')||'',email:pick(parsed.email,local.email,base.email,'')||'',phone:pick(parsed.phone,local.phone,base.phone,'')||'',location:pick(parsed.location,local.location,base.current_location,'')||'',preferredLocation:pick(parsed.preferredLocation,local.preferredLocation,base.preferred_location,'')||'',totalExperience:pick(parsed.totalExperience,local.totalExperience,base.total_experience,'')??'',relevantExperience:pick(parsed.relevantExperience,local.relevantExperience,base.relevant_experience,'')??'',currentCompany:pick(parsed.currentCompany,local.currentCompany,base.current_company,'')||'',designation:pick(parsed.designation,local.designation,base.current_designation,'')||'',skills:pick(parsed.skills,local.skills,base.skills,[])||[],education:pick(parsed.education,local.education,base.education,'')||'',noticePeriod:pick(parsed.noticePeriod,local.noticePeriod,base.notice_period,'')||'',currentCTC:pick(parsed.currentCTC,local.currentCTC,base.current_ctc,'')||'',expectedCTC:pick(parsed.expectedCTC,local.expectedCTC,base.expected_ctc,'')||'',resumeText:local.resumeText||''}}
-  function assertCandidateQuality(c){const n=String(c.name||'').trim();if(!n||/^(candidate|unknown|n\/?a|not provided)$/i.test(n))throw new Error('Candidate name could not be identified. Review the parsed resume before saving.');if(!String(c.email||'').trim()&&!String(c.phone||'').trim())throw new Error('Candidate email/phone could not be identified. Review the parsed resume before saving.')}
+  function assertCandidateQuality(c){const n=String(c.name||'').trim();if(!n||/^(candidate|unknown|n\/?a|not provided)$/i.test(n))throw new Error('Candidate name could not be identified. Review the parsed resume before saving.')}
+  function withTimeout(promise,ms,label){let timer;return Promise.race([Promise.resolve(promise),new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error(`${label} timed out. Please retry.`)),ms)})]).finally(()=>clearTimeout(timer))}
   function setScreeningSaveState(state,message=''){
     const btn=$('saveScreenedCandidate'),hint=$('screeningSaveHint');
     if(btn){
@@ -161,8 +162,12 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
     }
     if(hint&&message)hint.textContent=message;
   }
-  async function persistLatestScreening(){
-    if(savingScreening)return false;
+  function persistLatestScreening(){
+    if(screeningSavePromise)return screeningSavePromise;
+    screeningSavePromise=performLatestScreeningSave().finally(()=>{screeningSavePromise=null});
+    return screeningSavePromise;
+  }
+  async function performLatestScreeningSave(){
     if(!backend()?.enabled){setScreeningSaveState('failed','Secure database is unavailable. Please reconnect and retry.');toast('Supabase is not connected');return false}
     const localScreen=(db.screenings||[]).at(-1);
     if(!localScreen){setScreeningSaveState('failed','No screening result found. Screen the candidate again.');return false}
@@ -170,10 +175,11 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
     const localCand=(db.candidates||[]).find(c=>c.id===localScreen.candidateId);
     const localReq=(db.requirements||[]).find(r=>r.id===localScreen.requirementId);
     if(!localCand||!localReq){setScreeningSaveState('failed','Candidate or requirement details are missing. Screen the candidate again.');return false}
-    savingScreening=true;
+    window.TSSRealtimePerformance?.pause?.(20000);
     setScreeningSaveState('saving','Saving candidate, CV and screening securely…');
     const done=busy('Saving candidate, CV and screening securely…');
     try{
+      console.info('[screening-save] started',{screeningId:localScreen.id,requirementId:localScreen.requirementId});
       const freshParsed=localCand.resumeText&&window.TSSDocumentParser?.extractResume?window.TSSDocumentParser.extractResume(localCand.resumeText):(window.TSS_PARSED_RESUME||{});
       Object.assign(localCand,mergeCandidateData({},freshParsed,localCand));
       assertCandidateQuality(localCand);
@@ -182,7 +188,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
       if(file){
         hash=await fileHash(file);
         if(hash){
-          const{data:existingResume,error:resumeReadError}=await backend().client.from('resume_versions').select('id,candidate_id,storage_path,original_filename,mime_type,uploaded_at').eq('file_hash',hash).order('uploaded_at',{ascending:false}).limit(1).maybeSingle();
+          const{data:existingResume,error:resumeReadError}=await withTimeout(backend().client.from('resume_versions').select('id,candidate_id,storage_path,original_filename,mime_type,uploaded_at').eq('file_hash',hash).order('uploaded_at',{ascending:false}).limit(1).maybeSingle(),8000,'Resume lookup');
           if(resumeReadError)throw resumeReadError;
           if(existingResume?.candidate_id){
             const{data:resumeOwner,error:ownerError}=await backend().client.from('candidates').select('*').eq('id',existingResume.candidate_id).maybeSingle();
@@ -190,7 +196,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
             if(resumeOwner){
               const merged=mergeCandidateData(resumeOwner,freshParsed,localCand);
               assertCandidateQuality(merged);
-              serverCand=await backend().updateCandidate(resumeOwner.id,merged);
+              serverCand=await withTimeout(backend().updateCandidate(resumeOwner.id,merged),12000,'Candidate update');
               Object.assign(localCand,merged);
               resumeVersion=existingResume;
               toast('Exact resume already exists — candidate details enriched and reused');
@@ -199,15 +205,14 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
         }
       }
       if(!serverCand){
-        const created=await backend().createOrUpdateCandidate(localCand);
+        const created=await withTimeout(backend().createOrUpdateCandidate(localCand),12000,'Candidate save');
         serverCand=created.candidate;
         if(created.duplicate){
-          const ok=confirm(`A candidate with the same email/phone already exists: ${serverCand.candidate_name}. Use the existing record and preserve its history?`);
-          if(!ok){setScreeningSaveState('idle','Save cancelled. You can retry when ready.');toast('Duplicate candidate not saved');return false}
           const merged=mergeCandidateData(serverCand,freshParsed,localCand);
           assertCandidateQuality(merged);
-          serverCand=await backend().updateCandidate(serverCand.id,merged);
+          serverCand=await withTimeout(backend().updateCandidate(serverCand.id,merged),12000,'Existing candidate update');
           Object.assign(localCand,merged);
+          toast('Existing candidate found — profile reused and screening history preserved');
         }
       }
       localCand.serverId=serverCand.id;
@@ -229,24 +234,16 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
       localCand.serverId=serverCand.id;
       localScreen.candidateId=serverCand.id;
       localStorage.setItem('tss_talent_buddy_v1',JSON.stringify(db));
-      if(file&&!resumeVersion)resumeVersion=await backend().uploadResume(serverCand.id,file,hash,localCand.resumeText||'');
-      if(resumeVersion?.storage_path){
-        localCand.resumeAvailable=true;
-        localCand.resumeVersionId=resumeVersion.id;
-        localCand.resumePath=resumeVersion.storage_path;
-        localCand.resumeFilename=resumeVersion.original_filename||file?.name||'';
-        localCand.resumeMimeType=resumeVersion.mime_type||file?.type||'';
-        localCand.resumeUploadedAt=resumeVersion.uploaded_at||new Date().toISOString();
-      }
+      console.info('[screening-save] candidate stored',{candidateId:serverCand.id});
       let reqServerId=localReq.serverId;
       if(!reqServerId){
-        const{data,error}=await backend().client.from('requirements').select('id').eq('profile_key',localReq.profileKey||localReq.id).maybeSingle();
+        const{data,error}=await withTimeout(backend().client.from('requirements').select('id').eq('profile_key',localReq.profileKey||localReq.id).maybeSingle(),8000,'Requirement lookup');
         if(error)throw error;
         reqServerId=data?.id;
       }
       if(!reqServerId)throw new Error('Requirement is not synced to Supabase yet');
       const m=localScreen.metrics||{};
-      const saved=await backend().saveScreening({
+      const saved=await withTimeout(backend().saveScreening({
         candidate_id:serverCand.id,requirement_id:reqServerId,resume_version_id:resumeVersion?.id||null,
         overall_score:localScreen.score,mandatory_skill_score:m.mandatoryPct||0,preferred_skill_score:m.prefPct||0,
         experience_score:m.expPct||0,domain_score:m.domainPct||0,location_score:m.locPct||0,
@@ -254,34 +251,55 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
         concerns:localScreen.missing||[],explanation:`Score ${localScreen.score}/100 based on skills, experience, role context and location.`,
         ai_recommendation:localScreen.recommendation,final_recommendation:localScreen.recommendation,
         recruiter_decision:'Pending',recruiter_notes:'',manually_overridden:false
-      });
+      }),12000,'Screening save');
       localScreen.serverId=saved.id;
       localScreen.id=saved.id;
       localScreen.candidateId=serverCand.id;
       localStorage.setItem('tss_talent_buddy_v1',JSON.stringify(db));
+      console.info('[screening-save] screening stored',{candidateId:serverCand.id,screeningId:saved.id});
+      let resumeUploadFailed=false;
+      if(file&&!resumeVersion){
+        try{
+          resumeVersion=await withTimeout(backend().uploadResume(serverCand.id,file,hash,localCand.resumeText||''),20000,'CV upload');
+          if(resumeVersion?.id){
+            const{error}=await backend().client.from('screenings').update({resume_version_id:resumeVersion.id}).eq('id',saved.id);
+            if(error)console.warn('Screening CV link update skipped',error.message||error);
+          }
+        }catch(uploadError){resumeUploadFailed=true;console.warn('Candidate saved; CV upload failed',uploadError?.message||uploadError)}
+      }
+      if(resumeVersion?.storage_path){
+        localCand.resumeAvailable=true;
+        localCand.resumeVersionId=resumeVersion.id;
+        localCand.resumePath=resumeVersion.storage_path;
+        localCand.resumeFilename=resumeVersion.original_filename||file?.name||'';
+        localCand.resumeMimeType=resumeVersion.mime_type||file?.type||'';
+        localCand.resumeUploadedAt=resumeVersion.uploaded_at||new Date().toISOString();
+        localStorage.setItem('tss_talent_buddy_v1',JSON.stringify(db));
+      }
       try{renderCandidates($('candidateSearch')?.value||'')}catch{}
       if(!window.TSSRealtimePerformance)status('Saved securely','on');
-      setScreeningSaveState('saved','Candidate, CV and screening are stored securely in Todo.');
-      toast('Candidate details, CV and screening saved to Supabase');
+      setScreeningSaveState('saved',resumeUploadFailed?'Candidate and screening saved. CV upload can be retried later.':'Candidate, CV and screening are stored securely in Todo.');
+      toast(resumeUploadFailed?'Candidate and screening saved; CV upload needs retry':'Candidate details, CV and screening saved to Todo');
       try{
         await window.TSSSafeBackendFeatures?.upsertLatestMatch?.();
         await window.TSSSafeBackendFeatures?.logAction?.('screening_saved','screening',saved.id,{candidate_id:serverCand.id,requirement_id:reqServerId});
       }catch(logErr){console.warn('Post-save activity log skipped',logErr?.message||logErr)}
+      window.TSSRealtimePerformance?.resume?.();
       return true;
     }catch(err){
       console.error(err);
       status('Save failed','error');
       setScreeningSaveState('failed','Save failed: '+(err.message||err)+'. Fix the issue and retry.');
       toast('Secure save failed: '+(err.message||err));
+      window.TSSRealtimePerformance?.resume?.();
       return false;
     }finally{
-      savingScreening=false;
       done();
     }
   }
   function validDecision(d){if(d==='Request Updated Resume')return'Updated Resume Requested';if(['Pending','Shortlisted','Rejected','Keep for Future','Updated Resume Requested'].includes(d))return d;return'Pending'}
   async function persistDecision(){const s=(db.screenings||[]).at(-1);if(!s?.serverId||!backend()?.enabled)return;const{error}=await backend().client.from('screenings').update({overall_score:s.score,final_recommendation:s.recommendation,recruiter_decision:validDecision(s.recruiterDecision),recruiter_notes:s.notes||'',manually_overridden:Boolean(s.manualOverride)}).eq('id',s.serverId);if(error){console.warn(error);toast('Decision saved locally; backend update needs review')}else if(!window.TSSRealtimePerformance)status('Decision saved','on')}
-  function wire(){applyBrand();document.addEventListener('click',e=>{const save=e.target.closest('#saveScreenedCandidate');if(save){e.preventDefault();persistLatestScreening();return}if(e.target.closest('.decision,#approveAi,#editScore'))setTimeout(persistDecision,180)});const ws=$('workspace');if(ws){new MutationObserver(()=>{if(!ws.classList.contains('hidden'))setTimeout(hydrate,150)}).observe(ws,{attributes:true,attributeFilter:['class']})}if(!ws?.classList.contains('hidden'))setTimeout(hydrate,150);status(backend()?.enabled?'Supabase ready':'Local mode',backend()?.enabled?'on':'off')}
+  function wire(){applyBrand();document.addEventListener('click',e=>{const save=e.target.closest('#saveScreenedCandidate');if(save){e.preventDefault();persistLatestScreening();return}if(e.target.closest('#screenBtn'))setTimeout(()=>{const latest=(db.screenings||[]).at(-1),age=Date.now()-new Date(latest?.date||0).getTime();if(latest&&!latest.serverId&&age>=0&&age<5000)persistLatestScreening()},80);if(e.target.closest('.decision,#approveAi,#editScore'))setTimeout(persistDecision,180)});const ws=$('workspace');if(ws){new MutationObserver(()=>{if(!ws.classList.contains('hidden')&&!hydrated)setTimeout(hydrate,150)}).observe(ws,{attributes:true,attributeFilter:['class']})}if(!ws?.classList.contains('hidden'))setTimeout(hydrate,150);status(backend()?.enabled?'Supabase ready':'Local mode',backend()?.enabled?'on':'off')}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',wire);else wire();window.TSSProduction={hydrate,persistLatestScreening,applyBrand};
 })();
 
@@ -2804,7 +2822,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
   window.__TSS_REALTIME_PERFORMANCE__=true;
   const backend=()=>window.TSSBackend;
   let channel=null,refreshTimer=null,reconnectTimer=null,stateTimer=null,subscribePromise=null;
-  let refreshing=false,refreshAgain=false,lastRefresh=0,reconnectAttempt=0,booted=false,channelReady=false;
+  let refreshing=false,refreshAgain=false,lastRefresh=0,reconnectAttempt=0,booted=false,channelReady=false,pausedUntil=0;
   let online=navigator.onLine;
 
   function paintState(state){
@@ -2838,8 +2856,9 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
   }
   async function refresh(reason='background',force=false){
     if(!online||document.visibilityState==='hidden')return false;
+    if(Date.now()<pausedUntil){refreshAgain=true;return false}
     if(refreshing){refreshAgain=true;return false}
-    if(!force&&Date.now()-lastRefresh<1500)return false;
+    if(!force&&Date.now()-lastRefresh<5000)return false;
     refreshing=true;setSyncing(true);
     try{
       await window.TSSProduction?.hydrate?.();
@@ -2851,6 +2870,8 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
   function scheduleRefresh(reason='change',delay=180,force=false){
     clearTimeout(refreshTimer);refreshTimer=setTimeout(()=>refresh(reason,force),delay);
   }
+  function pause(ms=15000){pausedUntil=Math.max(pausedUntil,Date.now()+ms);clearTimeout(refreshTimer);refreshTimer=null}
+  function resume(){pausedUntil=0;if(refreshAgain){refreshAgain=false;scheduleRefresh('save-complete',500,true)}}
   function scheduleReconnect(){
     if(!online||reconnectTimer)return;
     const delay=Math.min(30000,1000*(2**Math.min(reconnectAttempt++,5)));
@@ -2865,7 +2886,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
     const {data:{session}}=await b.client.auth.getSession();if(!session?.user)return false;
     await removeChannel();
     const next=b.client.channel('tss-operational-live-v3');channel=next;channelReady=false;
-    ['requirements','candidates','screenings','interviews'].forEach(table=>next.on('postgres_changes',{event:'*',schema:'public',table},()=>scheduleRefresh(table,180,true)));
+    ['requirements','candidates','screenings','interviews'].forEach(table=>next.on('postgres_changes',{event:'*',schema:'public',table},()=>scheduleRefresh(table,250,true)));
     next.subscribe((status,error)=>{
       if(channel!==next)return;
       if(status==='SUBSCRIBED'){
@@ -2903,7 +2924,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
     setInterval(()=>{if(document.visibilityState==='visible')scheduleRefresh('fallback',0,false)},120000);
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(boot,50),{once:true});else setTimeout(boot,50);
-  window.TSSRealtimePerformance={boot,subscribe,refresh,backgroundRefresh:refresh,scheduleRefresh,removeChannel};
+  window.TSSRealtimePerformance={boot,subscribe,refresh,backgroundRefresh:refresh,scheduleRefresh,removeChannel,pause,resume};
 })();
 
 /* ===== workflow-finalization.js ===== */

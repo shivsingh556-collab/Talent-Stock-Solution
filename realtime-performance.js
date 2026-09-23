@@ -5,7 +5,7 @@
   window.__TSS_REALTIME_PERFORMANCE__=true;
   const backend=()=>window.TSSBackend;
   let channel=null,refreshTimer=null,reconnectTimer=null,stateTimer=null,subscribePromise=null;
-  let refreshing=false,refreshAgain=false,lastRefresh=0,reconnectAttempt=0,booted=false,channelReady=false;
+  let refreshing=false,refreshAgain=false,lastRefresh=0,reconnectAttempt=0,booted=false,channelReady=false,pausedUntil=0;
   let online=navigator.onLine;
 
   function paintState(state){
@@ -39,8 +39,9 @@
   }
   async function refresh(reason='background',force=false){
     if(!online||document.visibilityState==='hidden')return false;
+    if(Date.now()<pausedUntil){refreshAgain=true;return false}
     if(refreshing){refreshAgain=true;return false}
-    if(!force&&Date.now()-lastRefresh<1500)return false;
+    if(!force&&Date.now()-lastRefresh<5000)return false;
     refreshing=true;setSyncing(true);
     try{
       await window.TSSProduction?.hydrate?.();
@@ -52,6 +53,8 @@
   function scheduleRefresh(reason='change',delay=180,force=false){
     clearTimeout(refreshTimer);refreshTimer=setTimeout(()=>refresh(reason,force),delay);
   }
+  function pause(ms=15000){pausedUntil=Math.max(pausedUntil,Date.now()+ms);clearTimeout(refreshTimer);refreshTimer=null}
+  function resume(){pausedUntil=0;if(refreshAgain){refreshAgain=false;scheduleRefresh('save-complete',500,true)}}
   function scheduleReconnect(){
     if(!online||reconnectTimer)return;
     const delay=Math.min(30000,1000*(2**Math.min(reconnectAttempt++,5)));
@@ -66,7 +69,7 @@
     const {data:{session}}=await b.client.auth.getSession();if(!session?.user)return false;
     await removeChannel();
     const next=b.client.channel('tss-operational-live-v3');channel=next;channelReady=false;
-    ['requirements','candidates','screenings','interviews'].forEach(table=>next.on('postgres_changes',{event:'*',schema:'public',table},()=>scheduleRefresh(table,180,true)));
+    ['requirements','candidates','screenings','interviews'].forEach(table=>next.on('postgres_changes',{event:'*',schema:'public',table},()=>scheduleRefresh(table,250,true)));
     next.subscribe((status,error)=>{
       if(channel!==next)return;
       if(status==='SUBSCRIBED'){
@@ -104,5 +107,5 @@
     setInterval(()=>{if(document.visibilityState==='visible')scheduleRefresh('fallback',0,false)},120000);
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(boot,50),{once:true});else setTimeout(boot,50);
-  window.TSSRealtimePerformance={boot,subscribe,refresh,backgroundRefresh:refresh,scheduleRefresh,removeChannel};
+  window.TSSRealtimePerformance={boot,subscribe,refresh,backgroundRefresh:refresh,scheduleRefresh,removeChannel,pause,resume};
 })();
