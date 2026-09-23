@@ -114,7 +114,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
   const $=id=>document.getElementById(id);
   const backend=()=>window.TSSBackend;
   const assets=()=>window.TSS_ASSETS||{};
-  let hydrating=false,hydrated=false;
+  let hydrating=false,hydrated=false,savingScreening=false;
   function status(text,type='on'){let el=document.getElementById('backendIndicator');if(!el){el=document.createElement('div');el.id='backendIndicator';el.className='backend-indicator';el.innerHTML='<i></i><span></span>';document.querySelector('.profile-box')?.before(el)}el.className='backend-indicator '+(type==='on'?'':type);el.querySelector('span').textContent=text}
   function busy(text){let e=document.getElementById('savingOverlay');if(!e){e=document.createElement('div');e.id='savingOverlay';e.className='saving-overlay';document.body.appendChild(e)}e.textContent=text;e.hidden=false;return()=>e.hidden=true}
   function applyBrand(){const a=assets();if(a.logo){document.querySelectorAll('.talent-logo').forEach(el=>{el.innerHTML=`<img class="brand-image ${el.classList.contains('small')?'sidebar-logo-image':'login-logo-image'}" src="${a.logo}" alt="TalentStock Solutions">`})}if(a.todo){const hero=document.querySelector('.todo-figure');if(hero)hero.innerHTML=`<img class="todo-photo login-todo-photo" src="${a.todo}" alt="Todo - Talent Buddy">`;const mini=document.querySelector('.mini-todo');if(mini)mini.outerHTML=`<img class="todo-photo mini-todo-photo" src="${a.todo}" alt="Todo">`;const large=document.querySelector('.todo-large');if(large)large.outerHTML=`<img class="todo-photo modal-todo-photo" src="${a.todo}" alt="Todo Recruiter Assistant">`}}
@@ -125,13 +125,23 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
   function mapInterview(i){const d=i.scheduled_at?new Date(i.scheduled_at):null;return{id:i.id,serverId:i.id,scheduledAt:i.scheduled_at||null,date:d&&!isNaN(d)?new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Kolkata',year:'numeric',month:'2-digit',day:'2-digit'}).format(d):'',time:d&&!isNaN(d)?new Intl.DateTimeFormat('en-IN',{timeZone:'Asia/Kolkata',hour:'2-digit',minute:'2-digit',hour12:true}).format(d):'',candidate:i.candidate_name_snapshot||i.candidates?.candidate_name||'Candidate',position:i.job_title_snapshot||i.requirements?.job_title||'',client:i.client_name_snapshot||i.requirements?.clients?.name||'',mode:i.interview_type||'Client Interview',status:i.status||'Scheduled',candidateResponse:i.candidate_response||'Pending',outcome:i.outcome||'Pending',outcomeNotes:i.outcome_notes||'',outcomeUpdatedAt:i.outcome_updated_at||null,interviewStage:i.interview_stage||'Scheduled',notes:i.notes||'',archivedAt:i.archived_at||null,createdBy:i.created_by||null,scheduledBy:recruiterLabel(i.scheduled_by_profile),candidateId:i.candidate_id,requirementServerId:i.requirement_id}}
   async function hydrate(){if(hydrating||!backend()?.enabled)return;hydrating=true;const done=hydrated?()=>{}:busy('Loading secure workspace…');try{const user=await backend().currentUser();if(!user){status('Secure backend ready','off');return}const c=backend().client;const [{data:reqs,error:re},{data:cands,error:ce},{data:resumes,error:rve},{data:screens,error:se},{data:ints,error:ie}]=await Promise.all([c.from('requirements').select('*,clients(name)').neq('status','Closed').order('created_at',{ascending:false}).order('tss_id',{ascending:false}),c.from('candidates').select('*').order('created_at',{ascending:false}),c.from('resume_versions').select('id,candidate_id,storage_path,original_filename,mime_type,file_size,uploaded_at,is_current').order('uploaded_at',{ascending:true}),c.from('screenings').select('*,requirements(profile_key,tss_id,job_title)').order('screened_at',{ascending:true}),c.from('interviews').select('*,candidates(candidate_name),requirements(job_title,clients(name)),scheduled_by_profile:profiles!interviews_created_by_fkey(full_name,email)').order('scheduled_at',{ascending:true})]);if(re)throw re;if(ce)throw ce;if(rve)throw rve;if(se)throw se;if(ie)throw ie;const latestResume=new Map();for(const resume of resumes||[])if(resume?.candidate_id&&resume.storage_path)latestResume.set(resume.candidate_id,resume);if(Array.isArray(reqs)){const custom=(db.requirements||[]).filter(r=>String(r.id).startsWith('CUSTOM-'));db.requirements=[...reqs.map(mapReq),...custom]}db.candidates=(cands||[]).map(row=>mapCandidate(row,latestResume.get(row.id)));db.screenings=(screens||[]).map(mapScreening);db.interviews=(ints||[]).map(mapInterview);localStorage.setItem('tss_talent_buddy_v1',JSON.stringify(db));try{renderAll()}catch{}try{renderOldSite()}catch{}hydrated=true;if(!window.TSSRealtimePerformance)status('Supabase connected','on')}catch(err){console.error(err);status('Backend issue','error');try{toast('Backend sync issue: '+(err.message||err))}catch{}}finally{hydrating=false;done()}}
   async function fileHash(file){if(!file||!crypto?.subtle)return null;const buf=await file.arrayBuffer();const h=await crypto.subtle.digest('SHA-256',buf);return[...new Uint8Array(h)].map(b=>b.toString(16).padStart(2,'0')).join('')}
+  function setScreeningSaveState(state,message=''){
+    const btn=$('saveScreenedCandidate'),hint=$('screeningSaveHint');
+    if(btn){
+      btn.disabled=state==='saving'||state==='saved';
+      btn.textContent=state==='saving'?'Saving…':state==='saved'?'✓ Candidate Saved':state==='failed'?'Retry Save Candidate':'Save Candidate';
+    }
+    if(hint&&message)hint.textContent=message;
+  }
   async function persistLatestScreening(){
-    if(!backend()?.enabled)return;
+    if(savingScreening)return false;
+    if(!backend()?.enabled){setScreeningSaveState('failed','Secure database is unavailable. Please reconnect and retry.');toast('Supabase is not connected');return false}
     const localScreen=(db.screenings||[]).at(-1);
-    if(!localScreen||localScreen.serverId)return;
+    if(!localScreen){setScreeningSaveState('failed','No screening result found. Screen the candidate again.');return false}
+    if(localScreen.serverId){setScreeningSaveState('saved','Candidate, CV and screening are stored securely.');return true}
     const localCand=(db.candidates||[]).find(c=>c.id===localScreen.candidateId);
     const localReq=(db.requirements||[]).find(r=>r.id===localScreen.requirementId);
-    if(!localCand||!localReq)return;
+    if(!localCand||!localReq){setScreeningSaveState('failed','Candidate or requirement details are missing. Screen the candidate again.');return false}
 
     const rawText=String($('resumeText')?.value||localCand.resumeText||'').trim();
     let file=$('resumeFile')?.files?.[0]||null;
@@ -152,13 +162,15 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
     if(parsed.email&&!localCand.email)localCand.email=parsed.email;
     if(parsed.phone&&!localCand.phone)localCand.phone=parsed.phone;
 
+    savingScreening=true;
+    setScreeningSaveState('saving','Saving candidate, CV and screening securely…');
     const done=busy('Saving candidate, CV and screening securely…');
     try{
       let created=await backend().createOrUpdateCandidate(localCand);
       let serverCand=created.candidate;
       if(created.duplicate){
         const ok=confirm(`A candidate with the same email/phone already exists: ${serverCand.candidate_name}. Use the existing record and preserve its history?`);
-        if(!ok){toast('Duplicate candidate not saved');return}
+        if(!ok){setScreeningSaveState('idle','Save cancelled. You can retry when ready.');toast('Duplicate candidate not saved');return false}
         serverCand=await backend().updateCandidate(serverCand.id,localCand);
       }
       localCand.serverId=serverCand.id;
@@ -233,16 +245,21 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
       localStorage.setItem('tss_talent_buddy_v1',JSON.stringify(db));
       try{renderCandidates($('candidateSearch')?.value||'')}catch{}
       if(!window.TSSRealtimePerformance)status('Saved securely','on');
+      setScreeningSaveState('saved','Candidate, CV and screening are stored securely in Todo.');
       toast('Candidate, resume and screening saved to Supabase');
+      try{await window.TSSSafeBackendFeatures?.upsertLatestMatch?.();await window.TSSSafeBackendFeatures?.logAction?.('screening_saved','screening',saved.id,{candidate_id:serverCand.id,requirement_id:reqServerId})}catch(logErr){console.warn('Post-save activity log skipped',logErr?.message||logErr)}
+      return true;
     }catch(err){
       console.error(err);
       status('Save failed','error');
+      setScreeningSaveState('failed','Save failed: '+(err.message||err)+'. Fix the issue and retry.');
       toast('Secure save failed: '+(err.message||err));
-    }finally{done()}
+      return false;
+    }finally{savingScreening=false;done()}
   }
   function validDecision(d){if(d==='Request Updated Resume')return'Updated Resume Requested';if(['Pending','Shortlisted','Rejected','Keep for Future','Updated Resume Requested'].includes(d))return d;return'Pending'}
   async function persistDecision(){const s=(db.screenings||[]).at(-1);if(!s?.serverId||!backend()?.enabled)return;const{error}=await backend().client.from('screenings').update({overall_score:s.score,final_recommendation:s.recommendation,recruiter_decision:validDecision(s.recruiterDecision),recruiter_notes:s.notes||'',manually_overridden:Boolean(s.manualOverride)}).eq('id',s.serverId);if(error){console.warn(error);toast('Decision saved locally; backend update needs review')}else if(!window.TSSRealtimePerformance)status('Decision saved','on')}
-  function wire(){applyBrand();$('screenBtn')?.addEventListener('click',()=>setTimeout(persistLatestScreening,120));document.addEventListener('click',e=>{if(e.target.closest('.decision,#approveAi,#editScore'))setTimeout(persistDecision,180)});const ws=$('workspace');if(ws){new MutationObserver(()=>{if(!ws.classList.contains('hidden'))setTimeout(hydrate,150)}).observe(ws,{attributes:true,attributeFilter:['class']})}if(!ws?.classList.contains('hidden'))setTimeout(hydrate,150);status(backend()?.enabled?'Supabase ready':'Local mode',backend()?.enabled?'on':'off')}
+  function wire(){applyBrand();document.addEventListener('click',e=>{const save=e.target.closest('#saveScreenedCandidate');if(save){e.preventDefault();persistLatestScreening();return}if(e.target.closest('.decision,#approveAi,#editScore'))setTimeout(persistDecision,180)});const ws=$('workspace');if(ws){new MutationObserver(()=>{if(!ws.classList.contains('hidden'))setTimeout(hydrate,150)}).observe(ws,{attributes:true,attributeFilter:['class']})}if(!ws?.classList.contains('hidden'))setTimeout(hydrate,150);status(backend()?.enabled?'Supabase ready':'Local mode',backend()?.enabled?'on':'off')}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',wire);else wire();window.TSSProduction={hydrate,persistLatestScreening,applyBrand};
 })();
 
@@ -1104,7 +1121,6 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
     styles();ensureAdminUI();
     document.addEventListener('click',e=>{
       const nav=e.target.closest('.nav-item');if(nav?.dataset.view==='candidates')setTimeout(enhanceCandidateTable,120);
-      if(e.target.closest('#screenBtn'))setTimeout(()=>{upsertLatestMatch();logAction('screening_saved','screening',(db.screenings||[]).at(-1)?.serverId||'',{})},800);
       if(e.target.closest('.decision,#approveAi,#editScore'))setTimeout(()=>{syncLatestNote();logAction('screening_decision_updated','screening',(db.screenings||[]).at(-1)?.serverId||'',{})},500);
       if(e.target.closest('#saveRequirementBtn'))setTimeout(()=>{const id=$('reqId')?.value;const r=(db.requirements||[]).find(x=>x.id===id||x.profileKey===id||x.requirementId===id);if(r)rematchRequirement(r)},900);
     },false);
