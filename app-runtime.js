@@ -223,6 +223,12 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
       localCand.currentCTC=serverCand.current_ctc||localCand.currentCTC||'';
       localCand.expectedCTC=serverCand.expected_ctc||localCand.expectedCTC||'';
       localCand.totalExperience=serverCand.total_experience??localCand.totalExperience;
+      // Persist the server identity immediately. If resume upload or screening insert fails,
+      // Retry must reuse this candidate instead of leaving an unreachable partial record.
+      localCand.id=serverCand.id;
+      localCand.serverId=serverCand.id;
+      localScreen.candidateId=serverCand.id;
+      localStorage.setItem('tss_talent_buddy_v1',JSON.stringify(db));
       if(file&&!resumeVersion)resumeVersion=await backend().uploadResume(serverCand.id,file,hash,localCand.resumeText||'');
       if(resumeVersion?.storage_path){
         localCand.resumeAvailable=true;
@@ -252,7 +258,6 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
       localScreen.serverId=saved.id;
       localScreen.id=saved.id;
       localScreen.candidateId=serverCand.id;
-      localCand.id=serverCand.id;
       localStorage.setItem('tss_talent_buddy_v1',JSON.stringify(db));
       try{renderCandidates($('candidateSearch')?.value||'')}catch{}
       if(!window.TSSRealtimePerformance)status('Saved securely','on');
@@ -2397,48 +2402,40 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
       </div>
       <div class="quick-next-question"><b>Best recruiter question:</b> ${esc(screeningQuestion(s,r))}</div>
       <div class="quick-result-actions">
-        <button id="quickSaveCandidate" class="primary" ${s.serverId?'disabled':''}>${s.serverId?'✓ Candidate Saved':'Save Candidate to Todo'}</button>
-        <button data-qdecision="Shortlisted">Shortlist</button>
+        <button class="primary" id="quickSaveCandidate">Save Candidate to Todo</button>
+        <button class="primary" data-qdecision="Shortlisted">Shortlist</button>
         <button data-qdecision="Keep for Future">Keep for Future</button>
         <button data-qdecision="Request Updated Resume">Request Updated Resume</button>
         <button class="danger" data-qdecision="Rejected">Reject</button>
         <button id="quickScheduleInterview">Schedule Interview</button>
         <button id="quickOpenDetailed">Open Detailed Result</button>
       </div>`;
-    byId('quickSaveCandidate')?.addEventListener('click',saveQuickCandidate);
-    node.querySelectorAll('[data-qdecision]').forEach(btn=>btn.addEventListener('click',()=>applyDecision(btn.dataset.qdecision)));
-    byId('quickScheduleInterview')?.addEventListener('click',()=>{
-      if(!s.serverId){setStatus('Save Candidate to Todo before scheduling the interview.','bad');return}
-      byId('scheduleInterview')?.click();
-    });
+    const saveButton=byId('quickSaveCandidate');
+    if(s.serverId){saveButton.disabled=true;saveButton.textContent='✓ Candidate Saved'}
+    saveButton?.addEventListener('click',()=>saveCandidate(s));
+    node.querySelectorAll('[data-qdecision]').forEach(btn=>btn.addEventListener('click',()=>applyDecision(btn.dataset.qdecision,s)));
+    byId('quickScheduleInterview')?.addEventListener('click',async()=>{if(await ensureSaved(s))byId('scheduleInterview')?.click()});
     byId('quickOpenDetailed')?.addEventListener('click',()=>document.querySelector('.nav-item[data-view="screening"]')?.click());
   }
-  async function saveQuickCandidate(){
-    const s=(()=>{try{return (db.screenings||[]).at(-1)||null}catch{return null}})();
-    const btn=byId('quickSaveCandidate');
-    if(!s){setStatus('No screening result found. Analyse the candidate again.','bad');return}
-    if(s.serverId){
-      if(btn){btn.disabled=true;btn.textContent='✓ Candidate Saved'}
-      setStatus('Candidate is already saved securely in Todo.','ok');
-      return;
-    }
-    const save=window.TSSProduction?.persistLatestScreening;
-    if(typeof save!=='function'){setStatus('Secure save service is not ready. Refresh once and retry.','bad');return}
-    if(btn){btn.disabled=true;btn.textContent='Saving candidate…'}
+  async function saveCandidate(s){
+    const button=byId('quickSaveCandidate');
+    if(s?.serverId){if(button){button.disabled=true;button.textContent='✓ Candidate Saved'}return true}
+    if(!window.TSSProduction?.persistLatestScreening){setStatus('Secure save is unavailable. Refresh once and retry.','bad');return false}
+    if(button){button.disabled=true;button.textContent='Saving…'}
     setStatus('Saving candidate, CV and screening to Todo…','busy');
-    const ok=await save();
-    if(ok){
-      if(btn){btn.disabled=true;btn.textContent='✓ Candidate Saved'}
-      setStatus('Candidate saved securely. Calling Tracker will now show this candidate.','ok');
-    }else{
-      if(btn){btn.disabled=false;btn.textContent='Retry Save Candidate'}
-      setStatus('Candidate was not saved. Check the error shown and retry.','bad');
-    }
+    const saved=await window.TSSProduction.persistLatestScreening();
+    if(saved){if(button){button.disabled=true;button.textContent='✓ Candidate Saved'}setStatus('Candidate saved — now available in Calling Tracker','ok');return true}
+    if(button){button.disabled=false;button.textContent='Retry Save Candidate'}
+    setStatus('Save did not finish. Retry here; the candidate details will be reused safely.','bad');
+    return false;
   }
-  function applyDecision(decision){
-    const latest=(()=>{try{return (db.screenings||[]).at(-1)||null}catch{return null}})();
-    if(!latest?.serverId){setStatus('Save Candidate to Todo before recording a decision.','bad');return}
-
+  async function ensureSaved(s){
+    if(s?.serverId)return true;
+    setStatus('Save the candidate before adding a decision or interview.','busy');
+    return saveCandidate(s);
+  }
+  async function applyDecision(decision,s){
+    if(!await ensureSaved(s))return;
     const source=document.querySelector(`#screeningResult .decision[data-d="${CSS.escape(decision)}"]`);
     if(source){source.click();setStatus(`Decision saved: ${decision}`,'ok');return}
     try{
@@ -2489,7 +2486,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
     const result=await waitForScreening(before);
     button.disabled=false;button.textContent='Analyse Candidate';
     if(!result){setStatus('Screening did not complete. Open Detailed Mode to review the input.','bad');return}
-    renderResult(result);setStatus('Screening complete — click Save Candidate to add it to Todo.','busy');
+    renderResult(result);setStatus('Screening complete — click Save Candidate to add it to Todo and Calling Tracker','ok');
   }
   function mount(){
     const dash=byId('dashboard'); if(!dash||byId('quickScreenCard'))return false;
@@ -2949,7 +2946,7 @@ const RESULTS=['Pending','Second Round','Selected','Hold','Rejected','Client Rej
 function outcomeDialog(){
   let d=$('#tssOutcomeDialog');if(d)return d;
   d=document.createElement('dialog');d.id='tssOutcomeDialog';
-  d.innerHTML=`<form method="dialog" class="tss-outcome-form"><div class="dialog-head"><div><span class="purple-label">INTERVIEW PROGRESS</span><h3>Update Interview</h3><p style="margin:4px 0 0;color:#68788a;font-size:12px">Internal update only. Responsible TSS team members may be notified; the candidate will not receive a result email.</p></div><button value="cancel" class="icon-btn">×</button></div><label>Interview Stage</label><select id="tssStageSelect">${STAGES.map(x=>`<option>${x}</option>`).join('')}</select><label>Interview Result</label><select id="tssOutcomeSelect">${RESULTS.map(x=>`<option>${x}</option>`).join('')}</select><label>Feedback / Notes</label><textarea id="tssOutcomeNotes" rows="4" placeholder="Client feedback, next round, joining update, reason for rejection, etc."></textarea><div style="font-size:11px;color:#68788a;margin-top:8px">Flow: Scheduled → Completed → Feedback Pending → Result Received → Joining / Closure</div><div class="dialog-actions"><button value="cancel" class="btn ghost">Cancel</button><button type="button" id="tssSaveOutcome" class="btn primary">Save Interview Update</button></div></form>`;
+  d.innerHTML=`<form method="dialog" class="tss-outcome-form"><div class="dialog-head"><div><span class="purple-label">INTERVIEW PROGRESS</span><h3>Update Interview</h3><p style="margin:4px 0 0;color:#68788a;font-size:12px">Track the interview through 5 clear stages. Every saved update is emailed to active Admins and Super Admins.</p></div><button value="cancel" class="icon-btn">×</button></div><label>Interview Stage</label><select id="tssStageSelect">${STAGES.map(x=>`<option>${x}</option>`).join('')}</select><label>Interview Result</label><select id="tssOutcomeSelect">${RESULTS.map(x=>`<option>${x}</option>`).join('')}</select><label>Feedback / Notes</label><textarea id="tssOutcomeNotes" rows="4" placeholder="Client feedback, next round, joining update, reason for rejection, etc."></textarea><div style="font-size:11px;color:#68788a;margin-top:8px">Flow: Scheduled → Completed → Feedback Pending → Result Received → Joining / Closure</div><div class="dialog-actions"><button value="cancel" class="btn ghost">Cancel</button><button type="button" id="tssSaveOutcome" class="btn primary">Save Interview Update</button></div></form>`;
   document.body.appendChild(d);return d;
 }
 
@@ -2992,7 +2989,7 @@ async function saveOutcome(){
     }
     try{
       const user=await backend().currentUser?.();
-      if(user)await c.from('activity_logs').insert({actor_id:user.id,action:'Interview stage/result updated',entity_type:'interviews',entity_id:id,details:{stage,outcome,pipeline,internal_email_queued:true,candidate_email_suppressed:true}});
+      if(user)await c.from('activity_logs').insert({actor_id:user.id,action:'Interview stage/result updated',entity_type:'interviews',entity_id:id,details:{stage,outcome,pipeline,management_email_queued:true}});
     }catch{}
     d.close();toast(`Interview updated: ${stage} · ${outcome}`);
     await window.TSSProduction?.hydrate?.();

@@ -96,48 +96,40 @@
       </div>
       <div class="quick-next-question"><b>Best recruiter question:</b> ${esc(screeningQuestion(s,r))}</div>
       <div class="quick-result-actions">
-        <button id="quickSaveCandidate" class="primary" ${s.serverId?'disabled':''}>${s.serverId?'✓ Candidate Saved':'Save Candidate to Todo'}</button>
-        <button data-qdecision="Shortlisted">Shortlist</button>
+        <button class="primary" id="quickSaveCandidate">Save Candidate to Todo</button>
+        <button class="primary" data-qdecision="Shortlisted">Shortlist</button>
         <button data-qdecision="Keep for Future">Keep for Future</button>
         <button data-qdecision="Request Updated Resume">Request Updated Resume</button>
         <button class="danger" data-qdecision="Rejected">Reject</button>
         <button id="quickScheduleInterview">Schedule Interview</button>
         <button id="quickOpenDetailed">Open Detailed Result</button>
       </div>`;
-    byId('quickSaveCandidate')?.addEventListener('click',saveQuickCandidate);
-    node.querySelectorAll('[data-qdecision]').forEach(btn=>btn.addEventListener('click',()=>applyDecision(btn.dataset.qdecision)));
-    byId('quickScheduleInterview')?.addEventListener('click',()=>{
-      if(!s.serverId){setStatus('Save Candidate to Todo before scheduling the interview.','bad');return}
-      byId('scheduleInterview')?.click();
-    });
+    const saveButton=byId('quickSaveCandidate');
+    if(s.serverId){saveButton.disabled=true;saveButton.textContent='✓ Candidate Saved'}
+    saveButton?.addEventListener('click',()=>saveCandidate(s));
+    node.querySelectorAll('[data-qdecision]').forEach(btn=>btn.addEventListener('click',()=>applyDecision(btn.dataset.qdecision,s)));
+    byId('quickScheduleInterview')?.addEventListener('click',async()=>{if(await ensureSaved(s))byId('scheduleInterview')?.click()});
     byId('quickOpenDetailed')?.addEventListener('click',()=>document.querySelector('.nav-item[data-view="screening"]')?.click());
   }
-  async function saveQuickCandidate(){
-    const s=(()=>{try{return (db.screenings||[]).at(-1)||null}catch{return null}})();
-    const btn=byId('quickSaveCandidate');
-    if(!s){setStatus('No screening result found. Analyse the candidate again.','bad');return}
-    if(s.serverId){
-      if(btn){btn.disabled=true;btn.textContent='✓ Candidate Saved'}
-      setStatus('Candidate is already saved securely in Todo.','ok');
-      return;
-    }
-    const save=window.TSSProduction?.persistLatestScreening;
-    if(typeof save!=='function'){setStatus('Secure save service is not ready. Refresh once and retry.','bad');return}
-    if(btn){btn.disabled=true;btn.textContent='Saving candidate…'}
+  async function saveCandidate(s){
+    const button=byId('quickSaveCandidate');
+    if(s?.serverId){if(button){button.disabled=true;button.textContent='✓ Candidate Saved'}return true}
+    if(!window.TSSProduction?.persistLatestScreening){setStatus('Secure save is unavailable. Refresh once and retry.','bad');return false}
+    if(button){button.disabled=true;button.textContent='Saving…'}
     setStatus('Saving candidate, CV and screening to Todo…','busy');
-    const ok=await save();
-    if(ok){
-      if(btn){btn.disabled=true;btn.textContent='✓ Candidate Saved'}
-      setStatus('Candidate saved securely. Calling Tracker will now show this candidate.','ok');
-    }else{
-      if(btn){btn.disabled=false;btn.textContent='Retry Save Candidate'}
-      setStatus('Candidate was not saved. Check the error shown and retry.','bad');
-    }
+    const saved=await window.TSSProduction.persistLatestScreening();
+    if(saved){if(button){button.disabled=true;button.textContent='✓ Candidate Saved'}setStatus('Candidate saved — now available in Calling Tracker','ok');return true}
+    if(button){button.disabled=false;button.textContent='Retry Save Candidate'}
+    setStatus('Save did not finish. Retry here; the candidate details will be reused safely.','bad');
+    return false;
   }
-  function applyDecision(decision){
-    const latest=(()=>{try{return (db.screenings||[]).at(-1)||null}catch{return null}})();
-    if(!latest?.serverId){setStatus('Save Candidate to Todo before recording a decision.','bad');return}
-
+  async function ensureSaved(s){
+    if(s?.serverId)return true;
+    setStatus('Save the candidate before adding a decision or interview.','busy');
+    return saveCandidate(s);
+  }
+  async function applyDecision(decision,s){
+    if(!await ensureSaved(s))return;
     const source=document.querySelector(`#screeningResult .decision[data-d="${CSS.escape(decision)}"]`);
     if(source){source.click();setStatus(`Decision saved: ${decision}`,'ok');return}
     try{
@@ -188,7 +180,7 @@
     const result=await waitForScreening(before);
     button.disabled=false;button.textContent='Analyse Candidate';
     if(!result){setStatus('Screening did not complete. Open Detailed Mode to review the input.','bad');return}
-    renderResult(result);setStatus('Screening complete — click Save Candidate to add it to Todo.','busy');
+    renderResult(result);setStatus('Screening complete — click Save Candidate to add it to Todo and Calling Tracker','ok');
   }
   function mount(){
     const dash=byId('dashboard'); if(!dash||byId('quickScreenCard'))return false;

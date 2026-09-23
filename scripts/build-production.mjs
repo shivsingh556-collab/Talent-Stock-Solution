@@ -5,7 +5,7 @@ import vm from 'node:vm';
 
 const root=join(dirname(fileURLToPath(import.meta.url)),'..');
 const read=name=>readFile(join(root,name),'utf8');
-const banner=(name,body)=>`\n/* ===== ${name} ===== */\n${body.trim()}\n`;
+const banner=(name,body)=>`\n/* ===== ${name} ===== */\n${body.replace(/\r\n?/g,'\n').trim()}\n`;
 
 const cssFiles=[
   'styles.css','production-polish.css','requirements-perfect-fix.css',

@@ -86,6 +86,12 @@
       localCand.currentCTC=serverCand.current_ctc||localCand.currentCTC||'';
       localCand.expectedCTC=serverCand.expected_ctc||localCand.expectedCTC||'';
       localCand.totalExperience=serverCand.total_experience??localCand.totalExperience;
+      // Persist the server identity immediately. If resume upload or screening insert fails,
+      // Retry must reuse this candidate instead of leaving an unreachable partial record.
+      localCand.id=serverCand.id;
+      localCand.serverId=serverCand.id;
+      localScreen.candidateId=serverCand.id;
+      localStorage.setItem('tss_talent_buddy_v1',JSON.stringify(db));
       if(file&&!resumeVersion)resumeVersion=await backend().uploadResume(serverCand.id,file,hash,localCand.resumeText||'');
       if(resumeVersion?.storage_path){
         localCand.resumeAvailable=true;
@@ -115,7 +121,6 @@
       localScreen.serverId=saved.id;
       localScreen.id=saved.id;
       localScreen.candidateId=serverCand.id;
-      localCand.id=serverCand.id;
       localStorage.setItem('tss_talent_buddy_v1',JSON.stringify(db));
       try{renderCandidates($('candidateSearch')?.value||'')}catch{}
       if(!window.TSSRealtimePerformance)status('Saved securely','on');
