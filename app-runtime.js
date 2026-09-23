@@ -14,7 +14,7 @@ window.TSS_ASSETS.todo = 'data:image/webp;base64,UklGRrpSAABXRUJQVlA4WAoAAAAQAAA
 'use strict';
 let pdf,mammoth,xlsx,ocr;
 const load=(s,i)=>new Promise((r,j)=>{if([...document.scripts].some(x=>x.src===s))return r();const e=document.createElement('script');e.src=s;if(i){e.integrity=i;e.crossOrigin='anonymous'}e.referrerPolicy='no-referrer';e.onload=r;e.onerror=j;document.head.appendChild(e)});
-const clean=s=>String(s||'').replace(/\u00a0/g,' ').replace(/[\t ]+/g,' ').replace(/\s*\n\s*/g,'\n').trim();
+const clean=s=>String(s||'').replace(/\u00a0/g,' ').replace(/\b0ct\b/gi,'Oct').replace(/[\t ]+/g,' ').replace(/\s*\n\s*/g,'\n').trim();
 const line=s=>String(s||'').replace(/\s+/g,' ').trim();
 const lines=s=>String(s||'').split(/\r?\n/).map(line).filter(Boolean);
 const uniq=a=>[...new Set((a||[]).filter(Boolean))];
@@ -42,19 +42,44 @@ async function parse(f){const n=(f.name||'').toLowerCase(),t=(f.type||'').toLowe
 const catalog={'Java':['java'],'JavaScript':['javascript','js'],'TypeScript':['typescript'],'Python':['python'],'C#':['c#','c sharp'],'C++':['c++'],'ASP.NET Core':['asp.net core'],'NET Core':['.net core','dotnet core'],'Angular':['angular'],'React':['react','reactjs'],'Node.js':['node.js','nodejs'],'Spring Boot':['spring boot'],'REST API':['rest api','restful api'],'GraphQL':['graphql'],'SQL':['sql'],'SQL Server':['sql server'],'MS SQL':['ms sql','mssql'],'MySQL':['mysql'],'PostgreSQL':['postgresql','postgres'],'MongoDB':['mongodb'],'Oracle':['oracle'],'AWS':['aws','amazon web services'],'Azure':['azure'],'GCP':['gcp','google cloud'],'Docker':['docker'],'Kubernetes':['kubernetes','k8s'],'Git':['git'],'CI/CD':['ci/cd'],'Jenkins':['jenkins'],'Power BI':['power bi','powerbi'],'Tableau':['tableau'],'Excel':['excel'],'Selenium':['selenium'],'Playwright':['playwright'],'Cypress':['cypress'],'Postman':['postman'],'API Testing':['api testing'],'Automation Testing':['automation testing','test automation'],'Manual Testing':['manual testing'],'Regression Testing':['regression testing'],'Performance Testing':['performance testing'],'JMeter':['jmeter'],'Appium':['appium'],'TensorFlow':['tensorflow'],'PyTorch':['pytorch'],'Generative AI':['generative ai','gen ai'],'RAG':['retrieval augmented generation','rag'],'LangChain':['langchain'],'Flutter':['flutter'],'Dart':['dart'],'B2B Sales':['b2b sales'],'CRM':['crm'],'Lead Generation':['lead generation'],'Key Account Management':['key account management','key accounts'],'Stakeholder Management':['stakeholder management'],'Team Leadership':['team leadership','team management'],'Logistics':['logistics'],'MIS Reporting':['mis reporting'],'Recruitment':['recruitment','talent acquisition'],'Staffing':['staffing'],'Executive Search':['executive search'],'Digital Marketing':['digital marketing'],'SEO':['seo'],'SEM':['sem'],'Google Ads':['google ads','adwords'],'Meta Ads':['meta ads'],'Salesforce':['salesforce'],'SAP':['sap'],'MSBI':['msbi'],'ETL':['etl'],'Data Engineering':['data engineering'],'Machine Learning':['machine learning'],'Data Analysis':['data analysis','data analytics'],'Business Analysis':['business analysis'],'Project Management':['project management'],'Agile':['agile'],'Scrum':['scrum'],'Jira':['jira']};
 const reEsc=s=>String(s).replace(/[-/\\^$*+?.()|[\]{}]/g,'\\$&');
 function catalogSkills(t){const l=(' '+String(t).toLowerCase()+' '),out=[];for(const [name,aliases] of Object.entries(catalog))if(aliases.some(alias=>new RegExp('(^|[^a-z0-9+#.])'+reEsc(alias)+'([^a-z0-9+#.]|$)','i').test(l)))out.push(name);return out}
-function cleanSkillItem(value){let v=line(value).replace(/^(?:[-–—*#]+|\d+[.)])\s*/,'').replace(/^(?:and|or)\s+/i,'').replace(/^(?:(?:must|required|preferred|essential|key|technical)\s+(?:have\s+)?(?:skills?|technologies)|(?:strong\s+)?(?:hands-on\s+)?(?:experience|knowledge|proficiency|expertise)\s+(?:in|with|of)|proficient\s+(?:in|with))\s*[:\-]?\s*/i,'').replace(/\s+(?:is|are)\s+(?:required|mandatory|preferred|essential)\.?$/i,'').replace(/[.]+$/,'').trim();if(!v||v.length<2||v.length>80||v.split(/\s+/).length>8)return'';if(/\b(?:years?|yrs?|location|salary|ctc|qualification|degree|graduate|notice period|responsibilities|candidate|applicant)\b/i.test(v))return'';return v}
-function splitSkillBlock(value){const protectedValue=String(value||'').replace(/ci\s*\/\s*cd/gi,'CI§CD');return uniq(protectedValue.split(/[\n,;|•·●▪◦/]+|\s+&\s+|\s+and\s+/i).map(v=>cleanSkillItem(v.replace(/CI§CD/g,'CI/CD'))).filter(Boolean))}
-function explicitSkillSection(t){const sm=String(t).match(/(?:^|\n)\s*(?:skills(?:\s*\([^)]*\))?|key\s+skills|technical\s+skills|technologies|tech\s+stack|tools)\s*[:\-]?\s*\n([\s\S]{0,1800}?)(?=\n\s*(?:experience|work\s+experience|employment|internship|education|certification|projects?|languages?|declaration|objective|summary)\b|$)/i);return sm?splitSkillBlock(sm[1]):[]}
-function cueSkills(t){const required=[],preferred=[];lines(t).forEach(raw=>{const isPreferred=/\b(?:preferred|good to have|nice to have|desirable)\b/i.test(raw),cue=/\b(?:must have|required skills?|mandatory skills?|key skills?|technical skills?|technologies|tech stack|tools|proficient in|proficiency in|expertise in|knowledge of|experience with|hands-on experience (?:in|with))\b/i,match=raw.match(cue);if(!match)return;let tail=raw.slice(match.index+match[0].length).replace(/^\s*[:\-]\s*/,'');if(!tail||tail===raw)return;const items=splitSkillBlock(tail);(isPreferred?preferred:required).push(...items)});return {required:uniq(required),preferred:uniq(preferred)}}
+function cleanSkillItem(value){
+  let v=line(value).replace(/^(?:[-–—*#]+|\d+[.)])\s*/,'').replace(/^(?:and|or)\s+/i,'')
+    .replace(/^(?:(?:must|required|preferred|essential|key|technical)\s+(?:have\s+)?(?:skills?|technologies)|(?:strong\s+)?(?:hands-on\s+)?(?:experience|knowledge|proficiency|expertise)\s+(?:in|with|of)|proficient\s+(?:in|with))\s*[:\-]?\s*/i,'')
+    .replace(/\s+(?:is|are)\s+(?:required|mandatory|preferred|essential)\.?$/i,'').replace(/[.]+$/,'').trim();
+  if(!v||v.length<2||v.length>80||v.split(/\s+/).length>8)return'';
+  if(/\b(?:years?|yrs?|location|salary|ctc|qualification|degree|graduate|notice period|responsibilities|candidate|applicant)\b/i.test(v))return'';
+  return v;
+}
+function splitSkillBlock(value){
+  const protectedValue=String(value||'').replace(/ci\s*\/\s*cd/gi,'CI§CD');
+  return uniq(protectedValue.split(/[\n,;|•·●▪◦/]+|\s+&\s+|\s+and\s+/i).map(v=>cleanSkillItem(v.replace(/CI§CD/g,'CI/CD'))).filter(Boolean));
+}
+function explicitSkillSection(t){
+  const sm=String(t).match(/(?:^|\n)\s*(?:skills(?:\s*\([^)]*\))?|key\s+skills|technical\s+skills|technologies|tech\s+stack|tools)\s*[:\-]?\s*\n([\s\S]{0,1800}?)(?=\n\s*(?:experience|work\s+experience|employment|internship|education|certification|projects?|languages?|declaration|objective|summary)\b|$)/i);
+  return sm?splitSkillBlock(sm[1]):[];
+}
+function cueSkills(t){
+  const required=[],preferred=[];
+  lines(t).forEach(raw=>{
+    const isPreferred=/\b(?:preferred|good to have|nice to have|desirable)\b/i.test(raw);
+    const cue=/\b(?:must have|required skills?|mandatory skills?|key skills?|technical skills?|technologies|tech stack|tools|proficient in|proficiency in|expertise in|knowledge of|experience with|hands-on experience (?:in|with))\b/i;
+    const match=raw.match(cue);if(!match)return;
+    let tail=raw.slice(match.index+match[0].length).replace(/^\s*[:\-]\s*/,'');
+    if(!tail||tail===raw)return;
+    const items=splitSkillBlock(tail);(isPreferred?preferred:required).push(...items);
+  });
+  return {required:uniq(required),preferred:uniq(preferred)};
+}
 function skillList(t){return uniq([...catalogSkills(t),...explicitSkillSection(t)]).slice(0,60)}
 function likelyName(ls){const bad=/resume|profile|summary|objective|experience|engineer|developer|manager|analyst|email|phone|mobile|contact|linkedin|github/i;for(const l of ls.slice(0,12)){const x=l.replace(/[|•·]/g,' ').trim();if(x.length>=3&&x.length<=55&&!bad.test(x)&&!/@/.test(x)&&!/\d{5,}/.test(x)&&/^[A-Za-z][A-Za-z .'-]+$/.test(x)&&x.split(/\s+/).length<=5)return x.replace(/\b\w/g,c=>c.toUpperCase())}return''}
-function location(t,ls){const d=first(t,[/(?:current\s+location|location|based\s+in|address|city)\s*[:\-]\s*([^\n|]{2,70})/i]);if(d)return d;const cs=['Mumbai','Navi Mumbai','Pune','Delhi','New Delhi','Gurgaon','Gurugram','Noida','Bangalore','Bengaluru','Hyderabad','Chennai','Kolkata','Ahmedabad','Dubai','Abu Dhabi','Thane','Jaipur','Indore','Kochi','Surat'];for(const l of ls.slice(0,18)){const c=cs.find(c=>new RegExp('\\b'+c.replace(' ','\\s+')+'\\b','i').test(l));if(c)return c}return''}
+function location(t,ls){const d=first(t,[/(?:current\s+location|location|based\s+in|address|city)\s*[:\-]\s*(?:-\s*)?([^\n|]{2,70})/i]);if(d)return d;const cs=['Mumbai','Navi Mumbai','Pune','Delhi','New Delhi','Gurgaon','Gurugram','Noida','Bangalore','Bengaluru','Hyderabad','Chennai','Kolkata','Ahmedabad','Dubai','Abu Dhabi','Thane','Jaipur','Indore','Kochi','Surat'];for(const l of ls.slice(0,18)){const c=cs.find(c=>new RegExp('\\b'+c.replace(' ','\\s+')+'\\b','i').test(l));if(c)return c}return''}
 const mon={jan:0,feb:1,mar:2,apr:3,may:4,jun:5,jul:6,aug:7,sep:8,oct:9,nov:10,dec:11};
 function my(s){s=String(s).toLowerCase();if(/present|current|till date|till now/.test(s)){const d=new Date;return new Date(d.getFullYear(),d.getMonth(),1)}let m=s.match(/(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s*[,/'-]?\s*((?:19|20)\d{2})/i);if(m)return new Date(+m[2],mon[m[1].slice(0,3)],1);m=s.match(/\b(0?[1-9]|1[0-2])[\/-]((?:19|20)\d{2})\b/);if(m)return new Date(+m[2],+m[1]-1,1);m=s.match(/\b((?:19|20)\d{2})\b/);return m?new Date(+m[1],0,1):null}
-function expInfo(t){const d=first(t,[/(?:total\s+experience|overall\s+experience|professional\s+experience|experience)\s*[:\-]?\s*(\d+(?:\.\d+)?\s*\+?\s*(?:years?|yrs?))/i,/(\d+(?:\.\d+)?\+?\s*(?:years?|yrs?)\s+(?:of\s+)?experience)/i]),decl=d?parseFloat(d):null,token='(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:t(?:ember)?)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?|0?[1-9]|1[0-2])?[\\s,./-]*(?:19|20)\\d{2}|Present|Current|Till Date|Till Now',re=new RegExp('('+token+')\\s*(?:-|to|–|—)\\s*('+token+')','gi'),set=new Set;let m;while((m=re.exec(t))){const a=my(m[1]),b=my(m[2]);if(a&&b&&b>=a)for(let x=new Date(a);x<=b;x.setMonth(x.getMonth()+1))set.add(x.getFullYear()+'-'+x.getMonth())}const calc=set.size?Math.round(set.size/12*10)/10:null;return {declared:decl,calculated:calc,total:decl??calc??'',discrepancy:decl!=null&&calc!=null&&Math.abs(decl-calc)>1}}
-function designation(t,ls){const d=first(t,[/(?:current\s+designation|designation|current\s+role|job\s+title)\s*[:\-]\s*([^\n|]{2,90})/i]);if(d)return d;for(const l of ls.slice(0,25)){const m=l.match(/\b(?:Senior|Sr\.?|Lead|Principal|Junior|Jr\.?)?\s*(?:QA|Software|Data|Backend|Frontend|Full Stack|Automation|Sales|Business|Database|BI|AI|Account|Recruitment)?\s*(?:Engineer|Developer|Manager|Analyst|Consultant|Executive|Lead|Administrator|Architect|Specialist|Recruiter)\b/i);if(m&&l.length<110)return line(m[0])}return''}
-function company(t,ls){const d=first(t,[/(?:current\s+company|current\s+employer|company|organization|organisation)\s*[:\-]\s*([^\n|]{2,90})/i]);if(d)return d;const i=ls.findIndex(x=>/^(experience|work experience|employment|professional experience)/i.test(x));if(i>=0)for(const l of ls.slice(i+1,i+8))if(/\b(pvt\.?\s*ltd\.?|private limited|ltd\.?|limited|llp|inc\.?|technologies|solutions|services|consulting)\b/i.test(l)&&l.length<100)return l;return''}
-function education(t){const d=first(t,[/(?:highest\s+qualification|qualification|education|degree)\s*[:\-]\s*([^\n]{2,140})/i]);if(d)return d;return lines(t).find(l=>/\b(B\.?Tech|M\.?Tech|B\.?E\.?|MBA|PGDM|BCA|MCA|Bachelor|Master|PhD|Diploma)\b/i.test(l)&&l.length<150)||''}
+function expInfo(t){const d=first(t,[/(?:total\s+experience|overall\s+experience|professional\s+experience)\s*[:\-]?\s*(\d+(?:\.\d+)?\s*\+?\s*(?:years?|yrs?))/i,/(\d+(?:\.\d+)?\+?\s*(?:years?|yrs?)\s+(?:of\s+)?experience)/i]),decl=d?parseFloat(d):null,token='(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:t(?:ember)?)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?|0?[1-9]|1[0-2])?[\\s,./-]*(?:19|20)\\d{2}|Present|Current|Till Date|Till Now',re=new RegExp('('+token+')\\s*(?:-|to|–|—)\\s*('+token+')','gi'),set=new Set;let m;while((m=re.exec(t))){const before=t.slice(0,m.index).toLowerCase();const workPos=Math.max(before.lastIndexOf('\nexperience\n'),before.lastIndexOf('\nwork experience\n'),before.lastIndexOf('\nprofessional experience\n'),before.lastIndexOf('\nemployment\n'));const internshipPos=before.lastIndexOf('internship experience');const educationPos=Math.max(before.lastIndexOf('\neducation\n'),before.lastIndexOf('academic qualification'),before.lastIndexOf('\ncertification\n'));if(Math.max(internshipPos,educationPos)>workPos)continue;const nearby=before.slice(Math.max(0,before.length-650));if(workPos<0&&!/(company\s+name|employer|job\s+role|designation|job\s+title)/i.test(nearby))continue;const a=my(m[1]),b=my(m[2]);if(a&&b&&b>=a)for(let x=new Date(a);x<=b;x.setMonth(x.getMonth()+1))set.add(x.getFullYear()+'-'+x.getMonth())}const calc=set.size?Math.round(set.size/12*10)/10:null;return {declared:decl,calculated:calc,total:decl??calc??'',discrepancy:decl!=null&&calc!=null&&Math.abs(decl-calc)>1}}
+function currentEmployment(t){const re=/(?:Present|Current|Till\s+Date|Till\s+Now)/ig;let m,last=null;while((m=re.exec(t))){const before=t.slice(Math.max(0,m.index-900),m.index);const companies=[...before.matchAll(/(?:company\s+name|current\s+company|employer|organization|organisation)\s*[:\-]\s*(?:-\s*)?([^\n|]{2,100})/ig)];const roles=[...before.matchAll(/(?:job\s+role|current\s+role|current\s+designation|designation|job\s+title)\s*[:\-]\s*(?:-\s*)?([^\n|]{2,100})/ig)];last={company:companies.at(-1)?.[1]?.trim()||'',designation:roles.at(-1)?.[1]?.trim()||''}}return last||{company:'',designation:''}}
+function designation(t,ls){const cur=currentEmployment(t);if(cur.designation)return line(cur.designation);const d=first(t,[/(?:current\s+designation|current\s+role|job\s+title)\s*[:\-]\s*([^\n|]{2,90})/i]);if(d)return d;for(const l of ls.slice(0,35)){const m=l.match(/\b(?:Senior|Sr\.?|Lead|Principal|Junior|Jr\.?)?\s*(?:QA|Software|Data|Backend|Frontend|Full Stack|Automation|Sales|Business|Database|BI|AI|Account|Recruitment|Agency)?\s*(?:Engineer|Developer|Manager|Analyst|Consultant|Executive|Lead|Administrator|Architect|Specialist|Recruiter)\b/i);if(m&&l.length<110)return line(m[0])}return''}
+function company(t,ls){const cur=currentEmployment(t);if(cur.company)return line(cur.company);const d=first(t,[/(?:current\s+company|current\s+employer)\s*[:\-]\s*([^\n|]{2,90})/i]);if(d)return d;const matches=[...t.matchAll(/(?:company\s+name|employer|organization|organisation)\s*[:\-]\s*([^\n|]{2,100})/ig)];if(matches.length)return line(matches.at(-1)[1]);const i=ls.findIndex(x=>/^(experience|work experience|employment|professional experience)/i.test(x));if(i>=0)for(const l of ls.slice(i+1,i+12))if(/\b(pvt\.?\s*ltd\.?|private limited|ltd\.?|limited|llp|inc\.?|technologies|solutions|services|consulting|bank|insurance|finance)\b/i.test(l)&&l.length<100)return l;return''}
+function education(t){const ls=lines(t);const d=first(t,[/(?:highest\s+qualification|qualification|degree)\s*[:\-]\s*([^\n]{2,140})/i]);if(d)return d;const i=ls.findIndex(l=>/\b(B\.?Tech|M\.?Tech|B\.?E\.?|MBA|PGDM|BCA|MCA|Bachelor|Master|PhD|Diploma)\b/i.test(l)&&l.length<150);if(i<0)return'';let v=ls[i];if(/\bin\s*$/i.test(v)&&/^major\s*[:\-]/i.test(ls[i+1]||'')){const major=(ls[i+1]||'').replace(/^major\s*[:\-]\s*(?:-\s*)?/i,'').replace(/\s+\d+(?:\.\d+)?%.*$/,'').trim();if(major)v=v+' '+major}return v}
 function extractResume(t){t=clean(t);const ls=lines(t),e=expInfo(t),email=emailAddress(t),pr=first(t,[/(?:\+?91[\s-]?)?([6-9]\d{9})\b/,/(?:phone|mobile|contact)\s*[:\-]?\s*([+\d][\d\s()-]{8,18})/i]),phone=pr.replace(/\D/g,'').slice(-10),name=likelyName(ls),loc=location(t,ls),des=designation(t,ls),co=company(t,ls),skills=skillList(t),edu=education(t),warnings=[];if(e.discrepancy)warnings.push(`Declared experience ${e.declared}y vs calculated ${e.calculated}y`);return {name,email,phone,location:loc,preferredLocation:first(t,[/(?:preferred\s+location|location\s+preference)\s*[:\-]?\s*([^\n|]+)/i]),totalExperience:e.total,relevantExperience:first(t,[/(?:relevant\s+experience|relevant\s+exp)\s*[:\-]?\s*(\d+(?:\.\d+)?)/i]),designation:des,currentCompany:co,skills,education:edu,noticePeriod:first(t,[/(?:notice\s+period|notice)\s*[:\-]?\s*([^\n|]+)/i]),currentCTC:first(t,[/(?:current\s+ctc|present\s+ctc|current\s+salary)\s*[:\-]?\s*([^\n|]+)/i]),expectedCTC:first(t,[/(?:expected\s+ctc|expected\s+salary)\s*[:\-]?\s*([^\n|]+)/i]),experienceValidation:e,warnings,overallConfidence:Math.round(([name,email,phone,loc,e.total,des,co,edu].filter(Boolean).length/8)*100)}}
 function section(t,n){const stop='mandatory skills|must have|required skills|preferred skills|good to have|experience|qualification|education|location|responsibilities|job responsibilities|requirements|job description|salary|ctc|industry|employment type';const r=new RegExp('(?:^|\\n)\\s*(?:'+n.join('|')+')\\s*[:\\-]?\\s*\\n?([\\s\\S]{0,3000}?)(?=\\n\\s*(?:'+stop+')\\s*[:\\-]?|$)','i');return clean((t.match(r)||[])[1]||'')}
 function suggest(o={}){const s=(o.title+' '+o.industry+' '+o.responsibilities).toLowerCase(),a=[];const add=x=>a.push(...x);if(/data engineer/.test(s))add(['Python','SQL','ETL','Data Engineering','AWS','Azure']);if(/java/.test(s))add(['Java','Spring Boot','REST API','SQL']);if(/\.net|dotnet|asp/.test(s))add(['C#','ASP.NET Core','SQL Server']);if(/frontend|react|angular/.test(s))add(['JavaScript','TypeScript','React','Angular','REST API']);if(/qa|quality|test/.test(s))add(['Manual Testing','Automation Testing','API Testing','Regression Testing','Selenium','Postman']);if(/sales|business development|bdm|bde/.test(s))add(['B2B Sales','CRM','Lead Generation','Stakeholder Management','Key Account Management']);if(/recruit|talent acquisition|staffing|hr/.test(s))add(['Recruitment','Staffing','Executive Search','Stakeholder Management']);if(/marketing/.test(s))add(['Digital Marketing','SEO','SEM','Google Ads','Meta Ads']);if(/manager|lead|head/.test(s))add(['Team Leadership','Stakeholder Management']);return uniq(a).slice(0,12)}
@@ -125,6 +150,9 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
   function mapInterview(i){const d=i.scheduled_at?new Date(i.scheduled_at):null;return{id:i.id,serverId:i.id,scheduledAt:i.scheduled_at||null,date:d&&!isNaN(d)?new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Kolkata',year:'numeric',month:'2-digit',day:'2-digit'}).format(d):'',time:d&&!isNaN(d)?new Intl.DateTimeFormat('en-IN',{timeZone:'Asia/Kolkata',hour:'2-digit',minute:'2-digit',hour12:true}).format(d):'',candidate:i.candidate_name_snapshot||i.candidates?.candidate_name||'Candidate',position:i.job_title_snapshot||i.requirements?.job_title||'',client:i.client_name_snapshot||i.requirements?.clients?.name||'',mode:i.interview_type||'Client Interview',status:i.status||'Scheduled',candidateResponse:i.candidate_response||'Pending',outcome:i.outcome||'Pending',outcomeNotes:i.outcome_notes||'',outcomeUpdatedAt:i.outcome_updated_at||null,interviewStage:i.interview_stage||'Scheduled',notes:i.notes||'',archivedAt:i.archived_at||null,createdBy:i.created_by||null,scheduledBy:recruiterLabel(i.scheduled_by_profile),candidateId:i.candidate_id,requirementServerId:i.requirement_id}}
   async function hydrate(){if(hydrating||!backend()?.enabled)return;hydrating=true;const done=hydrated?()=>{}:busy('Loading secure workspace…');try{const user=await backend().currentUser();if(!user){status('Secure backend ready','off');return}const c=backend().client;const [{data:reqs,error:re},{data:cands,error:ce},{data:resumes,error:rve},{data:screens,error:se},{data:ints,error:ie}]=await Promise.all([c.from('requirements').select('*,clients(name)').neq('status','Closed').order('created_at',{ascending:false}).order('tss_id',{ascending:false}),c.from('candidates').select('*').order('created_at',{ascending:false}),c.from('resume_versions').select('id,candidate_id,storage_path,original_filename,mime_type,file_size,uploaded_at,is_current').order('uploaded_at',{ascending:true}),c.from('screenings').select('*,requirements(profile_key,tss_id,job_title)').order('screened_at',{ascending:true}),c.from('interviews').select('*,candidates(candidate_name),requirements(job_title,clients(name)),scheduled_by_profile:profiles!interviews_created_by_fkey(full_name,email)').order('scheduled_at',{ascending:true})]);if(re)throw re;if(ce)throw ce;if(rve)throw rve;if(se)throw se;if(ie)throw ie;const latestResume=new Map();for(const resume of resumes||[])if(resume?.candidate_id&&resume.storage_path)latestResume.set(resume.candidate_id,resume);if(Array.isArray(reqs)){const custom=(db.requirements||[]).filter(r=>String(r.id).startsWith('CUSTOM-'));db.requirements=[...reqs.map(mapReq),...custom]}db.candidates=(cands||[]).map(row=>mapCandidate(row,latestResume.get(row.id)));db.screenings=(screens||[]).map(mapScreening);db.interviews=(ints||[]).map(mapInterview);localStorage.setItem('tss_talent_buddy_v1',JSON.stringify(db));try{renderAll()}catch{}try{renderOldSite()}catch{}hydrated=true;if(!window.TSSRealtimePerformance)status('Supabase connected','on')}catch(err){console.error(err);status('Backend issue','error');try{toast('Backend sync issue: '+(err.message||err))}catch{}}finally{hydrating=false;done()}}
   async function fileHash(file){if(!file||!crypto?.subtle)return null;const buf=await file.arrayBuffer();const h=await crypto.subtle.digest('SHA-256',buf);return[...new Uint8Array(h)].map(b=>b.toString(16).padStart(2,'0')).join('')}
+  function hasCandidateValue(v){return !(v==null||v===''||(Array.isArray(v)&&!v.length))}
+  function mergeCandidateData(base={},parsed={},local={}){const pick=(...v)=>v.find(hasCandidateValue);return{name:pick(parsed.name,local.name,base.candidate_name,'')||'',email:pick(parsed.email,local.email,base.email,'')||'',phone:pick(parsed.phone,local.phone,base.phone,'')||'',location:pick(parsed.location,local.location,base.current_location,'')||'',preferredLocation:pick(parsed.preferredLocation,local.preferredLocation,base.preferred_location,'')||'',totalExperience:pick(parsed.totalExperience,local.totalExperience,base.total_experience,'')??'',relevantExperience:pick(parsed.relevantExperience,local.relevantExperience,base.relevant_experience,'')??'',currentCompany:pick(parsed.currentCompany,local.currentCompany,base.current_company,'')||'',designation:pick(parsed.designation,local.designation,base.current_designation,'')||'',skills:pick(parsed.skills,local.skills,base.skills,[])||[],education:pick(parsed.education,local.education,base.education,'')||'',noticePeriod:pick(parsed.noticePeriod,local.noticePeriod,base.notice_period,'')||'',currentCTC:pick(parsed.currentCTC,local.currentCTC,base.current_ctc,'')||'',expectedCTC:pick(parsed.expectedCTC,local.expectedCTC,base.expected_ctc,'')||'',resumeText:local.resumeText||''}}
+  function assertCandidateQuality(c){const n=String(c.name||'').trim();if(!n||/^(candidate|unknown|n\/?a|not provided)$/i.test(n))throw new Error('Candidate name could not be identified. Review the parsed resume before saving.');if(!String(c.email||'').trim()&&!String(c.phone||'').trim())throw new Error('Candidate email/phone could not be identified. Review the parsed resume before saving.')}
   function setScreeningSaveState(state,message=''){
     const btn=$('saveScreenedCandidate'),hint=$('screeningSaveHint');
     if(btn){
@@ -142,72 +170,68 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
     const localCand=(db.candidates||[]).find(c=>c.id===localScreen.candidateId);
     const localReq=(db.requirements||[]).find(r=>r.id===localScreen.requirementId);
     if(!localCand||!localReq){setScreeningSaveState('failed','Candidate or requirement details are missing. Screen the candidate again.');return false}
-
-    const rawText=String($('resumeText')?.value||localCand.resumeText||'').trim();
-    let file=$('resumeFile')?.files?.[0]||null;
-    if(!file&&rawText){
-      const safeBase=String(localCand.name||'candidate').trim().replace(/[^a-zA-Z0-9._-]+/g,'_').replace(/^_+|_+$/g,'')||'candidate';
-      file=new File([rawText],safeBase+'-resume.txt',{type:'text/plain',lastModified:Date.now()});
-    }
-    if(!file)throw new Error('Resume file or resume text is required before saving a screening.');
-
-    localCand.resumeText=rawText;
-    const parsed=window.TSS_PARSED_RESUME||{};
-    if(Array.isArray(parsed.skills)&&parsed.skills.length)localCand.skills=parsed.skills;
-    if(parsed.education)localCand.education=parsed.education;
-    if(parsed.currentCompany)localCand.currentCompany=parsed.currentCompany;
-    if(parsed.totalExperience&&!localCand.totalExperience)localCand.totalExperience=parsed.totalExperience;
-    if(parsed.location&&!localCand.location)localCand.location=parsed.location;
-    if(parsed.designation&&!localCand.designation)localCand.designation=parsed.designation;
-    if(parsed.email&&!localCand.email)localCand.email=parsed.email;
-    if(parsed.phone&&!localCand.phone)localCand.phone=parsed.phone;
-
     savingScreening=true;
     setScreeningSaveState('saving','Saving candidate, CV and screening securely…');
     const done=busy('Saving candidate, CV and screening securely…');
     try{
-      let created=await backend().createOrUpdateCandidate(localCand);
-      let serverCand=created.candidate;
-      if(created.duplicate){
-        const ok=confirm(`A candidate with the same email/phone already exists: ${serverCand.candidate_name}. Use the existing record and preserve its history?`);
-        if(!ok){setScreeningSaveState('idle','Save cancelled. You can retry when ready.');toast('Duplicate candidate not saved');return false}
-        serverCand=await backend().updateCandidate(serverCand.id,localCand);
+      const freshParsed=localCand.resumeText&&window.TSSDocumentParser?.extractResume?window.TSSDocumentParser.extractResume(localCand.resumeText):(window.TSS_PARSED_RESUME||{});
+      Object.assign(localCand,mergeCandidateData({},freshParsed,localCand));
+      assertCandidateQuality(localCand);
+      const file=$('resumeFile')?.files?.[0];
+      let hash=null,resumeVersion=null,serverCand=null;
+      if(file){
+        hash=await fileHash(file);
+        if(hash){
+          const{data:existingResume,error:resumeReadError}=await backend().client.from('resume_versions').select('id,candidate_id,storage_path,original_filename,mime_type,uploaded_at').eq('file_hash',hash).order('uploaded_at',{ascending:false}).limit(1).maybeSingle();
+          if(resumeReadError)throw resumeReadError;
+          if(existingResume?.candidate_id){
+            const{data:resumeOwner,error:ownerError}=await backend().client.from('candidates').select('*').eq('id',existingResume.candidate_id).maybeSingle();
+            if(ownerError)throw ownerError;
+            if(resumeOwner){
+              const merged=mergeCandidateData(resumeOwner,freshParsed,localCand);
+              assertCandidateQuality(merged);
+              serverCand=await backend().updateCandidate(resumeOwner.id,merged);
+              Object.assign(localCand,merged);
+              resumeVersion=existingResume;
+              toast('Exact resume already exists — candidate details enriched and reused');
+            }
+          }
+        }
+      }
+      if(!serverCand){
+        const created=await backend().createOrUpdateCandidate(localCand);
+        serverCand=created.candidate;
+        if(created.duplicate){
+          const ok=confirm(`A candidate with the same email/phone already exists: ${serverCand.candidate_name}. Use the existing record and preserve its history?`);
+          if(!ok){setScreeningSaveState('idle','Save cancelled. You can retry when ready.');toast('Duplicate candidate not saved');return false}
+          const merged=mergeCandidateData(serverCand,freshParsed,localCand);
+          assertCandidateQuality(merged);
+          serverCand=await backend().updateCandidate(serverCand.id,merged);
+          Object.assign(localCand,merged);
+        }
       }
       localCand.serverId=serverCand.id;
       localCand.name=serverCand.candidate_name||localCand.name;
       localCand.email=serverCand.email||localCand.email||'';
       localCand.phone=serverCand.phone||localCand.phone||'';
-
-      const hash=await fileHash(file);
-      const {data:existing,error:resumeReadError}=await backend().client.from('resume_versions')
-        .select('id,candidate_id,storage_path,original_filename,mime_type,uploaded_at,extracted_text')
-        .eq('candidate_id',serverCand.id)
-        .eq('file_hash',hash)
-        .order('uploaded_at',{ascending:false})
-        .limit(1)
-        .maybeSingle();
-      if(resumeReadError)throw resumeReadError;
-
-      let resumeVersion=existing||null;
-      if(existing&&rawText&&!String(existing.extracted_text||'').trim()){
-        const {data:updated,error:updateResumeError}=await backend().client.from('resume_versions')
-          .update({extracted_text:rawText})
-          .eq('id',existing.id)
-          .select('id,candidate_id,storage_path,original_filename,mime_type,uploaded_at,extracted_text')
-          .single();
-        if(updateResumeError)throw updateResumeError;
-        resumeVersion=updated;
+      localCand.location=serverCand.current_location||localCand.location||'';
+      localCand.designation=serverCand.current_designation||localCand.designation||'';
+      localCand.currentCompany=serverCand.current_company||localCand.currentCompany||'';
+      localCand.skills=serverCand.skills||localCand.skills||[];
+      localCand.education=serverCand.education||localCand.education||'';
+      localCand.noticePeriod=serverCand.notice_period||localCand.noticePeriod||'';
+      localCand.currentCTC=serverCand.current_ctc||localCand.currentCTC||'';
+      localCand.expectedCTC=serverCand.expected_ctc||localCand.expectedCTC||'';
+      localCand.totalExperience=serverCand.total_experience??localCand.totalExperience;
+      if(file&&!resumeVersion)resumeVersion=await backend().uploadResume(serverCand.id,file,hash,localCand.resumeText||'');
+      if(resumeVersion?.storage_path){
+        localCand.resumeAvailable=true;
+        localCand.resumeVersionId=resumeVersion.id;
+        localCand.resumePath=resumeVersion.storage_path;
+        localCand.resumeFilename=resumeVersion.original_filename||file?.name||'';
+        localCand.resumeMimeType=resumeVersion.mime_type||file?.type||'';
+        localCand.resumeUploadedAt=resumeVersion.uploaded_at||new Date().toISOString();
       }
-      if(!resumeVersion)resumeVersion=await backend().uploadResume(serverCand.id,file,hash,rawText);
-      if(!resumeVersion?.id||!resumeVersion?.storage_path)throw new Error('Resume could not be stored. Screening was not finalized.');
-
-      localCand.resumeAvailable=true;
-      localCand.resumeVersionId=resumeVersion.id;
-      localCand.resumePath=resumeVersion.storage_path;
-      localCand.resumeFilename=resumeVersion.original_filename||file.name||'resume.txt';
-      localCand.resumeMimeType=resumeVersion.mime_type||file.type||'text/plain';
-      localCand.resumeUploadedAt=resumeVersion.uploaded_at||new Date().toISOString();
-
       let reqServerId=localReq.serverId;
       if(!reqServerId){
         const{data,error}=await backend().client.from('requirements').select('id').eq('profile_key',localReq.profileKey||localReq.id).maybeSingle();
@@ -215,28 +239,15 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
         reqServerId=data?.id;
       }
       if(!reqServerId)throw new Error('Requirement is not synced to Supabase yet');
-
       const m=localScreen.metrics||{};
       const saved=await backend().saveScreening({
-        candidate_id:serverCand.id,
-        requirement_id:reqServerId,
-        resume_version_id:resumeVersion.id,
-        overall_score:localScreen.score,
-        mandatory_skill_score:m.mandatoryPct||0,
-        preferred_skill_score:m.prefPct||0,
-        experience_score:m.expPct||0,
-        domain_score:m.domainPct||0,
-        location_score:m.locPct||0,
-        matching_skills:localScreen.matched||[],
-        missing_skills:localScreen.missing||[],
-        strengths:[],
-        concerns:localScreen.missing||[],
-        explanation:`Score ${localScreen.score}/100 based on skills, experience, role context and location.`,
-        ai_recommendation:localScreen.recommendation,
-        final_recommendation:localScreen.recommendation,
-        recruiter_decision:'Pending',
-        recruiter_notes:'',
-        manually_overridden:false
+        candidate_id:serverCand.id,requirement_id:reqServerId,resume_version_id:resumeVersion?.id||null,
+        overall_score:localScreen.score,mandatory_skill_score:m.mandatoryPct||0,preferred_skill_score:m.prefPct||0,
+        experience_score:m.expPct||0,domain_score:m.domainPct||0,location_score:m.locPct||0,
+        matching_skills:localScreen.matched||[],missing_skills:localScreen.missing||[],strengths:[],
+        concerns:localScreen.missing||[],explanation:`Score ${localScreen.score}/100 based on skills, experience, role context and location.`,
+        ai_recommendation:localScreen.recommendation,final_recommendation:localScreen.recommendation,
+        recruiter_decision:'Pending',recruiter_notes:'',manually_overridden:false
       });
       localScreen.serverId=saved.id;
       localScreen.id=saved.id;
@@ -246,8 +257,11 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
       try{renderCandidates($('candidateSearch')?.value||'')}catch{}
       if(!window.TSSRealtimePerformance)status('Saved securely','on');
       setScreeningSaveState('saved','Candidate, CV and screening are stored securely in Todo.');
-      toast('Candidate, resume and screening saved to Supabase');
-      try{await window.TSSSafeBackendFeatures?.upsertLatestMatch?.();await window.TSSSafeBackendFeatures?.logAction?.('screening_saved','screening',saved.id,{candidate_id:serverCand.id,requirement_id:reqServerId})}catch(logErr){console.warn('Post-save activity log skipped',logErr?.message||logErr)}
+      toast('Candidate details, CV and screening saved to Supabase');
+      try{
+        await window.TSSSafeBackendFeatures?.upsertLatestMatch?.();
+        await window.TSSSafeBackendFeatures?.logAction?.('screening_saved','screening',saved.id,{candidate_id:serverCand.id,requirement_id:reqServerId});
+      }catch(logErr){console.warn('Post-save activity log skipped',logErr?.message||logErr)}
       return true;
     }catch(err){
       console.error(err);
@@ -255,7 +269,10 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
       setScreeningSaveState('failed','Save failed: '+(err.message||err)+'. Fix the issue and retry.');
       toast('Secure save failed: '+(err.message||err));
       return false;
-    }finally{savingScreening=false;done()}
+    }finally{
+      savingScreening=false;
+      done();
+    }
   }
   function validDecision(d){if(d==='Request Updated Resume')return'Updated Resume Requested';if(['Pending','Shortlisted','Rejected','Keep for Future','Updated Resume Requested'].includes(d))return d;return'Pending'}
   async function persistDecision(){const s=(db.screenings||[]).at(-1);if(!s?.serverId||!backend()?.enabled)return;const{error}=await backend().client.from('screenings').update({overall_score:s.score,final_recommendation:s.recommendation,recruiter_decision:validDecision(s.recruiterDecision),recruiter_notes:s.notes||'',manually_overridden:Boolean(s.manualOverride)}).eq('id',s.serverId);if(error){console.warn(error);toast('Decision saved locally; backend update needs review')}else if(!window.TSSRealtimePerformance)status('Decision saved','on')}
@@ -2411,20 +2428,31 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
     syncRequirementToCore();
     const previous=byId('resumeText')?.value||'';
     if(pasted){byId('resumeText').value=pasted}
+    let fallbackName='';
     if(quickFile){
-      const quickName=deriveNameFromFilename(quickFile.name);
-      if(byId('candidateName')&&!byId('candidateName').value.trim()&&quickName)byId('candidateName').value=quickName;
+      fallbackName=deriveNameFromFilename(quickFile.name);
       await feedFileToCore(quickFile);
       setStatus('Extracting CV details…','busy');
       await waitForExtraction(previous);
+      // candidate-enrichment intentionally clears stale identity when a new file is handed off.
+      // Apply the filename fallback only AFTER parsing has had a chance to populate the real name.
+      if(byId('candidateName')&&!byId('candidateName').value.trim()&&fallbackName)byId('candidateName').value=fallbackName;
     }
     if(pasted && byId('candidateName')&&!byId('candidateName').value.trim()){
       const first=pasted.split(/\r?\n/).map(x=>x.trim()).find(Boolean)||'';
-      if(first.length<70)byId('candidateName').value=first;
+      if(first.length<70&&!/@/.test(first))byId('candidateName').value=first;
     }
     const text=byId('resumeText')?.value?.trim()||'';
     if(!text){button.disabled=false;button.textContent='Analyse Candidate';setStatus('Resume text could not be extracted. Paste the resume text once and try again.','bad');return}
-    if(byId('candidateName')&&!byId('candidateName').value.trim())byId('candidateName').value='Candidate';
+    if(byId('candidateName')&&!byId('candidateName').value.trim()){
+      const first=text.split(/\r?\n/).map(x=>x.trim()).find(Boolean)||'';
+      if(first&&first.length<70&&!/@/.test(first))byId('candidateName').value=first;
+    }
+    if(byId('candidateName')&&!byId('candidateName').value.trim()){
+      button.disabled=false;button.textContent='Analyse Candidate';
+      setStatus('Candidate name could not be identified. Enter the name once, then analyse again.','bad');
+      return;
+    }
     const before=(()=>{try{return (db.screenings||[]).length}catch{return 0}})();
     setStatus('Matching skills, experience and role fit…','busy');
     byId('screenBtn')?.click();
