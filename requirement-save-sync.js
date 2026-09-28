@@ -70,7 +70,7 @@
       }
       $('requirementDialog')?.close();
       await window.TSSRequirementsLiveSync?.syncNow?.();
-      setTimeout(()=>window.TSSProduction?.hydrate?.(),150);
+      // Realtime refreshes other workspace data; the saved requirement is already synced.
       return saved;
     }catch(err){console.error('Requirement save failed',err);toastSafe('Requirement save failed: '+(err?.message||err));}
     finally{saving=false;if(btn){btn.disabled=false;btn.textContent=old||(submitMode?'Submit Requirement':'Save Draft')}}
