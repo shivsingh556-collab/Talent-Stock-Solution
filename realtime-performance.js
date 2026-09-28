@@ -34,7 +34,7 @@
   function installSave(){
     if(typeof window.saveDB!=='function'||window.saveDB.__tssCoordinated)return;
     const original=window.saveDB;
-    const coordinated=function(){const result=original.apply(this,arguments);queueMicrotask(renderOnce);return result};
+    const coordinated=function(){const result=original.apply(this,arguments);queueMicrotask(()=>document.dispatchEvent(new CustomEvent('tss:data-rendered')));return result};
     coordinated.__tssCoordinated=true;window.saveDB=coordinated;
   }
   async function refresh(reason='background',force=false){

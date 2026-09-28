@@ -8,7 +8,7 @@
 
   function renameRequirements(){
     const nav=document.querySelector('#nav .nav-item[data-view="requirements"]');
-    if(nav){const count=nav.querySelector('b');nav.innerHTML='<span>▣</span>Requirements';if(count)nav.appendChild(count)}
+    if(nav&&!nav.dataset.requirementsRenamed){const count=nav.querySelector('b');nav.innerHTML='<span>▣</span>Requirements';if(count)nav.appendChild(count);nav.dataset.requirementsRenamed='true'}
     document.querySelectorAll('.jobs-table-card h3').forEach(h=>{if(/active job profiles/i.test(h.textContent))h.textContent='Active Requirements'});
     const section=$('requirements');
     if(section){const eyebrow=section.querySelector('.section-head span');const h=section.querySelector('.section-head h1');const p=section.querySelector('.section-head p');if(eyebrow)eyebrow.textContent='REQUIREMENT MASTER';if(h)h.textContent='Requirements';if(p)p.textContent='Open any requirement to review complete client details, JD, skills and ownership.'}
