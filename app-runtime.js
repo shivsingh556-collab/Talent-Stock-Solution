@@ -1190,7 +1190,9 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
   }
 
   function cleanTextNode(node){
-    if(!node?.nodeValue || !INTERNAL_ID_RE.test(node.nodeValue)) return;
+    if(!node?.nodeValue)return;
+    INTERNAL_ID_RE.lastIndex=0;
+    if(!INTERNAL_ID_RE.test(node.nodeValue))return;
     INTERNAL_ID_RE.lastIndex=0;
     node.nodeValue=node.nodeValue.replace(INTERNAL_ID_RE,m=>displayIdFor(m));
   }
@@ -1219,17 +1221,21 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
     cleanVisibleIds();
   }
 
-  let queued=false;
-  const queueApply=()=>{
-    if(queued) return;
-    queued=true;
-    requestAnimationFrame(()=>{queued=false;apply();});
-  };
-
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',apply,{once:true});
   else apply();
 
-  const observer=new MutationObserver(queueApply);
+  // Inspect only newly inserted text instead of walking the entire workspace
+  // after every rendering change or screening update.
+  const observer=new MutationObserver(records=>{
+    for(const record of records){
+      if(record.type==='characterData'){cleanTextNode(record.target);continue;}
+      for(const node of record.addedNodes){
+        if(node.nodeType===Node.TEXT_NODE)cleanTextNode(node);
+        else if(node.nodeType===Node.ELEMENT_NODE)cleanVisibleIds(node);
+      }
+    }
+    hideDashboardNoise();
+  });
   const start=()=>{if(document.body) observer.observe(document.body,{childList:true,subtree:true,characterData:true});};
   if(document.body) start(); else document.addEventListener('DOMContentLoaded',start,{once:true});
 
@@ -2122,7 +2128,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
       }
       $('requirementDialog')?.close();
       await window.TSSRequirementsLiveSync?.syncNow?.();
-      setTimeout(()=>window.TSSProduction?.hydrate?.(),150);
+      // The saved requirement was already synced; realtime handles remaining updates.
       return saved;
     }catch(err){console.error('Requirement save failed',err);toastSafe('Requirement save failed: '+(err?.message||err));}
     finally{saving=false;if(btn){btn.disabled=false;btn.textContent=old||(submitMode?'Submit Requirement':'Save Draft')}}
@@ -2851,7 +2857,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
   function installSave(){
     if(typeof window.saveDB!=='function'||window.saveDB.__tssCoordinated)return;
     const original=window.saveDB;
-    const coordinated=function(){const result=original.apply(this,arguments);queueMicrotask(renderOnce);return result};
+    const coordinated=function(){const result=original.apply(this,arguments);queueMicrotask(()=>document.dispatchEvent(new CustomEvent('tss:data-rendered')));return result};
     coordinated.__tssCoordinated=true;window.saveDB=coordinated;
   }
   async function refresh(reason='background',force=false){
