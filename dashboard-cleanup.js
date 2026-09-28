@@ -17,7 +17,9 @@
   }
 
   function cleanTextNode(node){
-    if(!node?.nodeValue || !INTERNAL_ID_RE.test(node.nodeValue)) return;
+    if(!node?.nodeValue)return;
+    INTERNAL_ID_RE.lastIndex=0;
+    if(!INTERNAL_ID_RE.test(node.nodeValue))return;
     INTERNAL_ID_RE.lastIndex=0;
     node.nodeValue=node.nodeValue.replace(INTERNAL_ID_RE,m=>displayIdFor(m));
   }
@@ -46,17 +48,21 @@
     cleanVisibleIds();
   }
 
-  let queued=false;
-  const queueApply=()=>{
-    if(queued) return;
-    queued=true;
-    requestAnimationFrame(()=>{queued=false;apply();});
-  };
-
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',apply,{once:true});
   else apply();
 
-  const observer=new MutationObserver(queueApply);
+  // Inspect only newly inserted text instead of walking the entire workspace
+  // after every rendering change or screening update.
+  const observer=new MutationObserver(records=>{
+    for(const record of records){
+      if(record.type==='characterData'){cleanTextNode(record.target);continue;}
+      for(const node of record.addedNodes){
+        if(node.nodeType===Node.TEXT_NODE)cleanTextNode(node);
+        else if(node.nodeType===Node.ELEMENT_NODE)cleanVisibleIds(node);
+      }
+    }
+    hideDashboardNoise();
+  });
   const start=()=>{if(document.body) observer.observe(document.body,{childList:true,subtree:true,characterData:true});};
   if(document.body) start(); else document.addEventListener('DOMContentLoaded',start,{once:true});
 
