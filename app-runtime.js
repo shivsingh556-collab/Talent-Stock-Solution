@@ -150,6 +150,30 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
   function mapInterview(i){const d=i.scheduled_at?new Date(i.scheduled_at):null;return{id:i.id,serverId:i.id,scheduledAt:i.scheduled_at||null,date:d&&!isNaN(d)?new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Kolkata',year:'numeric',month:'2-digit',day:'2-digit'}).format(d):'',time:d&&!isNaN(d)?new Intl.DateTimeFormat('en-IN',{timeZone:'Asia/Kolkata',hour:'2-digit',minute:'2-digit',hour12:true}).format(d):'',candidate:i.candidate_name_snapshot||i.candidates?.candidate_name||'Candidate',position:i.job_title_snapshot||i.requirements?.job_title||'',client:i.client_name_snapshot||i.requirements?.clients?.name||'',mode:i.interview_type||'Client Interview',status:i.status||'Scheduled',candidateResponse:i.candidate_response||'Pending',outcome:i.outcome||'Pending',outcomeNotes:i.outcome_notes||'',outcomeUpdatedAt:i.outcome_updated_at||null,interviewStage:i.interview_stage||'Scheduled',notes:i.notes||'',archivedAt:i.archived_at||null,createdBy:i.created_by||null,scheduledBy:recruiterLabel(i.scheduled_by_profile),candidateId:i.candidate_id,requirementServerId:i.requirement_id}}
   async function hydrate(){if(hydrating||!backend()?.enabled)return;hydrating=true;const done=hydrated?()=>{}:busy('Loading secure workspace…');try{const user=await backend().currentUser();if(!user){status('Secure backend ready','off');return}const c=backend().client;const [{data:reqs,error:re},{data:cands,error:ce},{data:resumes,error:rve},{data:screens,error:se},{data:ints,error:ie}]=await Promise.all([c.from('requirements').select('*,clients(name)').neq('status','Closed').order('created_at',{ascending:false}).order('tss_id',{ascending:false}),c.from('candidates').select('*').order('created_at',{ascending:false}),c.from('resume_versions').select('id,candidate_id,storage_path,original_filename,mime_type,file_size,uploaded_at,is_current').order('uploaded_at',{ascending:true}),c.from('screenings').select('*,requirements(profile_key,tss_id,job_title)').order('screened_at',{ascending:true}),c.from('interviews').select('*,candidates(candidate_name),requirements(job_title,clients(name)),scheduled_by_profile:profiles!interviews_created_by_fkey(full_name,email)').order('scheduled_at',{ascending:true})]);if(re)throw re;if(ce)throw ce;if(rve)throw rve;if(se)throw se;if(ie)throw ie;const latestResume=new Map();for(const resume of resumes||[])if(resume?.candidate_id&&resume.storage_path)latestResume.set(resume.candidate_id,resume);if(Array.isArray(reqs)){const custom=(db.requirements||[]).filter(r=>String(r.id).startsWith('CUSTOM-'));db.requirements=[...reqs.map(mapReq),...custom]}db.candidates=(cands||[]).map(row=>mapCandidate(row,latestResume.get(row.id)));db.screenings=(screens||[]).map(mapScreening);db.interviews=(ints||[]).map(mapInterview);localStorage.setItem('tss_talent_buddy_v1',JSON.stringify(db));try{renderAll()}catch{}try{renderOldSite()}catch{}hydrated=true;if(!window.TSSRealtimePerformance)status('Supabase connected','on')}catch(err){console.error(err);status('Backend issue','error');try{toast('Backend sync issue: '+(err.message||err))}catch{}}finally{hydrating=false;done()}}
   async function fileHash(file){if(!file||!crypto?.subtle)return null;const buf=await file.arrayBuffer();const h=await crypto.subtle.digest('SHA-256',buf);return[...new Uint8Array(h)].map(b=>b.toString(16).padStart(2,'0')).join('')}
+  const pendingResumeFiles=new WeakMap();
+  function applyResumeAttachment(candidate,resume){
+    Object.assign(candidate,{resumeAvailable:true,resumeVersionId:resume.id,resumePath:resume.storage_path,resumeFilename:resume.original_filename,resumeMimeType:resume.mime_type,resumeUploadedAt:resume.uploaded_at});
+    localStorage.setItem('tss_talent_buddy_v1',JSON.stringify(db));
+  }
+  async function persistResumeAttachment(screen,candidate,file){
+    if(!file)throw new Error('Select the original CV again to finish uploading it');
+    screen.resumeSavePending=true;
+    const hash=await fileHash(file);
+    let resume=null;
+    if(hash){
+      const {data,error}=await backend().client.from('resume_versions').select('*').eq('candidate_id',candidate.serverId||candidate.id).eq('file_hash',hash).limit(1).maybeSingle();
+      if(error)throw error;
+      resume=data;
+    }
+    if(!resume)resume=await withTimeout(backend().uploadResume(candidate.serverId||candidate.id,file,hash,candidate.resumeText||''),20000,'CV upload');
+    applyResumeAttachment(candidate,resume);
+    const {error}=await backend().client.from('screenings').update({resume_version_id:resume.id}).eq('id',screen.serverId);
+    if(error)throw error;
+    screen.resumeSavePending=false;
+    pendingResumeFiles.delete(screen);
+    localStorage.setItem('tss_talent_buddy_v1',JSON.stringify(db));
+    return resume;
+  }
   function hasCandidateValue(v){return !(v==null||v===''||(Array.isArray(v)&&!v.length))}
   function mergeCandidateData(base={},parsed={},local={}){const pick=(...v)=>v.find(hasCandidateValue);return{name:pick(parsed.name,local.name,base.candidate_name,'')||'',email:pick(parsed.email,local.email,base.email,'')||'',phone:pick(parsed.phone,local.phone,base.phone,'')||'',location:pick(parsed.location,local.location,base.current_location,'')||'',preferredLocation:pick(parsed.preferredLocation,local.preferredLocation,base.preferred_location,'')||'',totalExperience:pick(parsed.totalExperience,local.totalExperience,base.total_experience,'')??'',relevantExperience:pick(parsed.relevantExperience,local.relevantExperience,base.relevant_experience,'')??'',currentCompany:pick(parsed.currentCompany,local.currentCompany,base.current_company,'')||'',designation:pick(parsed.designation,local.designation,base.current_designation,'')||'',skills:pick(parsed.skills,local.skills,base.skills,[])||[],education:pick(parsed.education,local.education,base.education,'')||'',noticePeriod:pick(parsed.noticePeriod,local.noticePeriod,base.notice_period,'')||'',currentCTC:pick(parsed.currentCTC,local.currentCTC,base.current_ctc,'')||'',expectedCTC:pick(parsed.expectedCTC,local.expectedCTC,base.expected_ctc,'')||'',resumeText:local.resumeText||''}}
   function assertCandidateQuality(c){const n=String(c.name||'').trim();if(!n||/^(candidate|unknown|n\/?a|not provided)$/i.test(n))throw new Error('Candidate name could not be identified. Review the parsed resume before saving.')}
@@ -171,7 +195,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
     if(!backend()?.enabled){setScreeningSaveState('failed','Secure database is unavailable. Please reconnect and retry.');toast('Supabase is not connected');return false}
     const localScreen=(db.screenings||[]).at(-1);
     if(!localScreen){setScreeningSaveState('failed','No screening result found. Screen the candidate again.');return false}
-    if(localScreen.serverId){setScreeningSaveState('saved','Candidate, CV and screening are stored securely.');return true}
+    if(localScreen.serverId&&!localScreen.resumeSavePending){setScreeningSaveState('saved','Candidate and screening are stored securely.');return true}
     const localCand=(db.candidates||[]).find(c=>c.id===localScreen.candidateId);
     const localReq=(db.requirements||[]).find(r=>r.id===localScreen.requirementId);
     if(!localCand||!localReq){setScreeningSaveState('failed','Candidate or requirement details are missing. Screen the candidate again.');return false}
@@ -183,7 +207,14 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
       const freshParsed=localCand.resumeText&&window.TSSDocumentParser?.extractResume?window.TSSDocumentParser.extractResume(localCand.resumeText):(window.TSS_PARSED_RESUME||{});
       Object.assign(localCand,mergeCandidateData({},freshParsed,localCand));
       assertCandidateQuality(localCand);
-      const file=$('resumeFile')?.files?.[0];
+      const file=pendingResumeFiles.get(localScreen)||$('resumeFile')?.files?.[0]||(localCand.resumeText?new File([localCand.resumeText],`${localCand.name.replace(/[^a-zA-Z0-9_-]/g,'_')}-resume-text.txt`,{type:'text/plain'}):null);
+      if(file)pendingResumeFiles.set(localScreen,file);
+      if(localScreen.serverId){
+        await persistResumeAttachment(localScreen,localCand,file);
+        setScreeningSaveState('saved','Candidate, resume and screening saved securely.');
+        try{renderCandidates($('candidateSearch')?.value||'')}catch{}
+        return true;
+      }
       let hash=null,resumeVersion=null,serverCand=null;
       if(file){
         hash=await fileHash(file);
@@ -258,34 +289,22 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
       localStorage.setItem('tss_talent_buddy_v1',JSON.stringify(db));
       console.info('[screening-save] screening stored',{candidateId:serverCand.id,screeningId:saved.id});
       let resumeUploadFailed=false;
-      if(file&&!resumeVersion){
-        try{
-          resumeVersion=await withTimeout(backend().uploadResume(serverCand.id,file,hash,localCand.resumeText||''),20000,'CV upload');
-          if(resumeVersion?.id){
-            const{error}=await backend().client.from('screenings').update({resume_version_id:resumeVersion.id}).eq('id',saved.id);
-            if(error)console.warn('Screening CV link update skipped',error.message||error);
-          }
-        }catch(uploadError){resumeUploadFailed=true;console.warn('Candidate saved; CV upload failed',uploadError?.message||uploadError)}
-      }
-      if(resumeVersion?.storage_path){
-        localCand.resumeAvailable=true;
-        localCand.resumeVersionId=resumeVersion.id;
-        localCand.resumePath=resumeVersion.storage_path;
-        localCand.resumeFilename=resumeVersion.original_filename||file?.name||'';
-        localCand.resumeMimeType=resumeVersion.mime_type||file?.type||'';
-        localCand.resumeUploadedAt=resumeVersion.uploaded_at||new Date().toISOString();
-        localStorage.setItem('tss_talent_buddy_v1',JSON.stringify(db));
+      if(resumeVersion?.storage_path)applyResumeAttachment(localCand,resumeVersion);
+      else if(file){
+        localScreen.resumeSavePending=true;
+        try{await persistResumeAttachment(localScreen,localCand,file)}
+        catch(uploadError){resumeUploadFailed=true;console.warn('Candidate saved; CV upload failed',uploadError?.message||uploadError)}
       }
       try{renderCandidates($('candidateSearch')?.value||'')}catch{}
       if(!window.TSSRealtimePerformance)status('Saved securely','on');
-      setScreeningSaveState('saved',resumeUploadFailed?'Candidate and screening saved. CV upload can be retried later.':'Candidate, CV and screening are stored securely in Todo.');
+      setScreeningSaveState(resumeUploadFailed?'failed':'saved',resumeUploadFailed?'Candidate and screening saved, but CV upload failed. Click Retry Save Candidate to upload the CV.':'Candidate, CV and screening are stored securely in Todo.');
       toast(resumeUploadFailed?'Candidate and screening saved; CV upload needs retry':'Candidate details, CV and screening saved to Todo');
       try{
         await window.TSSSafeBackendFeatures?.upsertLatestMatch?.();
         await window.TSSSafeBackendFeatures?.logAction?.('screening_saved','screening',saved.id,{candidate_id:serverCand.id,requirement_id:reqServerId});
       }catch(logErr){console.warn('Post-save activity log skipped',logErr?.message||logErr)}
       window.TSSRealtimePerformance?.resume?.();
-      return true;
+      return !resumeUploadFailed;
     }catch(err){
       console.error(err);
       status('Save failed','error');
@@ -294,6 +313,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
       window.TSSRealtimePerformance?.resume?.();
       return false;
     }finally{
+      window.TSSRealtimePerformance?.resume?.();
       done();
     }
   }
@@ -1132,6 +1152,29 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 
   async function latestResume(c){const id=c.serverId||c.id;if(!C()||!id)return null;const {data,error}=await C().from('resume_versions').select('*').eq('candidate_id',id).order('uploaded_at',{ascending:false}).limit(1).maybeSingle();if(error)throw error;return data}
   async function viewResume(c){const resumeWindow=window.open('','_blank');if(resumeWindow)resumeWindow.opener=null;try{const r=await latestResume(c);if(!r){resumeWindow?.close();return notify('Resume unavailable for this candidate')}const {data,error}=await C().storage.from('candidate-resumes').createSignedUrl(r.storage_path,120);if(error)throw error;if(resumeWindow)resumeWindow.location.replace(data.signedUrl);else notify('Allow pop-ups to view the resume');await logAction('resume_viewed','candidate',c.serverId||c.id,{resume_version:r.id})}catch(e){resumeWindow?.close();notify('Unable to open resume: '+e.message)}}
+  function addResume(candidate){
+    const input=document.createElement('input');input.type='file';input.accept='.pdf,.docx,.txt,.png,.jpg,.jpeg,.webp';
+    input.addEventListener('change',async()=>{
+      const file=input.files?.[0];if(!file)return;
+      try{
+        notify('Uploading resume…');
+        let text='';
+        try{if(window.TSSDocumentParser?.parse)text=await window.TSSDocumentParser.parse(file)}catch(parseError){console.warn('Original CV will be saved without extracted text',parseError)}
+        const buffer=await file.arrayBuffer();
+        const digest=await crypto.subtle.digest('SHA-256',buffer);
+        const hash=[...new Uint8Array(digest)].map(x=>x.toString(16).padStart(2,'0')).join('');
+        const id=candidate.serverId||candidate.id;
+        const {data:existing,error}=await C().from('resume_versions').select('*').eq('candidate_id',id).eq('file_hash',hash).limit(1).maybeSingle();
+        if(error)throw error;
+        const resume=existing||await B().uploadResume(id,file,hash,text);
+        Object.assign(candidate,{resumeAvailable:true,resumeVersionId:resume.id,resumePath:resume.storage_path,resumeFilename:resume.original_filename,resumeMimeType:resume.mime_type,resumeText:text||candidate.resumeText||''});
+        localStorage.setItem('tss_talent_buddy_v1',JSON.stringify(db));
+        try{renderCandidates($('candidateSearch')?.value||'')}catch{}
+        notify('Resume added to the existing candidate');
+      }catch(error){notify('Resume upload failed: '+(error.message||error))}
+      finally{input.remove()}
+    },{once:true});input.hidden=true;document.body.appendChild(input);input.click();
+  }
   async function deleteEverywhere(c){
     const me=await getIdentity();
     if(me?.role!=='admin')return notify('Only admins can delete candidates');
@@ -1160,6 +1203,8 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
   function wire(){
     styles();ensureAdminUI();
     document.addEventListener('click',e=>{
+      const attach=e.target.closest('[data-add-resume]');
+      if(attach){const candidate=(db.candidates||[]).find(c=>String(c.id)===attach.dataset.addResume);if(candidate)addResume(candidate);return;}
       const nav=e.target.closest('.nav-item');if(nav?.dataset.view==='candidates')setTimeout(enhanceCandidateTable,120);
       if(e.target.closest('.decision,#approveAi,#editScore'))setTimeout(()=>{syncLatestNote();logAction('screening_decision_updated','screening',(db.screenings||[]).at(-1)?.serverId||'',{})},500);
       if(e.target.closest('#saveRequirementBtn'))setTimeout(()=>{const id=$('reqId')?.value;const r=(db.requirements||[]).find(x=>x.id===id||x.profileKey===id||x.requirementId===id);if(r)rematchRequirement(r)},900);
@@ -1680,11 +1725,11 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
     try{
       const user=await b.currentUser();if(!user)throw new Error('Please sign in again');
       const c=b.client;
-      const cand=await c.from('candidates').select('id,name,email').ilike('email',email).limit(1).maybeSingle();if(cand.error)throw cand.error;if(!cand.data?.id)throw new Error('Screen and save this candidate first');
+      const cand=await c.from('candidates').select('id,candidate_name,email').ilike('email',email).limit(1).maybeSingle();if(cand.error)throw cand.error;if(!cand.data?.id)throw new Error('Screen and save this candidate first');
       const reqId=r.serverId||r.id;
       const sc=await c.from('screenings').select('id').eq('candidate_id',cand.data.id).eq('requirement_id',reqId).order('screened_at',{ascending:false}).limit(1).maybeSingle();if(sc.error)throw sc.error;if(!sc.data?.id)throw new Error('No screening found for this candidate and requirement');
       const up=await c.from('screenings').update({submitted_at:new Date().toISOString(),submitted_by:user.id}).eq('id',sc.data.id);if(up.error)throw up.error;
-      toastSafe(`${cand.data.name||'Candidate'} submitted for ${r.title}`);
+      toastSafe(`${cand.data.candidate_name||'Candidate'} submitted for ${r.title}`);
     }catch(e){console.error(e);toastSafe('Submit failed: '+(e?.message||e));}
     finally{if(btn){btn.disabled=false;btn.textContent='Submit Candidate'}}
   }
@@ -2128,7 +2173,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
       }
       $('requirementDialog')?.close();
       await window.TSSRequirementsLiveSync?.syncNow?.();
-      // The saved requirement was already synced; realtime handles remaining updates.
+      // Realtime refreshes other workspace data; the saved requirement is already synced.
       return saved;
     }catch(err){console.error('Requirement save failed',err);toastSafe('Requirement save failed: '+(err?.message||err));}
     finally{saving=false;if(btn){btn.disabled=false;btn.textContent=old||(submitMode?'Submit Requirement':'Save Draft')}}
@@ -2435,7 +2480,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
         <button id="quickOpenDetailed">Open Detailed Result</button>
       </div>`;
     const saveButton=byId('quickSaveCandidate');
-    if(s.serverId){saveButton.disabled=true;saveButton.textContent='✓ Candidate Saved'}
+    if(s.serverId&&!s.resumeSavePending){saveButton.disabled=true;saveButton.textContent='✓ Candidate Saved'}
     saveButton?.addEventListener('click',()=>saveCandidate(s));
     node.querySelectorAll('[data-qdecision]').forEach(btn=>btn.addEventListener('click',()=>applyDecision(btn.dataset.qdecision,s)));
     byId('quickScheduleInterview')?.addEventListener('click',async()=>{if(await ensureSaved(s))byId('scheduleInterview')?.click()});
@@ -2443,7 +2488,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
   }
   async function saveCandidate(s){
     const button=byId('quickSaveCandidate');
-    if(s?.serverId){if(button){button.disabled=true;button.textContent='✓ Candidate Saved'}return true}
+    if(s?.serverId&&!s.resumeSavePending){if(button){button.disabled=true;button.textContent='✓ Candidate Saved'}return true}
     if(!window.TSSProduction?.persistLatestScreening){setStatus('Secure save is unavailable. Refresh once and retry.','bad');return false}
     if(button){button.disabled=true;button.textContent='Saving…'}
     setStatus('Saving candidate, CV and screening to Todo…','busy');
@@ -2454,7 +2499,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
     return false;
   }
   async function ensureSaved(s){
-    if(s?.serverId)return true;
+    if(s?.serverId&&!s.resumeSavePending)return true;
     setStatus('Save the candidate before adding a decision or interview.','busy');
     return saveCandidate(s);
   }
@@ -2474,6 +2519,8 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
     const req=selectedRequirement();
     if(!req){setStatus('Select a requirement first','bad');return}
     const pasted=(byId('quickResumeText')?.value||'').trim();
+    quickFile=byId('quickResumeFile')?.files?.[0]||null;
+    if(!quickFile&&byId('resumeFile'))byId('resumeFile').value='';
     if(!quickFile&&!pasted){setStatus('Drop a CV or paste resume text','bad');return}
     button.disabled=true;button.textContent='Analysing…';setStatus('Reading candidate profile…','busy');
     syncRequirementToCore();
@@ -2973,7 +3020,7 @@ const RESULTS=['Pending','Second Round','Selected','Hold','Rejected','Client Rej
 function outcomeDialog(){
   let d=$('#tssOutcomeDialog');if(d)return d;
   d=document.createElement('dialog');d.id='tssOutcomeDialog';
-  d.innerHTML=`<form method="dialog" class="tss-outcome-form"><div class="dialog-head"><div><span class="purple-label">INTERVIEW PROGRESS</span><h3>Update Interview</h3><p style="margin:4px 0 0;color:#68788a;font-size:12px">Track the interview through 5 clear stages. Every saved update is emailed to active Admins and Super Admins.</p></div><button value="cancel" class="icon-btn">×</button></div><label>Interview Stage</label><select id="tssStageSelect">${STAGES.map(x=>`<option>${x}</option>`).join('')}</select><label>Interview Result</label><select id="tssOutcomeSelect">${RESULTS.map(x=>`<option>${x}</option>`).join('')}</select><label>Feedback / Notes</label><textarea id="tssOutcomeNotes" rows="4" placeholder="Client feedback, next round, joining update, reason for rejection, etc."></textarea><div style="font-size:11px;color:#68788a;margin-top:8px">Flow: Scheduled → Completed → Feedback Pending → Result Received → Joining / Closure</div><div class="dialog-actions"><button value="cancel" class="btn ghost">Cancel</button><button type="button" id="tssSaveOutcome" class="btn primary">Save Interview Update</button></div></form>`;
+  d.innerHTML=`<form method="dialog" class="tss-outcome-form"><div class="dialog-head"><div><span class="purple-label">INTERVIEW PROGRESS</span><h3>Update Interview</h3><p style="margin:4px 0 0;color:#68788a;font-size:12px">Internal update only. Responsible TSS team members may be notified; the candidate will not receive a result email.</p></div><button value="cancel" class="icon-btn">×</button></div><label>Interview Stage</label><select id="tssStageSelect">${STAGES.map(x=>`<option>${x}</option>`).join('')}</select><label>Interview Result</label><select id="tssOutcomeSelect">${RESULTS.map(x=>`<option>${x}</option>`).join('')}</select><label>Feedback / Notes</label><textarea id="tssOutcomeNotes" rows="4" placeholder="Client feedback, next round, joining update, reason for rejection, etc."></textarea><div style="font-size:11px;color:#68788a;margin-top:8px">Flow: Scheduled → Completed → Feedback Pending → Result Received → Joining / Closure</div><div class="dialog-actions"><button value="cancel" class="btn ghost">Cancel</button><button type="button" id="tssSaveOutcome" class="btn primary">Save Interview Update</button></div></form>`;
   document.body.appendChild(d);return d;
 }
 
@@ -3016,7 +3063,7 @@ async function saveOutcome(){
     }
     try{
       const user=await backend().currentUser?.();
-      if(user)await c.from('activity_logs').insert({actor_id:user.id,action:'Interview stage/result updated',entity_type:'interviews',entity_id:id,details:{stage,outcome,pipeline,management_email_queued:true}});
+      if(user)await c.from('activity_logs').insert({actor_id:user.id,action:'Interview stage/result updated',entity_type:'interviews',entity_id:id,details:{stage,outcome,pipeline,internal_email_queued:true,candidate_email_suppressed:true}});
     }catch{}
     d.close();toast(`Interview updated: ${stage} · ${outcome}`);
     await window.TSSProduction?.hydrate?.();

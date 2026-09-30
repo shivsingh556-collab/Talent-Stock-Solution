@@ -81,6 +81,29 @@
 
   async function latestResume(c){const id=c.serverId||c.id;if(!C()||!id)return null;const {data,error}=await C().from('resume_versions').select('*').eq('candidate_id',id).order('uploaded_at',{ascending:false}).limit(1).maybeSingle();if(error)throw error;return data}
   async function viewResume(c){const resumeWindow=window.open('','_blank');if(resumeWindow)resumeWindow.opener=null;try{const r=await latestResume(c);if(!r){resumeWindow?.close();return notify('Resume unavailable for this candidate')}const {data,error}=await C().storage.from('candidate-resumes').createSignedUrl(r.storage_path,120);if(error)throw error;if(resumeWindow)resumeWindow.location.replace(data.signedUrl);else notify('Allow pop-ups to view the resume');await logAction('resume_viewed','candidate',c.serverId||c.id,{resume_version:r.id})}catch(e){resumeWindow?.close();notify('Unable to open resume: '+e.message)}}
+  function addResume(candidate){
+    const input=document.createElement('input');input.type='file';input.accept='.pdf,.docx,.txt,.png,.jpg,.jpeg,.webp';
+    input.addEventListener('change',async()=>{
+      const file=input.files?.[0];if(!file)return;
+      try{
+        notify('Uploading resume…');
+        let text='';
+        try{if(window.TSSDocumentParser?.parse)text=await window.TSSDocumentParser.parse(file)}catch(parseError){console.warn('Original CV will be saved without extracted text',parseError)}
+        const buffer=await file.arrayBuffer();
+        const digest=await crypto.subtle.digest('SHA-256',buffer);
+        const hash=[...new Uint8Array(digest)].map(x=>x.toString(16).padStart(2,'0')).join('');
+        const id=candidate.serverId||candidate.id;
+        const {data:existing,error}=await C().from('resume_versions').select('*').eq('candidate_id',id).eq('file_hash',hash).limit(1).maybeSingle();
+        if(error)throw error;
+        const resume=existing||await B().uploadResume(id,file,hash,text);
+        Object.assign(candidate,{resumeAvailable:true,resumeVersionId:resume.id,resumePath:resume.storage_path,resumeFilename:resume.original_filename,resumeMimeType:resume.mime_type,resumeText:text||candidate.resumeText||''});
+        localStorage.setItem('tss_talent_buddy_v1',JSON.stringify(db));
+        try{renderCandidates($('candidateSearch')?.value||'')}catch{}
+        notify('Resume added to the existing candidate');
+      }catch(error){notify('Resume upload failed: '+(error.message||error))}
+      finally{input.remove()}
+    },{once:true});input.hidden=true;document.body.appendChild(input);input.click();
+  }
   async function deleteEverywhere(c){
     const me=await getIdentity();
     if(me?.role!=='admin')return notify('Only admins can delete candidates');
@@ -109,6 +132,8 @@
   function wire(){
     styles();ensureAdminUI();
     document.addEventListener('click',e=>{
+      const attach=e.target.closest('[data-add-resume]');
+      if(attach){const candidate=(db.candidates||[]).find(c=>String(c.id)===attach.dataset.addResume);if(candidate)addResume(candidate);return;}
       const nav=e.target.closest('.nav-item');if(nav?.dataset.view==='candidates')setTimeout(enhanceCandidateTable,120);
       if(e.target.closest('.decision,#approveAi,#editScore'))setTimeout(()=>{syncLatestNote();logAction('screening_decision_updated','screening',(db.screenings||[]).at(-1)?.serverId||'',{})},500);
       if(e.target.closest('#saveRequirementBtn'))setTimeout(()=>{const id=$('reqId')?.value;const r=(db.requirements||[]).find(x=>x.id===id||x.profileKey===id||x.requirementId===id);if(r)rematchRequirement(r)},900);

@@ -105,7 +105,7 @@
         <button id="quickOpenDetailed">Open Detailed Result</button>
       </div>`;
     const saveButton=byId('quickSaveCandidate');
-    if(s.serverId){saveButton.disabled=true;saveButton.textContent='✓ Candidate Saved'}
+    if(s.serverId&&!s.resumeSavePending){saveButton.disabled=true;saveButton.textContent='✓ Candidate Saved'}
     saveButton?.addEventListener('click',()=>saveCandidate(s));
     node.querySelectorAll('[data-qdecision]').forEach(btn=>btn.addEventListener('click',()=>applyDecision(btn.dataset.qdecision,s)));
     byId('quickScheduleInterview')?.addEventListener('click',async()=>{if(await ensureSaved(s))byId('scheduleInterview')?.click()});
@@ -113,7 +113,7 @@
   }
   async function saveCandidate(s){
     const button=byId('quickSaveCandidate');
-    if(s?.serverId){if(button){button.disabled=true;button.textContent='✓ Candidate Saved'}return true}
+    if(s?.serverId&&!s.resumeSavePending){if(button){button.disabled=true;button.textContent='✓ Candidate Saved'}return true}
     if(!window.TSSProduction?.persistLatestScreening){setStatus('Secure save is unavailable. Refresh once and retry.','bad');return false}
     if(button){button.disabled=true;button.textContent='Saving…'}
     setStatus('Saving candidate, CV and screening to Todo…','busy');
@@ -124,7 +124,7 @@
     return false;
   }
   async function ensureSaved(s){
-    if(s?.serverId)return true;
+    if(s?.serverId&&!s.resumeSavePending)return true;
     setStatus('Save the candidate before adding a decision or interview.','busy');
     return saveCandidate(s);
   }
@@ -144,6 +144,8 @@
     const req=selectedRequirement();
     if(!req){setStatus('Select a requirement first','bad');return}
     const pasted=(byId('quickResumeText')?.value||'').trim();
+    quickFile=byId('quickResumeFile')?.files?.[0]||null;
+    if(!quickFile&&byId('resumeFile'))byId('resumeFile').value='';
     if(!quickFile&&!pasted){setStatus('Drop a CV or paste resume text','bad');return}
     button.disabled=true;button.textContent='Analysing…';setStatus('Reading candidate profile…','busy');
     syncRequirementToCore();

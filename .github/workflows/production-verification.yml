@@ -27,7 +27,7 @@ jobs:
           node --check auth-bootstrap.js
           node --check app-core.js
           node --check app-runtime.js
-          node --test tests/unit/evidence-screening.test.cjs tests/unit/candidate-records.test.cjs tests/unit/realtime-performance.test.cjs
+          node --test tests/unit/evidence-screening.test.cjs tests/unit/candidate-records.test.cjs tests/unit/realtime-performance.test.cjs tests/unit/resume-save.test.cjs
       - name: Verify signed-out and authenticated boot
         run: |
           python3 -m http.server 4173 --bind 127.0.0.1 >/tmp/todo-ai-http.log 2>&1 &
