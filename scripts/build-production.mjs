@@ -1,12 +1,15 @@
-import { readFile, writeFile, mkdir } from 'node:fs/promises';
+import { readFile, writeFile, mkdir, cp, rm } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import vm from 'node:vm';
 
 const root=join(dirname(fileURLToPath(import.meta.url)),'..');
+const output=join(root,'public');
 const read=name=>readFile(join(root,name),'utf8');
 const readSource=name=>read(name.endsWith('.css')?`src/css/${name}`:`src/js/${name}`);
 const banner=(name,body)=>`\n/* ===== ${name} ===== */\n${body.replace(/\r\n?/g,'\n').trim()}\n`;
+const emit=(name,body)=>writeFile(join(output,name),body);
+const copy=(source,destination)=>cp(join(root,source),join(output,destination),{recursive:true});
 
 const cssFiles=[
   'styles.css','production-polish.css','requirements-perfect-fix.css',
@@ -33,24 +36,32 @@ const runtimeFiles=[
 ];
 
 const joinFiles=async files=>(await Promise.all(files.map(async name=>banner(name,await readSource(name))))).join('');
-await writeFile(join(root,'app-runtime.css'),await joinFiles(cssFiles));
-await writeFile(join(root,'app-core.js'),await joinFiles(coreFiles));
-await writeFile(join(root,'app-runtime.js'),await joinFiles(runtimeFiles));
 
-let html=await read('index.html');
-const workspaceStart=html.indexOf('  <div id="workspace"');
-const scriptsStart=workspaceStart>=0?html.indexOf('  <script src=',workspaceStart):-1;
-let workspace;
-if(workspaceStart>=0&&scriptsStart>=0){
-  workspace=html.slice(workspaceStart,scriptsStart).trim();
-  await writeFile(join(root,'workspace-shell.html'),`${workspace}\n`);
-  let publicShell=html.slice(0,workspaceStart);
-  publicShell=publicShell.replace(/(?:\s*<link rel="stylesheet"[^>]*>\s*)+/m,'\n  <link rel="stylesheet" href="login-shell.css?v=20260922-forgot-password-1" />\n');
-  publicShell+=`  <main id="workspaceMount"></main>\n\n  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.109.0"></script>\n  <script src="backend/config.js?v=20260913-hardening-1"></script>\n  <script src="backend/supabase-client.js?v=20260922-forgot-password-1"></script>\n  <script src="auth-bootstrap.js?v=20260930-repository-organization-1"></script>\n</body>\n</html>\n`;
-  await writeFile(join(root,'index.html'),publicShell);
-}else{
-  workspace=(await read('workspace-shell.html')).trim();
+// Only deployment output is rebuilt. Editable source files are never rewritten.
+await rm(output,{recursive:true,force:true});
+await mkdir(join(output,'modules'),{recursive:true});
+await emit('app-runtime.css',await joinFiles(cssFiles));
+await emit('app-core.js',await joinFiles(coreFiles));
+await emit('app-runtime.js',await joinFiles(runtimeFiles));
+
+for(const name of ['index.html','confirm.html','reschedule.html','workspace-shell.html']){
+  await copy(`src/pages/${name}`,name);
 }
+for(const name of ['auth-bootstrap.js','confirm.js','evidence-screening.js']){
+  await copy(`src/js/${name}`,name);
+}
+await copy('src/css/login-shell.css','login-shell.css');
+for(const name of ['reports-activity.js','recruitment-trackers.js','role-access-visibility.js']){
+  await copy(`src/js/${name}`,`modules/${name}`);
+}
+for(const name of ['reports-activity.css','recruitment-trackers.css']){
+  await copy(`src/css/${name}`,`modules/${name}`);
+}
+await mkdir(join(output,'backend'),{recursive:true});
+for(const name of ['config.js','supabase-client.js']){
+  await copy(`src/backend/${name}`,`backend/${name}`);
+}
+await copy('src/assets','assets');
 
 const context={window:{}};
 vm.createContext(context);
@@ -58,7 +69,6 @@ vm.runInContext(await readSource('brand-assets.js'),context);
 const logo=context.window.TSS_ASSETS?.logo||'';
 const match=logo.match(/^data:([^;]+);base64,(.+)$/);
 if(!match)throw new Error('TalentStock logo asset missing');
-await mkdir(join(root,'assets'),{recursive:true});
-await writeFile(join(root,'assets/talentstock-logo.webp'),Buffer.from(match[2],'base64'));
-
-console.log(JSON.stringify({workspaceBytes:Buffer.byteLength(workspace),coreFiles:coreFiles.length,runtimeFiles:runtimeFiles.length,cssFiles:cssFiles.length},null,2));
+await emit('assets/talentstock-logo.webp',Buffer.from(match[2],'base64'));
+const workspace=await read('src/pages/workspace-shell.html');
+console.log(JSON.stringify({outputDirectory:'public',workspaceBytes:Buffer.byteLength(workspace.trim()),coreFiles:coreFiles.length,runtimeFiles:runtimeFiles.length,cssFiles:cssFiles.length},null,2));

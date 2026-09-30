@@ -4,7 +4,7 @@
   'use strict';
 
   const DOMAIN='talent-stock.com';
-  const BUILD='20260930-repository-organization-1';
+  const BUILD='20260930-full-repository-organization-2';
   const gate=document.getElementById('loginGate');
   const mount=document.getElementById('workspaceMount');
   const form=document.getElementById('loginForm');
@@ -209,12 +209,12 @@
 
     // Restore reporting as an authenticated late-loaded module.
     // Recruiter -> Daily Submissions; Admin/Super Admin -> Reports & Activity.
-    loadStyle(`src/css/reports-activity.css?v=${BUILD}`,'tssReports');
-    await loadLateBootScript(`src/js/reports-activity.js?v=${BUILD}`);
+    loadStyle(`modules/reports-activity.css?v=${BUILD}`,'tssReports');
+    await loadLateBootScript(`modules/reports-activity.js?v=${BUILD}`);
 
     // Post-screening calling, admin client-submission records and clean monthly reports.
-    loadStyle(`src/css/recruitment-trackers.css?v=${BUILD}`,'tssRecruitmentTrackers');
-    await loadScript(`src/js/recruitment-trackers.js?v=${BUILD}`);
+    loadStyle(`modules/recruitment-trackers.css?v=${BUILD}`,'tssRecruitmentTrackers');
+    await loadScript(`modules/recruitment-trackers.js?v=${BUILD}`);
     enforceRoleAccess(identity);
 
     appLoaded=true;

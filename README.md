@@ -16,24 +16,28 @@ The browser UI is not the authorization boundary. Supabase RLS remains authorita
 
 ## Repository layout
 
+Every editable file belongs to a named folder. The root contains this README and repository/deployment configuration.
+
 | Path | Purpose |
 | --- | --- |
-| `src/js/` | Editable application modules, including retained legacy modules |
-| `src/css/` | Editable application and legacy styles |
-| `scripts/` | Production bundle build |
-| `tests/unit/` | Screening, extraction, candidate and realtime logic checks |
+| `src/pages/` | Login page, workspace HTML and candidate interview pages |
+| `src/js/` | Application, authentication, screening and retained legacy JavaScript |
+| `src/css/` | Login, application and retained legacy styles |
+| `src/backend/` | Browser-safe Supabase configuration and client adapter |
+| `src/assets/` | Logo and mascot images |
+| `scripts/` | Production build |
+| `tests/unit/` | Screening, extraction, candidate, realtime and resume-save checks |
 | `tests/browser/` | Login, recovery, candidate and interview browser checks |
-| `backend/` | Browser-safe Supabase configuration and client adapter |
 | `supabase/` | Database schema and dated SQL updates |
-| `assets/` | Logos and mascot images |
-| `naukri-bridge/` | Naukri browser extension |
+| `extensions/naukri-bridge/` | Naukri browser extension |
 | `docs/` | Backend setup notes and archived rollback reference |
 | `.github/workflows/` | CI and verification workflows |
+| `public/` | Generated deployment output, ignored by Git |
 
-Public HTML pages, `auth-bootstrap.js`, `confirm.js`, `evidence-screening.js`,
-`login-shell.css` and generated bundles remain at the root to preserve existing
-page and asset URLs. The build script lists the source files in execution order;
-files in `src/` are not automatically included in production.
+The build script lists application sources in execution order. Legacy files are
+retained in `src/`; they are not automatically included in production. Source,
+tests, database updates, documentation and the extension are outside the deployed
+`public/` directory.
 
 ## Production build
 
@@ -53,7 +57,7 @@ Rebuild after changing application modules:
 node scripts/build-production.mjs
 ```
 
-The build also rewrites `index.html` as the public login-only shell and extracts the TalentStock logo asset.
+The build copies the login-only HTML, standalone scripts, selected late-loaded modules, browser-safe backend client and images into `public/`. It extracts the TalentStock logo asset and never rewrites editable source files. Existing public page URLs (`/`, `/confirm.html`, `/reschedule.html`) are preserved.
 
 The JD parser automatically captures catalogue skills, structured skill sections and custom skills found in requirement cues. Recruiters can edit or add any skill manually; the matching engine does not require that skill to exist in the built-in alias catalogue.
 
@@ -62,7 +66,8 @@ The JD parser automatically captures catalogue skills, structured skill sections
 Start a static server:
 
 ```bash
-python3 -m http.server 4173 --bind 127.0.0.1
+node scripts/build-production.mjs
+python3 -m http.server 4173 --bind 127.0.0.1 --directory public
 ```
 
 Run logic and browser checks:
@@ -88,4 +93,4 @@ SQL migrations are stored in `supabase/`. Apply them in chronological order thro
 
 ## Deployment
 
-Vercel serves the repository as a static application; no server-side build command is required. Run the production build script and tests before deployment, deploy a preview, verify the full auth story, then promote the verified commit.
+Vercel runs `node scripts/build-production.mjs` and serves only `public/`, as configured in `vercel.json`. Run the production build and tests before deployment, verify the preview, then promote the verified commit. Generated bundles should be rebuilt rather than edited or committed. See [Vercel build configuration](https://vercel.com/docs/project-configuration/vercel-json).
