@@ -5,6 +5,7 @@ import vm from 'node:vm';
 
 const root=join(dirname(fileURLToPath(import.meta.url)),'..');
 const read=name=>readFile(join(root,name),'utf8');
+const readSource=name=>read(name.endsWith('.css')?`src/css/${name}`:`src/js/${name}`);
 const banner=(name,body)=>`\n/* ===== ${name} ===== */\n${body.replace(/\r\n?/g,'\n').trim()}\n`;
 
 const cssFiles=[
@@ -31,7 +32,7 @@ const runtimeFiles=[
   'reports-activity.js','reports-daily-activity.js'
 ];
 
-const joinFiles=async files=>(await Promise.all(files.map(async name=>banner(name,await read(name))))).join('');
+const joinFiles=async files=>(await Promise.all(files.map(async name=>banner(name,await readSource(name))))).join('');
 await writeFile(join(root,'app-runtime.css'),await joinFiles(cssFiles));
 await writeFile(join(root,'app-core.js'),await joinFiles(coreFiles));
 await writeFile(join(root,'app-runtime.js'),await joinFiles(runtimeFiles));
@@ -45,7 +46,7 @@ if(workspaceStart>=0&&scriptsStart>=0){
   await writeFile(join(root,'workspace-shell.html'),`${workspace}\n`);
   let publicShell=html.slice(0,workspaceStart);
   publicShell=publicShell.replace(/(?:\s*<link rel="stylesheet"[^>]*>\s*)+/m,'\n  <link rel="stylesheet" href="login-shell.css?v=20260922-forgot-password-1" />\n');
-  publicShell+=`  <main id="workspaceMount"></main>\n\n  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.109.0"></script>\n  <script src="backend/config.js?v=20260913-hardening-1"></script>\n  <script src="backend/supabase-client.js?v=20260922-forgot-password-1"></script>\n  <script src="auth-bootstrap.js?v=20260922-forgot-password-1"></script>\n</body>\n</html>\n`;
+  publicShell+=`  <main id="workspaceMount"></main>\n\n  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.109.0"></script>\n  <script src="backend/config.js?v=20260913-hardening-1"></script>\n  <script src="backend/supabase-client.js?v=20260922-forgot-password-1"></script>\n  <script src="auth-bootstrap.js?v=20260930-repository-organization-1"></script>\n</body>\n</html>\n`;
   await writeFile(join(root,'index.html'),publicShell);
 }else{
   workspace=(await read('workspace-shell.html')).trim();
@@ -53,7 +54,7 @@ if(workspaceStart>=0&&scriptsStart>=0){
 
 const context={window:{}};
 vm.createContext(context);
-vm.runInContext(await read('brand-assets.js'),context);
+vm.runInContext(await readSource('brand-assets.js'),context);
 const logo=context.window.TSS_ASSETS?.logo||'';
 const match=logo.match(/^data:([^;]+);base64,(.+)$/);
 if(!match)throw new Error('TalentStock logo asset missing');

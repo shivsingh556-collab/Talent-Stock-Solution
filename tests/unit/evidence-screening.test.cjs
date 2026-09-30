@@ -1,5 +1,5 @@
 const fs=require('fs'),vm=require('vm'),assert=require('assert'),test=require('node:test');
-const context={window:{},Date};vm.createContext(context);vm.runInContext(fs.readFileSync('evidence-screening.js','utf8'),context);
+const context={window:{},Date};vm.createContext(context);vm.runInContext(fs.readFileSync(require('node:path').resolve(__dirname,'../../evidence-screening.js'),'utf8'),context);
 const engine=context.window.tssEvidenceScreening;
 
 test('matches approved aliases and formatting variations',()=>{

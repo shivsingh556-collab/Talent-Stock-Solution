@@ -3,7 +3,7 @@ const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/st
 function loadParser(){
   const document={readyState:'complete',scripts:[],getElementById(){return null},addEventListener(){},head:{appendChild(){}}};
   const context={console,Date,document,setTimeout,clearTimeout,URL};context.window=context;
-  vm.createContext(context);vm.runInContext(fs.readFileSync('extraction-accuracy.js','utf8'),context);
+  vm.createContext(context);vm.runInContext(fs.readFileSync(require('node:path').resolve(__dirname,'../../src/js/extraction-accuracy.js'),'utf8'),context);
   return context.TSSDocumentParser;
 }
 const parser=loadParser();

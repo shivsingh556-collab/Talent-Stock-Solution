@@ -27,7 +27,7 @@ jobs:
           node --check auth-bootstrap.js
           node --check app-core.js
           node --check app-runtime.js
-          node --test evidence-screening.test.cjs candidate-records.test.cjs realtime-performance.test.cjs
+          node --test tests/unit/evidence-screening.test.cjs tests/unit/candidate-records.test.cjs tests/unit/realtime-performance.test.cjs
       - name: Verify signed-out and authenticated boot
         run: |
           python3 -m http.server 4173 --bind 127.0.0.1 >/tmp/todo-ai-http.log 2>&1 &
@@ -37,4 +37,4 @@ jobs:
             curl --fail --silent http://127.0.0.1:4173/ >/dev/null && break
             sleep 1
           done
-          TSS_BASE_URL=http://127.0.0.1:4173/ node browser-smoke.test.cjs
+          TSS_BASE_URL=http://127.0.0.1:4173/ node tests/browser/browser-smoke.test.cjs

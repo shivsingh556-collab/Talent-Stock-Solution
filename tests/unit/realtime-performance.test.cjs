@@ -41,7 +41,7 @@ const context={
   renderAll(){},renderOldSite(){}
 };
 context.window=context;
-vm.runInNewContext(fs.readFileSync('realtime-performance.js','utf8'),context);
+vm.runInNewContext(fs.readFileSync(require('node:path').resolve(__dirname,'../../src/js/realtime-performance.js'),'utf8'),context);
 
 (async()=>{
   await new Promise(resolve=>setTimeout(resolve,400));

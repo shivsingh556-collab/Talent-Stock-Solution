@@ -7,7 +7,7 @@ function loadParser(){
   const context={console,Date,document,setTimeout,clearTimeout};
   context.window=context;
   vm.createContext(context);
-  vm.runInContext(fs.readFileSync('extraction-accuracy.js','utf8'),context);
+  vm.runInContext(fs.readFileSync(require('node:path').resolve(__dirname,'../../src/js/extraction-accuracy.js'),'utf8'),context);
   return context.TSSDocumentParser;
 }
 
@@ -33,7 +33,7 @@ function loadBackend(existingEmail='manual@example.com'){
   const context={console,document:{},TSS_SUPABASE_CONFIG:{url:'https://example.supabase.co',anonKey:'publishable'},supabase:{createClient:()=>client}};
   context.window=context;
   vm.createContext(context);
-  vm.runInContext(fs.readFileSync('backend/supabase-client.js','utf8'),context);
+  vm.runInContext(fs.readFileSync(require('node:path').resolve(__dirname,'../../backend/supabase-client.js'),'utf8'),context);
   return{backend:context.TSSBackend,getUpdatedPayload:()=>updatedPayload};
 }
 

@@ -14,14 +14,36 @@ Todo AI is TalentStock's authenticated recruitment workspace for job profiles, c
 
 The browser UI is not the authorization boundary. Supabase RLS remains authoritative for every data operation.
 
+## Repository layout
+
+| Path | Purpose |
+| --- | --- |
+| `src/js/` | Editable application modules, including retained legacy modules |
+| `src/css/` | Editable application and legacy styles |
+| `scripts/` | Production bundle build |
+| `tests/unit/` | Screening, extraction, candidate and realtime logic checks |
+| `tests/browser/` | Login, recovery, candidate and interview browser checks |
+| `backend/` | Browser-safe Supabase configuration and client adapter |
+| `supabase/` | Database schema and dated SQL updates |
+| `assets/` | Logos and mascot images |
+| `naukri-bridge/` | Naukri browser extension |
+| `docs/` | Backend setup notes and archived rollback reference |
+| `.github/workflows/` | CI and verification workflows |
+
+Public HTML pages, `auth-bootstrap.js`, `confirm.js`, `evidence-screening.js`,
+`login-shell.css` and generated bundles remain at the root to preserve existing
+page and asset URLs. The build script lists the source files in execution order;
+files in `src/` are not automatically included in production.
+
 ## Production build
 
-The repository keeps the feature sources readable, then emits three production assets:
+The build emits three application bundles:
 
 - `app-core.js` — core application workflow
-- `evidence-screening.js` — independently tested canonical skill matching and explainable scoring engine
 - `app-runtime.js` — post-auth feature modules
 - `app-runtime.css` — application styles
+
+`evidence-screening.js` is the standalone screening engine and is loaded separately.
 
 `workspace-shell.html` is generated separately and is requested only after authentication. Legacy timed login renderers and the localhost n8n bridge are not included in the production runtime.
 
@@ -46,8 +68,16 @@ python3 -m http.server 4173 --bind 127.0.0.1
 Run logic and browser checks:
 
 ```bash
-node --test evidence-screening.test.cjs candidate-records.test.cjs realtime-performance.test.cjs
-TSS_BASE_URL=http://127.0.0.1:4173/ node browser-smoke.test.cjs
+node --test tests/unit/evidence-screening.test.cjs tests/unit/candidate-records.test.cjs tests/unit/realtime-performance.test.cjs
+TSS_BASE_URL=http://127.0.0.1:4173/ node tests/browser/browser-smoke.test.cjs
+```
+
+All logic checks, including JD skill extraction, can be run with
+`node --test tests/unit/*.test.cjs`. Browser checks require Playwright and Chromium:
+
+```bash
+npm install --no-save playwright@1.55.0
+npx playwright install chromium
 ```
 
 The browser suite covers forged-session rejection, zero signed-out workspace payload, deferred bundles, mascot containment, no horizontal overflow at 360px/390px/768px, verified-profile boot, single bundle loading and reload stability.
