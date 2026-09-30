@@ -24,17 +24,18 @@ jobs:
           npx playwright install --with-deps chromium
       - name: Verify source and logic
         run: |
-          node --check auth-bootstrap.js
-          node --check app-core.js
-          node --check app-runtime.js
-          node --test evidence-screening.test.cjs candidate-records.test.cjs realtime-performance.test.cjs
+          node scripts/build-production.mjs
+          node --check public/auth-bootstrap.js
+          node --check public/app-core.js
+          node --check public/app-runtime.js
+          node --test tests/unit/evidence-screening.test.cjs tests/unit/candidate-records.test.cjs tests/unit/realtime-performance.test.cjs tests/unit/resume-save.test.cjs
       - name: Verify signed-out and authenticated boot
         run: |
-          python3 -m http.server 4173 --bind 127.0.0.1 >/tmp/todo-ai-http.log 2>&1 &
+          python3 -m http.server 4173 --bind 127.0.0.1 --directory public >/tmp/todo-ai-http.log 2>&1 &
           server_pid=$!
           trap 'kill "$server_pid"' EXIT
           for attempt in 1 2 3 4 5; do
             curl --fail --silent http://127.0.0.1:4173/ >/dev/null && break
             sleep 1
           done
-          TSS_BASE_URL=http://127.0.0.1:4173/ node browser-smoke.test.cjs
+          TSS_BASE_URL=http://127.0.0.1:4173/ node tests/browser/browser-smoke.test.cjs

@@ -1,5 +1,9 @@
 # Talent Buddy Backend Setup
 
+> Historical setup reference. For the current authenticated production workflow,
+> use the [repository README](../README.md). Relative paths below start at the
+> repository root.
+
 The repository now contains a Supabase-ready backend structure. The current Vercel app keeps working with localStorage until Supabase is configured, so the manager demo is not blocked.
 
 ## Backend scope
@@ -20,8 +24,8 @@ The repository now contains a Supabase-ready backend structure. The current Verc
 1. Create a Supabase project.
 2. Open SQL Editor and run `supabase/schema.sql`.
 3. Create a private Storage bucket named `candidate-resumes`.
-4. Copy `backend/config.example.js` to `backend/config.js` and fill only the project URL and browser-safe anon/publishable key.
-5. Add the Supabase JS browser library and `backend/config.js` / `backend/supabase-client.js` to the site before `app.js`.
+4. Copy `src/backend/config.example.js` to `src/backend/config.js` and fill only the project URL and browser-safe anon/publishable key.
+5. Run `node scripts/build-production.mjs`. The build publishes the browser configuration and adapter at `/backend/config.js` and `/backend/supabase-client.js` before the application loads.
 6. Create users in Supabase Auth. New users receive recruiter role by default. Change the manager/admin user's row in `profiles.role` to `admin`.
 7. Test login, requirement read/write, candidate upload, screening save, candidate history and resume access before moving away from localStorage.
 

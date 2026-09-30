@@ -1,0 +1,6 @@
+# Reproducible deployment output and local test dependencies
+/public/
+/node_modules/
+/package-lock.json
+/test-results/
+/playwright-report/

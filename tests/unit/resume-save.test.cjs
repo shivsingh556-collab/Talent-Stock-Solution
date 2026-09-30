@@ -11,7 +11,7 @@ function setup({pasted=false}={}){
   const client={from(table){let payload;let filters={};const q={select(){return q},eq(k,v){filters[k]=v;return q},order(){return q},limit(){return q},update(v){payload=v;return q},async maybeSingle(){return {data:table==='resume_versions'?state.resumes.find(r=>(!filters.candidate_id||r.candidate_id===filters.candidate_id)&&r.file_hash===filters.file_hash)||null:null,error:null}},then(resolve){return Promise.resolve({data:payload,error:null}).then(resolve)}};return q}};
   const backend={enabled:true,client,currentUser:async()=>({id:'recruiter'}),createOrUpdateCandidate:async()=>({candidate:{id:'candidate',candidate_name:'Test Person'}}),saveScreening:async()=>{state.screens++;return{id:'screening'}},uploadResume:async(id,file,hash,text)=>{state.uploads++;state.lastFile=file;if(state.fail)throw Error('upload interrupted');const r={id:'resume',candidate_id:id,file_hash:hash,storage_path:'private/path',original_filename:file.name,mime_type:file.type,extracted_text:text};state.resumes.push(r);return r}};
   const ctx={window:{TSSBackend:backend},db:{candidates:[candidate],requirements:[{id:'req',serverId:'requirement'}],screenings:[screening]},document:{readyState:'loading',addEventListener(){},getElementById:id=>elements[id]||null},localStorage:{setItem(){}},crypto:webcrypto,File,setTimeout,clearTimeout,console:{info(){},warn(){},error(){}},toast(){},renderCandidates(){}};
-  vm.createContext(ctx);vm.runInContext(fs.readFileSync('production.js','utf8'),ctx);
+  vm.createContext(ctx);vm.runInContext(fs.readFileSync(require('node:path').resolve(__dirname,'../../src/js/production.js'),'utf8'),ctx);
   return {api:ctx.window.TSSProduction,state,candidate,screening,elements};
 }
 (async()=>{

@@ -8,11 +8,20 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
       - name: Site inventory
         run: |
-          test -f index.html
-          test -f app.js
-          test -f styles.css
+          test -f src/pages/index.html
+          test -f src/js/app.js
+          test -f src/css/styles.css
           echo "Talent-Stock-Solution tree is intact"
       - name: HTML present
-        run: grep -q "<!DOCTYPE html>" index.html || grep -qi "<html" index.html
+        run: grep -q "<!DOCTYPE html>" src/pages/index.html || grep -qi "<html" src/pages/index.html
+      - name: Build organized sources
+        run: |
+          node scripts/build-production.mjs
+          node --check public/auth-bootstrap.js
+          node --check public/app-core.js
+          node --check public/app-runtime.js
