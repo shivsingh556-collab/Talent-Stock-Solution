@@ -4,7 +4,7 @@
   'use strict';
 
   const DOMAIN='talent-stock.com';
-  const BUILD='20260928-screening-freeze-1';
+  const BUILD='20260930-resume-save-1';
   const gate=document.getElementById('loginGate');
   const mount=document.getElementById('workspaceMount');
   const form=document.getElementById('loginForm');

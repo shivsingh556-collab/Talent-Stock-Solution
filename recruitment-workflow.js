@@ -179,11 +179,11 @@
     try{
       const user=await b.currentUser();if(!user)throw new Error('Please sign in again');
       const c=b.client;
-      const cand=await c.from('candidates').select('id,name,email').ilike('email',email).limit(1).maybeSingle();if(cand.error)throw cand.error;if(!cand.data?.id)throw new Error('Screen and save this candidate first');
+      const cand=await c.from('candidates').select('id,candidate_name,email').ilike('email',email).limit(1).maybeSingle();if(cand.error)throw cand.error;if(!cand.data?.id)throw new Error('Screen and save this candidate first');
       const reqId=r.serverId||r.id;
       const sc=await c.from('screenings').select('id').eq('candidate_id',cand.data.id).eq('requirement_id',reqId).order('screened_at',{ascending:false}).limit(1).maybeSingle();if(sc.error)throw sc.error;if(!sc.data?.id)throw new Error('No screening found for this candidate and requirement');
       const up=await c.from('screenings').update({submitted_at:new Date().toISOString(),submitted_by:user.id}).eq('id',sc.data.id);if(up.error)throw up.error;
-      toastSafe(`${cand.data.name||'Candidate'} submitted for ${r.title}`);
+      toastSafe(`${cand.data.candidate_name||'Candidate'} submitted for ${r.title}`);
     }catch(e){console.error(e);toastSafe('Submit failed: '+(e?.message||e));}
     finally{if(btn){btn.disabled=false;btn.textContent='Submit Candidate'}}
   }
