@@ -51,7 +51,7 @@
       const exactPosition=item.position||req?.title||'',exactClient=item.client||req?.client||'';
       if(!exactPosition)throw new Error('Interview position is required.');
 
-      const payload={id:item.clientRequestId,candidate_id:candId,requirement_id:reqId,scheduled_at:scheduled,status:'Scheduled',interview_type:item.mode||'Client Interview',interviewer:item.interviewer||null,location_or_link:item.locationOrLink||item.link||item.location||null,notes:item.notes||null,created_by:user.id,candidate_name_snapshot:item.candidate||cand?.name||'Candidate',candidate_email_snapshot:item.email||cand?.email||null,job_title_snapshot:exactPosition,client_name_snapshot:exactClient,timezone:'Asia/Kolkata',candidate_response:'Pending',reminder_status:'Pending'};
+      const payload={id:item.clientRequestId,candidate_id:candId,requirement_id:reqId,scheduled_at:scheduled,status:'Scheduled',interview_type:item.mode||'Client Interview',interviewer:item.interviewer||null,location_or_link:item.locationOrLink||item.link||item.location||null,notes:item.notes||null,created_by:user.id,candidate_name_snapshot:cand?.name||item.candidate||'Candidate',candidate_email_snapshot:item.email||cand?.email||null,job_title_snapshot:exactPosition,client_name_snapshot:exactClient,timezone:'Asia/Kolkata',candidate_response:'Pending',reminder_status:'Pending'};
       let {data,error}=await b.client.from('interviews').insert(payload).select().single();
       if(error?.code==='23505'){
         const existing=await b.client.from('interviews').select('*').eq('id',item.clientRequestId).maybeSingle();

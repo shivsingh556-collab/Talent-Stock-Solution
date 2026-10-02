@@ -12,7 +12,18 @@
 
   const esc=v=>String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
   function toastSafe(msg){try{toast(msg)}catch{console.log(msg)}}
-  function visibleItems(){return (DB()?.interviews||[]).filter(i=>!i.archivedAt)}
+  function visibleItems(){
+    const store=DB(),names=new Map();
+    for(const candidate of store?.candidates||[]){
+      if(!candidate.name)continue;
+      for(const id of [candidate.id,candidate.serverId])if(id)names.set(String(id),candidate.name);
+    }
+    return (store?.interviews||[]).filter(i=>!i.archivedAt).map(item=>{
+      const name=item.candidateId&&names.get(String(item.candidateId));
+      if(name)item.candidate=name;
+      return item;
+    });
+  }
   function localItem(id){return (DB()?.interviews||[]).find(i=>String(i.serverId||i.id)===String(id))}
   function saveLocal(){try{localStorage.setItem('tss_talent_buddy_v1',JSON.stringify(DB()))}catch{}}
   function toIso(date,time){const m=String(time||'11:00 AM').trim().match(/^(\d{1,2}):(\d{2})\s*(AM|PM)?$/i);if(!date||!m)return null;let h=Number(m[1]),mm=Number(m[2]);const ap=(m[3]||'').toUpperCase();if(ap==='PM'&&h<12)h+=12;if(ap==='AM'&&h===12)h=0;const iso=new Date(`${date}T${String(h).padStart(2,'0')}:${String(mm).padStart(2,'0')}:00+05:30`);return isNaN(iso)?null:iso.toISOString()}
