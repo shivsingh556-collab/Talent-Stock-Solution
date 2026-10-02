@@ -69,6 +69,8 @@ const signedInBackend=`
   check(resetCall?.options?.redirectTo===new URL(baseUrl).origin+'/', 'reset request returns to the Todo login page');
 
   await recoveryPage.goto(`${baseUrl}#type=recovery`,{waitUntil:'networkidle',timeout:30000});
+  // An emailed recovery link opens a fresh document, unlike hash-only navigation.
+  await recoveryPage.reload({waitUntil:'networkidle',timeout:30000});
   check(await recoveryPage.locator('#newPasswordForm').isVisible(),'recovery link opens the new-password form');
   await recoveryPage.fill('#newPassword','password-one');
   await recoveryPage.fill('#confirmNewPassword','password-two');
