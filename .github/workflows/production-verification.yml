@@ -38,3 +38,23 @@ jobs:
             sleep 1
           done
           TSS_BASE_URL=http://127.0.0.1:4173/ node browser-smoke.test.cjs
+
+  call-tracker:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install browser test runtime
+        run: |
+          npm install --no-save playwright@1.55.0
+          npx playwright install --with-deps chromium
+      - name: Verify call tracker save workflow
+        run: |
+          node --check recruitment-trackers.js
+          node --check app-core.js
+          node --check app-runtime.js
+          node resume-save.test.cjs
+          node calling-tracker-save.browser.test.cjs

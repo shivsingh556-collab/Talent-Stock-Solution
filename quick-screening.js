@@ -105,28 +105,30 @@
         <button id="quickOpenDetailed">Open Detailed Result</button>
       </div>`;
     const saveButton=byId('quickSaveCandidate');
-    if(s.serverId&&!s.resumeSavePending){saveButton.disabled=true;saveButton.textContent='✓ Candidate Saved'}
+    if(s.serverId&&!s.resumeSavePending){saveButton.disabled=false;saveButton.textContent='Saved · Update Call Details'}
     saveButton?.addEventListener('click',()=>saveCandidate(s));
     node.querySelectorAll('[data-qdecision]').forEach(btn=>btn.addEventListener('click',()=>applyDecision(btn.dataset.qdecision,s)));
     byId('quickScheduleInterview')?.addEventListener('click',async()=>{if(await ensureSaved(s))byId('scheduleInterview')?.click()});
     byId('quickOpenDetailed')?.addEventListener('click',()=>document.querySelector('.nav-item[data-view="screening"]')?.click());
   }
-  async function saveCandidate(s){
+  async function saveCandidate(s,withCallDetails=true){
     const button=byId('quickSaveCandidate');
-    if(s?.serverId&&!s.resumeSavePending){if(button){button.disabled=true;button.textContent='✓ Candidate Saved'}return true}
-    if(!window.TSSProduction?.persistLatestScreening){setStatus('Secure save is unavailable. Refresh once and retry.','bad');return false}
+    const production=window.TSSProduction;
+    if(!production?.persistLatestScreening){setStatus('Secure save is unavailable. Refresh once and retry.','bad');return false}
     if(button){button.disabled=true;button.textContent='Saving…'}
-    setStatus('Saving candidate, CV and screening to Todo…','busy');
-    const saved=await window.TSSProduction.persistLatestScreening();
-    if(saved){if(button){button.disabled=true;button.textContent='✓ Candidate Saved'}setStatus('Candidate saved — now available in Calling Tracker','ok');return true}
-    if(button){button.disabled=false;button.textContent='Retry Save Candidate'}
-    setStatus('Save did not finish. Retry here; the candidate details will be reused safely.','bad');
-    return false;
+    setStatus('Saving candidate and updating calling details…','busy');
+    try{
+      const saved=withCallDetails?await production.saveCandidateWithCallDetails(s):await production.persistLatestScreening();
+      if(saved){setStatus(withCallDetails?'Candidate saved — calling details updated':'Candidate saved securely','ok');return true}
+      setStatus(s?.serverId&&!s.resumeSavePending?'Candidate saved. Calling details can be updated when ready.':'Save did not finish. Retry here; candidate details will be reused safely.',s?.serverId?'':'bad');
+      return false;
+    }catch(error){setStatus(error.message||'Save failed. Please retry.','bad');return false}
+    finally{if(button){button.disabled=false;button.textContent=s?.serverId&&!s.resumeSavePending?'Saved · Update Call Details':'Retry Save Candidate'}}
   }
   async function ensureSaved(s){
     if(s?.serverId&&!s.resumeSavePending)return true;
     setStatus('Save the candidate before adding a decision or interview.','busy');
-    return saveCandidate(s);
+    return saveCandidate(s,false);
   }
   async function applyDecision(decision,s){
     if(!await ensureSaved(s))return;

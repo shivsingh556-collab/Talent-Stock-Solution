@@ -171,18 +171,29 @@
     if(!r){toastSafe('Select a requirement first');return;}ensureMatchDialog();activeMatchReq=r;activeMatches=computeMatches(r);$('dbMatchTitle').textContent=`${r.requirementId||r.id} · ${r.title} — Existing Candidate Match`;$('dbMatchSearch').value='';renderMatchResults();$('dbMatchDialog').showModal();
   }
 
+  function submitRequest(operation,label){
+    let timer;
+    return Promise.race([Promise.resolve(operation),new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error(`${label} timed out. Please retry.`)),12000)})]).finally(()=>clearTimeout(timer));
+  }
+
   async function submitCandidate(){
     const r=selectedReq();const email=norm($('candidateEmail')?.value).toLowerCase();
     if(!r){toastSafe('Select a requirement first');return;}if(!email){toastSafe('Candidate email is required before submitting');return;}
     const b=backend();if(!b?.enabled){toastSafe('Backend is not ready');return;}
-    const btn=$('submitCandidateBtn');if(btn){btn.disabled=true;btn.textContent='Submitting…'}
+    const btn=$('submitCandidateBtn');if(btn?.disabled)return;if(btn){btn.disabled=true;btn.textContent='Submitting…'}
     try{
-      const user=await b.currentUser();if(!user)throw new Error('Please sign in again');
+      const user=await submitRequest(b.currentUser(),'Session check');if(!user)throw new Error('Please sign in again');
       const c=b.client;
-      const cand=await c.from('candidates').select('id,candidate_name,email').ilike('email',email).limit(1).maybeSingle();if(cand.error)throw cand.error;if(!cand.data?.id)throw new Error('Screen and save this candidate first');
+      const latest=(store()?.screenings||[]).at(-1),localCandidate=(store()?.candidates||[]).find(x=>x.id===latest?.candidateId);
+      if(latest&&!latest.serverId&&norm(localCandidate?.email).toLowerCase()===email&&[r.id,r.serverId].includes(latest.requirementId)){
+        if(!await window.TSSProduction?.persistLatestScreening?.())throw new Error('Save the candidate before submitting');
+      }
+      const cand=await submitRequest(c.from('candidates').select('id,candidate_name,email').ilike('email',email).limit(1).maybeSingle(),'Candidate lookup');if(cand.error)throw cand.error;if(!cand.data?.id)throw new Error('Screen and save this candidate first');
       const reqId=r.serverId||r.id;
-      const sc=await c.from('screenings').select('id').eq('candidate_id',cand.data.id).eq('requirement_id',reqId).order('screened_at',{ascending:false}).limit(1).maybeSingle();if(sc.error)throw sc.error;if(!sc.data?.id)throw new Error('No screening found for this candidate and requirement');
-      const up=await c.from('screenings').update({submitted_at:new Date().toISOString(),submitted_by:user.id}).eq('id',sc.data.id);if(up.error)throw up.error;
+      const sc=await submitRequest(c.from('screenings').select('id').eq('candidate_id',cand.data.id).eq('requirement_id',reqId).order('screened_at',{ascending:false}).limit(1).maybeSingle(),'Screening lookup');if(sc.error)throw sc.error;if(!sc.data?.id)throw new Error('No screening found for this candidate and requirement');
+      if(!window.TSSCallTracker?.promptForCandidate)throw new Error('Calling Tracker is still loading. Please retry shortly.');
+      if(!await window.TSSCallTracker.promptForCandidate({candidateId:cand.data.id,requirementId:reqId,screeningId:sc.data.id,name:cand.data.candidate_name}))return;
+      const up=await submitRequest(c.from('screenings').update({submitted_at:new Date().toISOString(),submitted_by:user.id}).eq('id',sc.data.id),'Candidate submission');if(up.error)throw up.error;
       toastSafe(`${cand.data.candidate_name||'Candidate'} submitted for ${r.title}`);
     }catch(e){console.error(e);toastSafe('Submit failed: '+(e?.message||e));}
     finally{if(btn){btn.disabled=false;btn.textContent='Submit Candidate'}}
