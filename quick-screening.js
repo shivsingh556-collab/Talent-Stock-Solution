@@ -153,29 +153,21 @@
     syncRequirementToCore();
     const previous=byId('resumeText')?.value||'';
     if(pasted){byId('resumeText').value=pasted}
-    let fallbackName='';
     if(quickFile){
-      fallbackName=deriveNameFromFilename(quickFile.name);
       await feedFileToCore(quickFile);
       setStatus('Extracting CV details…','busy');
       await waitForExtraction(previous);
-      // candidate-enrichment intentionally clears stale identity when a new file is handed off.
-      // Apply the filename fallback only AFTER parsing has had a chance to populate the real name.
-      if(byId('candidateName')&&!byId('candidateName').value.trim()&&fallbackName)byId('candidateName').value=fallbackName;
-    }
-    if(pasted && byId('candidateName')&&!byId('candidateName').value.trim()){
-      const first=pasted.split(/\r?\n/).map(x=>x.trim()).find(Boolean)||'';
-      if(first.length<70&&!/@/.test(first))byId('candidateName').value=first;
     }
     const text=byId('resumeText')?.value?.trim()||'';
     if(!text){button.disabled=false;button.textContent='Analyse Candidate';setStatus('Resume text could not be extracted. Paste the resume text once and try again.','bad');return}
-    if(byId('candidateName')&&!byId('candidateName').value.trim()){
-      const first=text.split(/\r?\n/).map(x=>x.trim()).find(Boolean)||'';
-      if(first&&first.length<70&&!/@/.test(first))byId('candidateName').value=first;
-    }
-    if(byId('candidateName')&&!byId('candidateName').value.trim()){
+    const parser=window.TSSDocumentParser,parsed=parser?.extractResume?.(text);
+    if(pasted&&pasted!==previous){['candidateName','candidateEmail','candidatePhone','candidateExp','candidateLocation','candidateDesignation','candidateNotice','candidateCTC','candidateExpectedCTC'].forEach(id=>{if(byId(id))byId(id).value=''})}
+    if(parsed)parser.applyResume(parsed);
+    const issue=parser?.candidateNameIssue?.(byId('candidateName')?.value||'')||(!byId('candidateName')?.value?.trim()?'Enter the candidate’s real name.':'');
+    if(issue){
       button.disabled=false;button.textContent='Analyse Candidate';
-      setStatus('Candidate name could not be identified. Enter the name once, then analyse again.','bad');
+      setStatus(issue+(parsed?.nameSuggestion?' Possible name from email: '+parsed.nameSuggestion+'. Verify it in Candidate Name.':''),'bad');
+      document.querySelector('.nav-item[data-view="screening"]')?.click();byId('candidateName')?.focus();
       return;
     }
     const before=(()=>{try{return (db.screenings||[]).length}catch{return 0}})();

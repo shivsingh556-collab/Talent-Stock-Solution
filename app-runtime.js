@@ -71,7 +71,41 @@ function cueSkills(t){
   return {required:uniq(required),preferred:uniq(preferred)};
 }
 function skillList(t){return uniq([...catalogSkills(t),...explicitSkillSection(t)]).slice(0,60)}
-function likelyName(ls){const bad=/resume|profile|summary|objective|experience|engineer|developer|manager|analyst|email|phone|mobile|contact|linkedin|github/i;for(const l of ls.slice(0,12)){const x=l.replace(/[|•·]/g,' ').trim();if(x.length>=3&&x.length<=55&&!bad.test(x)&&!/@/.test(x)&&!/\d{5,}/.test(x)&&/^[A-Za-z][A-Za-z .'-]+$/.test(x)&&x.split(/\s+/).length<=5)return x.replace(/\b\w/g,c=>c.toUpperCase())}return''}
+function nameKey(value){return String(value||'').normalize('NFKD').replace(/\p{M}/gu,'').toLowerCase().replace(/[^\p{L}]/gu,'')}
+function candidateNameIssue(value){
+  const n=line(value);
+  if(!n||/^(candidate|unknown|n\/?a|not provided|resume|cv|curriculum vitae)$/i.test(n))return 'Enter the candidate’s real name.';
+  if(/\b(executive|engineer|developer|manager|analyst|consultant|administrator|architect|specialist|recruiter|associate|intern|trainee|officer|technician|accountant|supervisor|representative|resume|summary|objective|experience|education|skills|email|phone|mobile|contact|linkedin|github|university|school|college|limited|ltd|pvt|solutions|services)\b/i.test(n)||/^(sales|marketing|business development|human resources|personal details|personal information|professional profile|candidate name|full name|cover letter|date of birth|career summary|work history|curriculum vitae)$/i.test(n))return 'This looks like a job title or resume heading. Enter the candidate’s real name.';
+  if(n.length>100||!/[\p{L}]/u.test(n)||!/^\p{L}[\p{L}\p{M} .’'\-]*$/u.test(n))return 'Keep only the candidate’s name; remove phone numbers, email addresses and other details.';
+  return '';
+}
+function nameLine(value){
+  let n=line(value).replace(/^(?:(?:candidate|full|your)\s+)?name\s*[:\-]\s*/i,'').replace(/^(?:mr|mrs|ms|miss|dr)\.?\s+/i,'');
+  n=n.replace(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/ig,'').replace(/(?:\+?\d[\d ()\-]{6,}\d)/g,'').replace(/\b(?:phone|mobile|email|contact)\s*[:\-].*$/i,'').split(/[|•·]/)[0].replace(/[,:;|\-]+$/,'').trim();
+  if(candidateNameIssue(n)||n.split(/\s+/).length>7||/\b(?:new delhi|mumbai|bangalore|bengaluru|hyderabad|chennai|kolkata|noida|gurugram|pune)\b/i.test(n))return '';
+  return n===n.toUpperCase()||n===n.toLowerCase()?n.toLocaleLowerCase().replace(/(^|[\s\-'])\p{L}/gu,c=>c.toLocaleUpperCase()):n;
+}
+function emailNameSuggestion(email){
+  const part=String(email||'').split('@')[0].split('+')[0].replace(/\d+$/,'');
+  if(/^(?:info|sales|support|contact|admin|hr|recruitment|careers|jobs|noreply)(?:[._-]|$)/i.test(part))return '';
+  const words=part.split(/[._-]+/).filter(Boolean);
+  if(words.length<2||words.length>5||words.some(w=>!/^\p{L}{2,}$/u.test(w)))return '';
+  const name=words.map(w=>w[0].toLocaleUpperCase()+w.slice(1).toLocaleLowerCase()).join(' ');
+  return candidateNameIssue(name)?'':name;
+}
+function nameEvidence(ls,email){
+  const labelled=ls.slice(0,60).filter(l=>/^(?:(?:candidate|full|your)\s+)?name\s*[:\-]/i.test(l)).map(nameLine).find(Boolean);
+  if(labelled)return {name:labelled,source:'resume-label',confidence:0.98};
+  const emailKey=nameKey(String(email||'').split('@')[0]);
+  const header=ls.slice(0,16).map(nameLine).filter(Boolean);
+  const supported=header.find(n=>nameKey(n).length>=5&&emailKey.includes(nameKey(n)));
+  if(supported)return {name:supported,source:'resume-and-email',confidence:0.98};
+  const firstHeader=ls.slice(0,5).map(nameLine).find(n=>n&&n.split(/\s+/).length>=2);
+  if(firstHeader)return {name:firstHeader,source:'resume-header',confidence:0.85};
+  return {name:'',source:'needs-review',confidence:0,suggestion:emailNameSuggestion(email)};
+}
+function likelyName(ls,email){return nameEvidence(ls,email).name}
+
 function location(t,ls){const d=first(t,[/(?:current\s+location|location|based\s+in|address|city)\s*[:\-]\s*(?:-\s*)?([^\n|]{2,70})/i]);if(d)return d;const cs=['Mumbai','Navi Mumbai','Pune','Delhi','New Delhi','Gurgaon','Gurugram','Noida','Bangalore','Bengaluru','Hyderabad','Chennai','Kolkata','Ahmedabad','Dubai','Abu Dhabi','Thane','Jaipur','Indore','Kochi','Surat'];for(const l of ls.slice(0,18)){const c=cs.find(c=>new RegExp('\\b'+c.replace(' ','\\s+')+'\\b','i').test(l));if(c)return c}return''}
 const mon={jan:0,feb:1,mar:2,apr:3,may:4,jun:5,jul:6,aug:7,sep:8,oct:9,nov:10,dec:11};
 function my(s){s=String(s).toLowerCase();if(/present|current|till date|till now/.test(s)){const d=new Date;return new Date(d.getFullYear(),d.getMonth(),1)}let m=s.match(/(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s*[,/'-]?\s*((?:19|20)\d{2})/i);if(m)return new Date(+m[2],mon[m[1].slice(0,3)],1);m=s.match(/\b(0?[1-9]|1[0-2])[\/-]((?:19|20)\d{2})\b/);if(m)return new Date(+m[2],+m[1]-1,1);m=s.match(/\b((?:19|20)\d{2})\b/);return m?new Date(+m[1],0,1):null}
@@ -80,18 +114,18 @@ function currentEmployment(t){const re=/(?:Present|Current|Till\s+Date|Till\s+No
 function designation(t,ls){const cur=currentEmployment(t);if(cur.designation)return line(cur.designation);const d=first(t,[/(?:current\s+designation|current\s+role|job\s+title)\s*[:\-]\s*([^\n|]{2,90})/i]);if(d)return d;for(const l of ls.slice(0,35)){const m=l.match(/\b(?:Senior|Sr\.?|Lead|Principal|Junior|Jr\.?)?\s*(?:QA|Software|Data|Backend|Frontend|Full Stack|Automation|Sales|Business|Database|BI|AI|Account|Recruitment|Agency)?\s*(?:Engineer|Developer|Manager|Analyst|Consultant|Executive|Lead|Administrator|Architect|Specialist|Recruiter)\b/i);if(m&&l.length<110)return line(m[0])}return''}
 function company(t,ls){const cur=currentEmployment(t);if(cur.company)return line(cur.company);const d=first(t,[/(?:current\s+company|current\s+employer)\s*[:\-]\s*([^\n|]{2,90})/i]);if(d)return d;const matches=[...t.matchAll(/(?:company\s+name|employer|organization|organisation)\s*[:\-]\s*([^\n|]{2,100})/ig)];if(matches.length)return line(matches.at(-1)[1]);const i=ls.findIndex(x=>/^(experience|work experience|employment|professional experience)/i.test(x));if(i>=0)for(const l of ls.slice(i+1,i+12))if(/\b(pvt\.?\s*ltd\.?|private limited|ltd\.?|limited|llp|inc\.?|technologies|solutions|services|consulting|bank|insurance|finance)\b/i.test(l)&&l.length<100)return l;return''}
 function education(t){const ls=lines(t);const d=first(t,[/(?:highest\s+qualification|qualification|degree)\s*[:\-]\s*([^\n]{2,140})/i]);if(d)return d;const i=ls.findIndex(l=>/\b(B\.?Tech|M\.?Tech|B\.?E\.?|MBA|PGDM|BCA|MCA|Bachelor|Master|PhD|Diploma)\b/i.test(l)&&l.length<150);if(i<0)return'';let v=ls[i];if(/\bin\s*$/i.test(v)&&/^major\s*[:\-]/i.test(ls[i+1]||'')){const major=(ls[i+1]||'').replace(/^major\s*[:\-]\s*(?:-\s*)?/i,'').replace(/\s+\d+(?:\.\d+)?%.*$/,'').trim();if(major)v=v+' '+major}return v}
-function extractResume(t){t=clean(t);const ls=lines(t),e=expInfo(t),email=emailAddress(t),pr=first(t,[/(?:\+?91[\s-]?)?([6-9]\d{9})\b/,/(?:phone|mobile|contact)\s*[:\-]?\s*([+\d][\d\s()-]{8,18})/i]),phone=pr.replace(/\D/g,'').slice(-10),name=likelyName(ls),loc=location(t,ls),des=designation(t,ls),co=company(t,ls),skills=skillList(t),edu=education(t),warnings=[];if(e.discrepancy)warnings.push(`Declared experience ${e.declared}y vs calculated ${e.calculated}y`);return {name,email,phone,location:loc,preferredLocation:first(t,[/(?:preferred\s+location|location\s+preference)\s*[:\-]?\s*([^\n|]+)/i]),totalExperience:e.total,relevantExperience:first(t,[/(?:relevant\s+experience|relevant\s+exp)\s*[:\-]?\s*(\d+(?:\.\d+)?)/i]),designation:des,currentCompany:co,skills,education:edu,noticePeriod:first(t,[/(?:notice\s+period|notice)\s*[:\-]?\s*([^\n|]+)/i]),currentCTC:first(t,[/(?:current\s+ctc|present\s+ctc|current\s+salary)\s*[:\-]?\s*([^\n|]+)/i]),expectedCTC:first(t,[/(?:expected\s+ctc|expected\s+salary)\s*[:\-]?\s*([^\n|]+)/i]),experienceValidation:e,warnings,overallConfidence:Math.round(([name,email,phone,loc,e.total,des,co,edu].filter(Boolean).length/8)*100)}}
+function extractResume(t){t=clean(t);const ls=lines(t),e=expInfo(t),email=emailAddress(t),pr=first(t,[/(?:\+?91[\s-]?)?([6-9]\d{9})\b/,/(?:phone|mobile|contact)\s*[:\-]?\s*([+\d][\d\s()-]{8,18})/i]),phone=pr.replace(/\D/g,'').slice(-10),identity=nameEvidence(ls,email),name=identity.name,loc=location(t,ls),des=designation(t,ls),co=company(t,ls),skills=skillList(t),edu=education(t),warnings=[];if(!name)warnings.push('Candidate name needs review'+(identity.suggestion?': possible name from email '+identity.suggestion:''));if(e.discrepancy)warnings.push(`Declared experience ${e.declared}y vs calculated ${e.calculated}y`);return {name,nameSource:identity.source,nameConfidence:identity.confidence,nameSuggestion:identity.suggestion||'',email,phone,location:loc,preferredLocation:first(t,[/(?:preferred\s+location|location\s+preference)\s*[:\-]?\s*([^\n|]+)/i]),totalExperience:e.total,relevantExperience:first(t,[/(?:relevant\s+experience|relevant\s+exp)\s*[:\-]?\s*(\d+(?:\.\d+)?)/i]),designation:des,currentCompany:co,skills,education:edu,noticePeriod:first(t,[/(?:notice\s+period|notice)\s*[:\-]?\s*([^\n|]+)/i]),currentCTC:first(t,[/(?:current\s+ctc|present\s+ctc|current\s+salary)\s*[:\-]?\s*([^\n|]+)/i]),expectedCTC:first(t,[/(?:expected\s+ctc|expected\s+salary)\s*[:\-]?\s*([^\n|]+)/i]),experienceValidation:e,warnings,overallConfidence:Math.round(([name,email,phone,loc,e.total,des,co,edu].filter(Boolean).length/8)*100)}}
 function section(t,n){const stop='mandatory skills|must have|required skills|preferred skills|good to have|experience|qualification|education|location|responsibilities|job responsibilities|requirements|job description|salary|ctc|industry|employment type';const r=new RegExp('(?:^|\\n)\\s*(?:'+n.join('|')+')\\s*[:\\-]?\\s*\\n?([\\s\\S]{0,3000}?)(?=\\n\\s*(?:'+stop+')\\s*[:\\-]?|$)','i');return clean((t.match(r)||[])[1]||'')}
 function suggest(o={}){const s=(o.title+' '+o.industry+' '+o.responsibilities).toLowerCase(),a=[];const add=x=>a.push(...x);if(/data engineer/.test(s))add(['Python','SQL','ETL','Data Engineering','AWS','Azure']);if(/java/.test(s))add(['Java','Spring Boot','REST API','SQL']);if(/\.net|dotnet|asp/.test(s))add(['C#','ASP.NET Core','SQL Server']);if(/frontend|react|angular/.test(s))add(['JavaScript','TypeScript','React','Angular','REST API']);if(/qa|quality|test/.test(s))add(['Manual Testing','Automation Testing','API Testing','Regression Testing','Selenium','Postman']);if(/sales|business development|bdm|bde/.test(s))add(['B2B Sales','CRM','Lead Generation','Stakeholder Management','Key Account Management']);if(/recruit|talent acquisition|staffing|hr/.test(s))add(['Recruitment','Staffing','Executive Search','Stakeholder Management']);if(/marketing/.test(s))add(['Digital Marketing','SEO','SEM','Google Ads','Meta Ads']);if(/manager|lead|head/.test(s))add(['Team Leadership','Stakeholder Management']);return uniq(a).slice(0,12)}
 function extractJD(t,c={}){t=clean(t);const ls=lines(t),rm=section(t,['mandatory skills','must have skills','must have','required skills','key skills','technical skills']),rp=section(t,['preferred skills','good to have','nice to have']),cued=cueSkills(t),preferred=uniq([...splitSkillBlock(rp),...cued.preferred]),preferredKey=new Set(preferred.map(x=>x.toLowerCase())),detected=skillList(t).filter(x=>!preferredKey.has(x.toLowerCase())),skills=uniq([...splitSkillBlock(rm),...cued.required,...detected]),title=first(t,[/(?:job\s+title|position|role|designation)\s*[:\-]\s*([^\n|]{2,110})/i])||c.title||ls.find(l=>/\b(manager|engineer|developer|analyst|consultant|executive|lead|architect|recruiter|sales|specialist)\b/i.test(l)&&l.length<100)||'',loc=first(t,[/(?:work\s+location|job\s+location|location|based\s+at)\s*[:\-]\s*([^\n|]{2,90})/i])||location(t,ls),exp=first(t,[/(?:experience|required\s+experience|exp)\s*[:\-]?\s*([^\n|]{1,80})/i,/(\d+(?:\.\d+)?\s*(?:-|to)\s*\d+(?:\.\d+)?\s*(?:years?|yrs?))/i,/(\d+(?:\.\d+)?\+\s*(?:years?|yrs?))/i]),qualification=first(t,[/(?:qualification|education|academic\s+qualification)\s*[:\-]\s*([^\n]{2,180})/i]),responsibilities=section(t,['roles and responsibilities','role and responsibilities','job responsibilities','responsibilities','key responsibilities'])||section(t,['job description','about the role']),industry=first(t,[/(?:industry|sector|domain)\s*[:\-]\s*([^\n|]{2,100})/i])||c.industry||'',salary=first(t,[/(?:salary|ctc|compensation|budget)\s*[:\-]\s*([^\n|]{2,120})/i]),ai=skills.length?[]:suggest({title,industry,responsibilities}),warnings=ai.length?['JD has no confirmed skills; AI Suggested Skills require recruiter approval.']:[];return {title,location:loc,experience:exp,qualification,salary,responsibilities,skills:uniq(skills).slice(0,60),preferred:uniq(preferred).slice(0,30),industry,aiSuggestedSkills:ai,aiSuggested:!!ai.length,warnings,overallConfidence:Math.round(([title,loc,exp,qualification,responsibilities].filter(Boolean).length/5)*100)}}
 function set(id,v,over=false){const e=document.getElementById(id);if(e&&v!==''&&v!=null&&(over||!e.value))e.value=Array.isArray(v)?v.join(', '):v}
-function applyResume(d){set('candidateName',d.name);set('candidateEmail',d.email);set('candidatePhone',d.phone);set('candidateExp',d.totalExperience);set('candidateLocation',d.location);set('candidateDesignation',d.designation);set('candidateNotice',d.noticePeriod);set('candidateCTC',d.currentCTC);set('candidateExpectedCTC',d.expectedCTC);window.TSS_PARSED_RESUME=d}
+function applyResume(d){const field=document.getElementById('candidateName');if(field){if(d.name&&(!field.value||candidateNameIssue(field.value)))field.value=d.name;field.placeholder=d.nameSuggestion?'Suggested from email: '+d.nameSuggestion+' — verify':'Candidate’s full name';field.title=d.name?'Detected from '+d.nameSource:(d.nameSuggestion?'Possible name from email: '+d.nameSuggestion+'. Verify before saving.':'Name could not be verified from the resume');}set('candidateName',d.name);set('candidateEmail',d.email);set('candidatePhone',d.phone);set('candidateExp',d.totalExperience);set('candidateLocation',d.location);set('candidateDesignation',d.designation);set('candidateNotice',d.noticePeriod);set('candidateCTC',d.currentCTC);set('candidateExpectedCTC',d.expectedCTC);window.TSS_PARSED_RESUME=d}
 function ctx(){return {title:document.getElementById('reqTitle')?.value||'',industry:document.getElementById('reqIndustry')?.value||'',responsibilities:document.getElementById('reqResponsibilities')?.value||''}}
 function applyJD(d){set('reqTitle',d.title);set('reqLocation',d.location,true);set('reqExperience',d.experience,true);set('reqIndustry',d.industry,true);set('reqQualification',d.qualification,true);if(d.skills.length)set('reqSkills',d.skills,true);if(d.preferred.length)set('reqPreferred',d.preferred,true);if(d.responsibilities)set('reqResponsibilities',d.responsibilities,true);const cloud=document.getElementById('suggestedSkills');if(cloud&&d.aiSuggestedSkills.length){cloud.replaceChildren();d.aiSuggestedSkills.forEach(s=>{const b=document.createElement('button');b.type='button';b.className='skill ai suggest-chip';b.dataset.skill=String(s);b.textContent=String(s)+' · AI Suggested';cloud.appendChild(b)})}window.TSS_PARSED_JD=d}
 async function resumeFile(f){try{toast('Reading & validating resume…');const t=await parse(f);if(!t)throw Error('No readable text found');set('resumeText',t,true);const d=extractResume(t);applyResume(d);toast(`Resume extracted · ${d.overallConfidence}% completeness${d.warnings.length?' · review flag':''}`)}catch(e){console.error(e);toast(e.message||'Resume parsing failed')}}
 async function jdFile(f){try{toast('Reading & validating JD…');const t=await parse(f);if(!t)throw Error('No readable text found');const b=document.getElementById('reqJdText');if(b)b.value=t;const d=extractJD(t,ctx());applyJD(d);toast(d.skills.length?`JD extracted · ${d.skills.length} confirmed skills`:`JD extracted · ${d.aiSuggestedSkills.length} AI-suggested skills for approval`)}catch(e){console.error(e);toast(e.message||'JD parsing failed')}}
-function wire(){const acc='.pdf,.docx,.txt,.csv,.xls,.xlsx,.xlsm,.png,.jpg,.jpeg,.webp,.bmp,.tif,.tiff';['resumeFile','jdQuickFile','jdFile'].forEach(id=>document.getElementById(id)?.setAttribute('accept',acc));document.getElementById('resumeFile')?.addEventListener('change',e=>resumeFile(e.target.files?.[0]));document.getElementById('jdQuickFile')?.addEventListener('change',e=>jdFile(e.target.files?.[0]));document.getElementById('jdFile')?.addEventListener('change',e=>jdFile(e.target.files?.[0]));document.getElementById('resumeText')?.addEventListener('paste',()=>setTimeout(()=>{const t=document.getElementById('resumeText').value;if(t.length>20)applyResume(extractResume(t))},0));document.getElementById('reqJdText')?.addEventListener('paste',()=>setTimeout(()=>{const t=document.getElementById('reqJdText').value;if(t.length>20)applyJD(extractJD(t,ctx()))},0))}
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',wire);else wire();window.TSSDocumentParser={parse,extractResume,extractJD,suggestSkills:suggest,experienceInfo:expInfo,splitSkillBlock,version:'2.1-dynamic-skills'};
+function wire(){document.addEventListener('click',e=>{if(!e.target?.closest?.('#screenBtn'))return;const field=document.getElementById('candidateName');if(!field)return;const parsed=extractResume(document.getElementById('resumeText')?.value||'');if(candidateNameIssue(field.value)&&parsed.name){field.value=parsed.name;toast('Candidate name corrected from resume: '+parsed.name)}const issue=candidateNameIssue(field.value);if(issue){e.preventDefault();e.stopImmediatePropagation();field.focus();toast(issue+(parsed.nameSuggestion?' Possible name from email: '+parsed.nameSuggestion+'. Verify it first.':''));}},true);const acc='.pdf,.docx,.txt,.csv,.xls,.xlsx,.xlsm,.png,.jpg,.jpeg,.webp,.bmp,.tif,.tiff';['resumeFile','jdQuickFile','jdFile'].forEach(id=>document.getElementById(id)?.setAttribute('accept',acc));document.getElementById('resumeFile')?.addEventListener('change',e=>resumeFile(e.target.files?.[0]));document.getElementById('jdQuickFile')?.addEventListener('change',e=>jdFile(e.target.files?.[0]));document.getElementById('jdFile')?.addEventListener('change',e=>jdFile(e.target.files?.[0]));document.getElementById('resumeText')?.addEventListener('paste',()=>setTimeout(()=>{const t=document.getElementById('resumeText').value;if(t.length>20)applyResume(extractResume(t))},0));document.getElementById('reqJdText')?.addEventListener('paste',()=>setTimeout(()=>{const t=document.getElementById('reqJdText').value;if(t.length>20)applyJD(extractJD(t,ctx()))},0))}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',wire);else wire();window.TSSDocumentParser={parse,extractResume,extractJD,applyResume,candidateNameIssue,emailNameSuggestion,nameKey,suggestSkills:suggest,experienceInfo:expInfo,splitSkillBlock,version:'2.2-candidate-identity'};
 })();
 
 /* ===== candidate-enrichment.js ===== */
@@ -175,8 +209,18 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
     return resume;
   }
   function hasCandidateValue(v){return !(v==null||v===''||(Array.isArray(v)&&!v.length))}
-  function mergeCandidateData(base={},parsed={},local={}){const pick=(...v)=>v.find(hasCandidateValue);return{name:pick(parsed.name,local.name,base.candidate_name,'')||'',email:pick(parsed.email,local.email,base.email,'')||'',phone:pick(parsed.phone,local.phone,base.phone,'')||'',location:pick(parsed.location,local.location,base.current_location,'')||'',preferredLocation:pick(parsed.preferredLocation,local.preferredLocation,base.preferred_location,'')||'',totalExperience:pick(parsed.totalExperience,local.totalExperience,base.total_experience,'')??'',relevantExperience:pick(parsed.relevantExperience,local.relevantExperience,base.relevant_experience,'')??'',currentCompany:pick(parsed.currentCompany,local.currentCompany,base.current_company,'')||'',designation:pick(parsed.designation,local.designation,base.current_designation,'')||'',skills:pick(parsed.skills,local.skills,base.skills,[])||[],education:pick(parsed.education,local.education,base.education,'')||'',noticePeriod:pick(parsed.noticePeriod,local.noticePeriod,base.notice_period,'')||'',currentCTC:pick(parsed.currentCTC,local.currentCTC,base.current_ctc,'')||'',expectedCTC:pick(parsed.expectedCTC,local.expectedCTC,base.expected_ctc,'')||'',resumeText:local.resumeText||''}}
-  function assertCandidateQuality(c){const n=String(c.name||'').trim();if(!n||/^(candidate|unknown|n\/?a|not provided)$/i.test(n))throw new Error('Candidate name could not be identified. Review the parsed resume before saving.')}
+  function candidateNameForSave(base,parsed,local){
+    const valid=value=>hasCandidateValue(value)&&!(window.TSSDocumentParser?.candidateNameIssue?.(value));
+    if(valid(local.name)){
+      // A previously corrected profile wins over a repeated automatic extraction.
+      if(valid(base.candidate_name)&&local.name===parsed.name)return base.candidate_name;
+      return local.name;
+    }
+    if(valid(parsed.name))return parsed.name;
+    return base.candidate_name||local.name||'';
+  }
+  function mergeCandidateData(base={},parsed={},local={}){const pick=(...v)=>v.find(hasCandidateValue);return{name:candidateNameForSave(base,parsed,local),email:pick(parsed.email,local.email,base.email,'')||'',phone:pick(parsed.phone,local.phone,base.phone,'')||'',location:pick(parsed.location,local.location,base.current_location,'')||'',preferredLocation:pick(parsed.preferredLocation,local.preferredLocation,base.preferred_location,'')||'',totalExperience:pick(parsed.totalExperience,local.totalExperience,base.total_experience,'')??'',relevantExperience:pick(parsed.relevantExperience,local.relevantExperience,base.relevant_experience,'')??'',currentCompany:pick(parsed.currentCompany,local.currentCompany,base.current_company,'')||'',designation:pick(parsed.designation,local.designation,base.current_designation,'')||'',skills:pick(parsed.skills,local.skills,base.skills,[])||[],education:pick(parsed.education,local.education,base.education,'')||'',noticePeriod:pick(parsed.noticePeriod,local.noticePeriod,base.notice_period,'')||'',currentCTC:pick(parsed.currentCTC,local.currentCTC,base.current_ctc,'')||'',expectedCTC:pick(parsed.expectedCTC,local.expectedCTC,base.expected_ctc,'')||'',resumeText:local.resumeText||''}}
+  function assertCandidateQuality(c){const n=String(c.name||'').trim();const issue=window.TSSDocumentParser?.candidateNameIssue?.(n);if(issue)throw new Error(issue);if(!n||/^(candidate|unknown|n\/?a|not provided)$/i.test(n))throw new Error('Candidate name could not be identified. Review the parsed resume before saving.')}
   function withTimeout(promise,ms,label){let timer;return Promise.race([Promise.resolve(promise),new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error(`${label} timed out. Please retry.`)),ms)})]).finally(()=>clearTimeout(timer))}
   function setScreeningSaveState(state,message=''){
     const btn=$('saveScreenedCandidate'),hint=$('screeningSaveHint');
@@ -424,11 +468,13 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
       const user=await b.currentUser();
       if(!user)throw new Error('Your session has expired. Please sign in again.');
       let cand=(store.candidates||[]).find(c=>String(c.serverId||c.id)===String(item.candidateId))||(store.candidates||[]).find(c=>String(c.name).toLowerCase()===String(item.candidate).toLowerCase());
+      const nameIssue=window.TSSDocumentParser?.candidateNameIssue?.(cand?.name||item.candidate||'');
+      if(nameIssue)throw new Error(nameIssue+' Edit the candidate profile before scheduling.');
       let candId=item.candidateId||cand?.serverId||cand?.id;
       if(!candId||!String(candId).includes('-')){
         const created=await b.createOrUpdateCandidate({name:item.candidate||'Candidate',email:cand?.email||item.email||'',phone:cand?.phone||'',location:cand?.location||'',totalExperience:cand?.totalExperience||null,designation:cand?.designation||'',noticePeriod:cand?.noticePeriod||''});
         candId=created.candidate.id;
-        cand={...(cand||{}),serverId:candId,email:created.candidate.email||cand?.email||item.email||''};
+        cand={...(cand||{}),serverId:candId,name:created.candidate.candidate_name||cand?.name||item.candidate,email:created.candidate.email||cand?.email||item.email||''};
       }
 
       let req=(store.requirements||[]).find(r=>String(r.serverId||'')===String(item.requirementServerId||''))||(store.requirements||[]).find(r=>String(r.id||'')===String(item.requirementId||''));
@@ -745,6 +791,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
     if(!date||!time)return alert('Please select interview date and time.');
     if(!emailOf(c))return alert('This candidate has no email saved. Add the candidate email first so confirmation can be sent.');
     const store=DB(); if(!store)return;
+    const nameIssue=window.TSSDocumentParser?.candidateNameIssue?.(nameOf(c));if(nameIssue){try{toast(nameIssue+' Edit the candidate profile before scheduling.')}catch{}return;}
     const item={candidate:nameOf(c),email:emailOf(c),candidateId:c.serverId||c.id||null,date,time:localTimeLabel(time),position:r.title||'',client:r.client||'',requirementId:r.id||'',requirementServerId:r.serverId||null,mode:$('tssIsMode').value||'Client Interview',interviewer:$('tssIsInterviewer').value.trim(),locationOrLink:$('tssIsLocation').value.trim(),notes:$('tssIsNotes').value.trim()};
     const submissionKey=JSON.stringify([item.candidateId,item.requirementServerId,item.date,item.time,item.mode,item.interviewer,item.locationOrLink,item.notes]);
     if(pendingSubmission?.submissionKey===submissionKey)item.clientRequestId=pendingSubmission.item.clientRequestId;
@@ -2570,29 +2617,21 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
     syncRequirementToCore();
     const previous=byId('resumeText')?.value||'';
     if(pasted){byId('resumeText').value=pasted}
-    let fallbackName='';
     if(quickFile){
-      fallbackName=deriveNameFromFilename(quickFile.name);
       await feedFileToCore(quickFile);
       setStatus('Extracting CV details…','busy');
       await waitForExtraction(previous);
-      // candidate-enrichment intentionally clears stale identity when a new file is handed off.
-      // Apply the filename fallback only AFTER parsing has had a chance to populate the real name.
-      if(byId('candidateName')&&!byId('candidateName').value.trim()&&fallbackName)byId('candidateName').value=fallbackName;
-    }
-    if(pasted && byId('candidateName')&&!byId('candidateName').value.trim()){
-      const first=pasted.split(/\r?\n/).map(x=>x.trim()).find(Boolean)||'';
-      if(first.length<70&&!/@/.test(first))byId('candidateName').value=first;
     }
     const text=byId('resumeText')?.value?.trim()||'';
     if(!text){button.disabled=false;button.textContent='Analyse Candidate';setStatus('Resume text could not be extracted. Paste the resume text once and try again.','bad');return}
-    if(byId('candidateName')&&!byId('candidateName').value.trim()){
-      const first=text.split(/\r?\n/).map(x=>x.trim()).find(Boolean)||'';
-      if(first&&first.length<70&&!/@/.test(first))byId('candidateName').value=first;
-    }
-    if(byId('candidateName')&&!byId('candidateName').value.trim()){
+    const parser=window.TSSDocumentParser,parsed=parser?.extractResume?.(text);
+    if(pasted&&pasted!==previous){['candidateName','candidateEmail','candidatePhone','candidateExp','candidateLocation','candidateDesignation','candidateNotice','candidateCTC','candidateExpectedCTC'].forEach(id=>{if(byId(id))byId(id).value=''})}
+    if(parsed)parser.applyResume(parsed);
+    const issue=parser?.candidateNameIssue?.(byId('candidateName')?.value||'')||(!byId('candidateName')?.value?.trim()?'Enter the candidate’s real name.':'');
+    if(issue){
       button.disabled=false;button.textContent='Analyse Candidate';
-      setStatus('Candidate name could not be identified. Enter the name once, then analyse again.','bad');
+      setStatus(issue+(parsed?.nameSuggestion?' Possible name from email: '+parsed.nameSuggestion+'. Verify it in Candidate Name.':''),'bad');
+      document.querySelector('.nav-item[data-view="screening"]')?.click();byId('candidateName')?.focus();
       return;
     }
     const before=(()=>{try{return (db.screenings||[]).length}catch{return 0}})();

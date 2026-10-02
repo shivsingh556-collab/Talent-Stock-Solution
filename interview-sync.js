@@ -31,11 +31,13 @@
       const user=await b.currentUser();
       if(!user)throw new Error('Your session has expired. Please sign in again.');
       let cand=(store.candidates||[]).find(c=>String(c.serverId||c.id)===String(item.candidateId))||(store.candidates||[]).find(c=>String(c.name).toLowerCase()===String(item.candidate).toLowerCase());
+      const nameIssue=window.TSSDocumentParser?.candidateNameIssue?.(cand?.name||item.candidate||'');
+      if(nameIssue)throw new Error(nameIssue+' Edit the candidate profile before scheduling.');
       let candId=item.candidateId||cand?.serverId||cand?.id;
       if(!candId||!String(candId).includes('-')){
         const created=await b.createOrUpdateCandidate({name:item.candidate||'Candidate',email:cand?.email||item.email||'',phone:cand?.phone||'',location:cand?.location||'',totalExperience:cand?.totalExperience||null,designation:cand?.designation||'',noticePeriod:cand?.noticePeriod||''});
         candId=created.candidate.id;
-        cand={...(cand||{}),serverId:candId,email:created.candidate.email||cand?.email||item.email||''};
+        cand={...(cand||{}),serverId:candId,name:created.candidate.candidate_name||cand?.name||item.candidate,email:created.candidate.email||cand?.email||item.email||''};
       }
 
       let req=(store.requirements||[]).find(r=>String(r.serverId||'')===String(item.requirementServerId||''))||(store.requirements||[]).find(r=>String(r.id||'')===String(item.requirementId||''));

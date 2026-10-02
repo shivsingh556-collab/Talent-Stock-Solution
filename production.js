@@ -38,8 +38,18 @@
     return resume;
   }
   function hasCandidateValue(v){return !(v==null||v===''||(Array.isArray(v)&&!v.length))}
-  function mergeCandidateData(base={},parsed={},local={}){const pick=(...v)=>v.find(hasCandidateValue);return{name:pick(parsed.name,local.name,base.candidate_name,'')||'',email:pick(parsed.email,local.email,base.email,'')||'',phone:pick(parsed.phone,local.phone,base.phone,'')||'',location:pick(parsed.location,local.location,base.current_location,'')||'',preferredLocation:pick(parsed.preferredLocation,local.preferredLocation,base.preferred_location,'')||'',totalExperience:pick(parsed.totalExperience,local.totalExperience,base.total_experience,'')??'',relevantExperience:pick(parsed.relevantExperience,local.relevantExperience,base.relevant_experience,'')??'',currentCompany:pick(parsed.currentCompany,local.currentCompany,base.current_company,'')||'',designation:pick(parsed.designation,local.designation,base.current_designation,'')||'',skills:pick(parsed.skills,local.skills,base.skills,[])||[],education:pick(parsed.education,local.education,base.education,'')||'',noticePeriod:pick(parsed.noticePeriod,local.noticePeriod,base.notice_period,'')||'',currentCTC:pick(parsed.currentCTC,local.currentCTC,base.current_ctc,'')||'',expectedCTC:pick(parsed.expectedCTC,local.expectedCTC,base.expected_ctc,'')||'',resumeText:local.resumeText||''}}
-  function assertCandidateQuality(c){const n=String(c.name||'').trim();if(!n||/^(candidate|unknown|n\/?a|not provided)$/i.test(n))throw new Error('Candidate name could not be identified. Review the parsed resume before saving.')}
+  function candidateNameForSave(base,parsed,local){
+    const valid=value=>hasCandidateValue(value)&&!(window.TSSDocumentParser?.candidateNameIssue?.(value));
+    if(valid(local.name)){
+      // A previously corrected profile wins over a repeated automatic extraction.
+      if(valid(base.candidate_name)&&local.name===parsed.name)return base.candidate_name;
+      return local.name;
+    }
+    if(valid(parsed.name))return parsed.name;
+    return base.candidate_name||local.name||'';
+  }
+  function mergeCandidateData(base={},parsed={},local={}){const pick=(...v)=>v.find(hasCandidateValue);return{name:candidateNameForSave(base,parsed,local),email:pick(parsed.email,local.email,base.email,'')||'',phone:pick(parsed.phone,local.phone,base.phone,'')||'',location:pick(parsed.location,local.location,base.current_location,'')||'',preferredLocation:pick(parsed.preferredLocation,local.preferredLocation,base.preferred_location,'')||'',totalExperience:pick(parsed.totalExperience,local.totalExperience,base.total_experience,'')??'',relevantExperience:pick(parsed.relevantExperience,local.relevantExperience,base.relevant_experience,'')??'',currentCompany:pick(parsed.currentCompany,local.currentCompany,base.current_company,'')||'',designation:pick(parsed.designation,local.designation,base.current_designation,'')||'',skills:pick(parsed.skills,local.skills,base.skills,[])||[],education:pick(parsed.education,local.education,base.education,'')||'',noticePeriod:pick(parsed.noticePeriod,local.noticePeriod,base.notice_period,'')||'',currentCTC:pick(parsed.currentCTC,local.currentCTC,base.current_ctc,'')||'',expectedCTC:pick(parsed.expectedCTC,local.expectedCTC,base.expected_ctc,'')||'',resumeText:local.resumeText||''}}
+  function assertCandidateQuality(c){const n=String(c.name||'').trim();const issue=window.TSSDocumentParser?.candidateNameIssue?.(n);if(issue)throw new Error(issue);if(!n||/^(candidate|unknown|n\/?a|not provided)$/i.test(n))throw new Error('Candidate name could not be identified. Review the parsed resume before saving.')}
   function withTimeout(promise,ms,label){let timer;return Promise.race([Promise.resolve(promise),new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error(`${label} timed out. Please retry.`)),ms)})]).finally(()=>clearTimeout(timer))}
   function setScreeningSaveState(state,message=''){
     const btn=$('saveScreenedCandidate'),hint=$('screeningSaveHint');

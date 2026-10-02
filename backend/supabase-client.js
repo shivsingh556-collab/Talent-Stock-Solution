@@ -158,6 +158,7 @@
     const user = await currentUser();
     if(!user) throw new Error('Not signed in');
     const candidateName=String(candidate?.name||'').trim();
+    const nameIssue=window.TSSDocumentParser?.candidateNameIssue?.(candidateName);if(nameIssue)throw new Error(nameIssue);
     if(!candidateName || /^(candidate|unknown|n\/?a|not provided)$/i.test(candidateName)){
       throw new Error('Candidate name could not be identified. Review the parsed resume before saving.');
     }
@@ -196,6 +197,7 @@
     if(readError) throw readError;
     const payload=candidatePayload(candidate,{preserveExistingEmail:Boolean(existing?.email)&&!emailInput});
     if(!payload.candidate_name) throw new Error('Candidate name is required');
+    const nameIssue=window.TSSDocumentParser?.candidateNameIssue?.(payload.candidate_name);if(nameIssue)throw new Error(nameIssue);
     const {data,error}=await client.from('candidates').update(payload).eq('id',candidateId).select().single();
     if(error) throw error;
     return data;
