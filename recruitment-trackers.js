@@ -107,6 +107,72 @@
       d.close();toast('Call result saved in the daily record');await renderCallingTracker();
     }catch(error){console.error(error);alert('Could not save the call result: '+(error.message||error))}finally{button.disabled=false}
   }
+  // Save/submit uses this small dialog; it never loads or renders the full tracker.
+  let candidatePrompt=null;
+  function callRequest(query,ms=10000){
+    const controller=new AbortController();
+    let timer;
+    const request=typeof query.abortSignal==='function'?query.abortSignal(controller.signal):query;
+    return Promise.race([Promise.resolve(request),new Promise((_,reject)=>{timer=setTimeout(()=>{controller.abort();reject(new Error('The connection took too long. Your details are kept here; retry to finish.'))},ms)})]).finally(()=>clearTimeout(timer));
+  }
+  function ensureCandidateCallDialog(){
+    let d=$('#candidateCallSaveDialog');if(d)return d;
+    d=document.createElement('dialog');d.id='candidateCallSaveDialog';d.setAttribute('aria-labelledby','candidateCallSaveTitle');
+    d.innerHTML=`<form method="dialog" class="tracker-dialog"><div class="dialog-head"><div><span class="purple-label">CALLING TRACKER</span><h3 id="candidateCallSaveTitle">Candidate follow-up</h3></div><button value="cancel" formnovalidate class="icon-btn" aria-label="Close">×</button></div><p id="candidateCallSaveDescription" class="tracker-call-description"></p><label for="candidateCallOutcome">Contact status</label><select id="candidateCallOutcome" required><option value="">Select contact status</option><option>Not contacted yet</option>${OUTCOMES.map(x=>`<option>${esc(x)}</option>`).join('')}</select><div id="candidateCallFields"><label for="candidateCallNotes">Call Notes</label><textarea id="candidateCallNotes" rows="3" maxlength="5000" placeholder="Candidate response or important discussion notes"></textarea><label for="candidateCallFollowUp">Next Follow-up</label><input id="candidateCallFollowUp" type="datetime-local"></div><label id="candidateNewCallLabel" class="tracker-new-call" hidden><input id="candidateNewCall" type="checkbox">Record a new call (keep the earlier call in history)</label><p id="candidateCallSaveStatus" role="status" aria-live="polite"></p><div class="dialog-actions"><button value="cancel" formnovalidate class="btn ghost">Cancel</button><button type="button" id="candidateCallSaveContinue" class="btn primary">Save & Continue</button></div></form>`;
+    document.body.appendChild(d);
+    $('#candidateCallOutcome').addEventListener('change',()=>{const pending=$('#candidateCallOutcome').value==='Not contacted yet';$('#candidateCallFields').hidden=pending;if(candidatePrompt?.latest&&!pending)$('#candidateNewCall').checked=true});
+    ['candidateCallOutcome','candidateCallNotes','candidateCallFollowUp','candidateNewCall'].forEach(id=>$('#'+id).addEventListener('input',()=>{if(candidatePrompt)candidatePrompt.touched=true}));
+    ['candidateCallNotes','candidateCallFollowUp'].forEach(id=>$('#'+id).addEventListener('input',()=>{if(candidatePrompt?.latest)$('#candidateNewCall').checked=true}));
+    $('#candidateCallSaveContinue').onclick=saveCandidateCallDetails;
+    d.addEventListener('cancel',event=>{if(candidatePrompt?.saving)event.preventDefault()});
+    d.addEventListener('close',()=>{if(candidatePrompt){const current=candidatePrompt;candidatePrompt=null;current.resolve(current.saved===true)}});
+    return d;
+  }
+  function promptForCandidate(candidate={}){
+    if(candidatePrompt)return candidatePrompt.promise;
+    const candidateId=candidate.candidateId||candidate.serverId||candidate.id;
+    if(!candidateId||!candidate.requirementId||!client()){toast('Save the candidate and select a requirement before updating the tracker');return Promise.resolve(false)}
+    const d=ensureCandidateCallDialog();
+    let resolve;const promise=new Promise(done=>{resolve=done});
+    const current={candidate:{...candidate,candidateId},promise,resolve,saving:false,saved:false,latest:null,payload:null,recordId:crypto.randomUUID()};candidatePrompt=current;
+    $('#candidateCallSaveTitle').textContent=`Follow-up · ${candidate.name||'Candidate'}`;
+    $('#candidateCallSaveDescription').textContent='Your candidate is saved. Choose the contact status to keep the Calling Tracker updated.';
+    $('#candidateCallOutcome').value='';$('#candidateCallNotes').value='';$('#candidateCallFollowUp').value='';$('#candidateCallFields').hidden=false;$('#candidateNewCallLabel').hidden=true;$('#candidateNewCall').checked=false;$('#candidateCallSaveStatus').textContent='';$('#candidateCallSaveContinue').disabled=false;
+    ['candidateCallOutcome','candidateCallNotes','candidateCallFollowUp','candidateNewCall'].forEach(id=>$('#'+id).disabled=false);
+    d.showModal();
+    // Only the most recent call for this candidate/requirement is requested.
+    callRequest(client().from('candidate_call_logs').select('id,call_outcome,call_notes,next_follow_up_at,called_at').eq('candidate_id',candidateId).eq('requirement_id',candidate.requirementId).order('called_at',{ascending:false}).limit(1).maybeSingle(),5000).then(({data,error})=>{
+      if(error||candidatePrompt!==current||current.saving||current.touched||$('#candidateCallOutcome').value)return;
+      if(data){current.latest=data;$('#candidateCallOutcome').value=data.call_outcome;$('#candidateCallNotes').value=data.call_notes||'';if(data.next_follow_up_at){const dt=new Date(data.next_follow_up_at);$('#candidateCallFollowUp').value=new Date(dt.getTime()-dt.getTimezoneOffset()*60000).toISOString().slice(0,16)}$('#candidateNewCallLabel').hidden=false;$('#candidateCallSaveDescription').textContent='The latest call details are shown. Keep them, or record a new call after speaking with the candidate.'}
+    }).catch(()=>{});
+    return promise;
+  }
+  async function saveCandidateCallDetails(){
+    const current=candidatePrompt;if(!current||current.saving)return;
+    const outcome=$('#candidateCallOutcome').value,status=$('#candidateCallSaveStatus');
+    if(!outcome){status.textContent='Choose a contact status before continuing.';$('#candidateCallOutcome').focus();return}
+    current.saving=true;const button=$('#candidateCallSaveContinue'),d=$('#candidateCallSaveDialog');
+    button.disabled=true;button.textContent='Saving…';status.textContent='';
+    $$('button[value="cancel"]',d).forEach(b=>b.disabled=true);
+    ['candidateCallOutcome','candidateCallNotes','candidateCallFollowUp','candidateNewCall'].forEach(id=>$('#'+id).disabled=true);
+    try{
+      if(outcome!=='Not contacted yet'&&(!current.latest||$('#candidateNewCall').checked)){
+        const user=await callRequest(Promise.resolve(backend().currentUser()),8000);if(!user?.id)throw new Error('Please sign in again to save the call result.');
+        // Reuse the same UUID on retries, including an uncertain network response.
+        if(!current.payload)current.payload={id:current.recordId,candidate_id:current.candidate.candidateId,requirement_id:current.candidate.requirementId,screening_id:current.candidate.screeningId||null,recruiter_id:user.id,call_outcome:outcome,call_notes:$('#candidateCallNotes').value.trim()||null,next_follow_up_at:$('#candidateCallFollowUp').value?new Date($('#candidateCallFollowUp').value).toISOString():null,called_at:new Date().toISOString()};
+        const {error}=await callRequest(client().from('candidate_call_logs').insert(current.payload));
+        if(error&&error.code!=='23505')throw error;
+        if(error){const check=await callRequest(client().from('candidate_call_logs').select('id').eq('id',current.recordId).maybeSingle());if(check.error||!check.data)throw check.error||error}
+        const row=callingRows.find(x=>x.candidate_id===current.candidate.candidateId&&x.requirement_id===current.candidate.requirementId);if(row)row.lastCall=current.payload;
+      }
+      if(current.candidate.screening){current.candidate.screening.callTrackerRecorded=true;current.candidate.screening.callTrackerOutcome=outcome}
+      // Not contacted yet stays pending and does not create a false call event.
+      current.saved=true;toast(outcome==='Not contacted yet'?(current.latest?'No new call recorded; previous call history is preserved':'Candidate remains pending in Calling Tracker'):'Calling Tracker updated');
+      if($('#callingTracker')?.classList.contains('active'))paintCallingRows();
+      d.close('saved');
+    }catch(error){if(error.code&&error.code!=='23505')current.payload=null;status.textContent=error.message||'Could not update the Calling Tracker. Retry to finish.';if(current.payload)status.textContent+=' Retry preserves this call and avoids creating a duplicate.'}
+    finally{current.saving=false;button.disabled=false;button.textContent='Save & Continue';$$('button[value="cancel"]',d).forEach(b=>b.disabled=false);if(!current.payload)['candidateCallOutcome','candidateCallNotes','candidateCallFollowUp','candidateNewCall'].forEach(id=>$('#'+id).disabled=false)}
+  }
   function loadXLSX(){
     if(window.XLSX)return Promise.resolve(window.XLSX);
     return new Promise((resolve,reject)=>{const s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js';s.onload=()=>resolve(window.XLSX);s.onerror=reject;document.head.appendChild(s)});
@@ -222,4 +288,5 @@
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
   window.TSSRecruitmentTrackers={renderCallingTracker,renderClientSubmissions,renderMonthlyReport};
+  window.TSSCallTracker={promptForCandidate};
 })();

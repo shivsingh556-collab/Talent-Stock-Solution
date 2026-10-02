@@ -181,8 +181,8 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
   function setScreeningSaveState(state,message=''){
     const btn=$('saveScreenedCandidate'),hint=$('screeningSaveHint');
     if(btn){
-      btn.disabled=state==='saving'||state==='saved';
-      btn.textContent=state==='saving'?'Saving…':state==='saved'?'✓ Candidate Saved':state==='failed'?'Retry Save Candidate':'Save Candidate';
+      btn.disabled=state==='saving';
+      btn.textContent=state==='saving'?'Saving…':state==='saved'?'Saved · Update Call Details':state==='failed'?'Retry Save Candidate':'Save Candidate';
     }
     if(hint&&message)hint.textContent=message;
   }
@@ -190,6 +190,26 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
     if(screeningSavePromise)return screeningSavePromise;
     screeningSavePromise=performLatestScreeningSave().finally(()=>{screeningSavePromise=null});
     return screeningSavePromise;
+  }
+  let explicitSavePromise=null;
+  function saveCandidateWithCallDetails(screening=(db.screenings||[]).at(-1)){
+    if(explicitSavePromise)return explicitSavePromise;
+    explicitSavePromise=(async()=>{
+      try{
+        if(!screening)throw new Error('Screen a candidate first');
+        // Background saves remain independent; only an explicit save requests call details.
+        if(!screening.serverId||screening.resumeSavePending){
+          if(screening!==(db.screenings||[]).at(-1))throw new Error('Open the latest screening before saving');
+          if(!await persistLatestScreening())return false;
+        }
+        const candidate=(db.candidates||[]).find(c=>c.id===screening.candidateId||c.serverId===screening.candidateId);
+        const requirement=(db.requirements||[]).find(r=>r.id===screening.requirementId||r.serverId===screening.requirementId);
+        if(!candidate||!requirement)throw new Error('Candidate or requirement details are missing');
+        if(!window.TSSCallTracker?.promptForCandidate)throw new Error('Calling Tracker is still loading. Please retry shortly.');
+        return await window.TSSCallTracker.promptForCandidate({candidateId:candidate.serverId||candidate.id,requirementId:requirement.serverId||requirement.id,screeningId:screening.serverId,name:candidate.name,screening});
+      }catch(error){toast(error.message||'Could not update calling details');return false}
+    })().finally(()=>{explicitSavePromise=null});
+    return explicitSavePromise;
   }
   async function performLatestScreeningSave(){
     if(!backend()?.enabled){setScreeningSaveState('failed','Secure database is unavailable. Please reconnect and retry.');toast('Supabase is not connected');return false}
@@ -319,8 +339,8 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
   }
   function validDecision(d){if(d==='Request Updated Resume')return'Updated Resume Requested';if(['Pending','Shortlisted','Rejected','Keep for Future','Updated Resume Requested'].includes(d))return d;return'Pending'}
   async function persistDecision(){const s=(db.screenings||[]).at(-1);if(!s?.serverId||!backend()?.enabled)return;const{error}=await backend().client.from('screenings').update({overall_score:s.score,final_recommendation:s.recommendation,recruiter_decision:validDecision(s.recruiterDecision),recruiter_notes:s.notes||'',manually_overridden:Boolean(s.manualOverride)}).eq('id',s.serverId);if(error){console.warn(error);toast('Decision saved locally; backend update needs review')}else if(!window.TSSRealtimePerformance)status('Decision saved','on')}
-  function wire(){applyBrand();document.addEventListener('click',e=>{if(!e.target.closest('#screenBtn'))return;const previous=(db.screenings||[]).at(-1)?.id;setTimeout(()=>{const latest=(db.screenings||[]).at(-1);if(latest&&latest.id!==previous&&!latest.serverId)persistLatestScreening()},0)},true);document.addEventListener('click',e=>{const save=e.target.closest('#saveScreenedCandidate');if(save){e.preventDefault();persistLatestScreening();return}if(e.target.closest('.decision,#approveAi,#editScore'))setTimeout(persistDecision,180)});const ws=$('workspace');if(ws){new MutationObserver(()=>{if(!ws.classList.contains('hidden')&&!hydrated)setTimeout(hydrate,150)}).observe(ws,{attributes:true,attributeFilter:['class']})}if(!ws?.classList.contains('hidden'))setTimeout(hydrate,150);status(backend()?.enabled?'Supabase ready':'Local mode',backend()?.enabled?'on':'off')}
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',wire);else wire();window.TSSProduction={hydrate,persistLatestScreening,applyBrand};
+  function wire(){applyBrand();document.addEventListener('click',e=>{if(!e.target.closest('#screenBtn'))return;const previous=(db.screenings||[]).at(-1)?.id;setTimeout(()=>{const latest=(db.screenings||[]).at(-1);if(latest&&latest.id!==previous&&!latest.serverId)persistLatestScreening()},0)},true);document.addEventListener('click',e=>{const save=e.target.closest('#saveScreenedCandidate');if(save){e.preventDefault();saveCandidateWithCallDetails();return}if(e.target.closest('.decision,#approveAi,#editScore'))setTimeout(persistDecision,180)});const ws=$('workspace');if(ws){new MutationObserver(()=>{if(!ws.classList.contains('hidden')&&!hydrated)setTimeout(hydrate,150)}).observe(ws,{attributes:true,attributeFilter:['class']})}if(!ws?.classList.contains('hidden'))setTimeout(hydrate,150);status(backend()?.enabled?'Supabase ready':'Local mode',backend()?.enabled?'on':'off')}
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',wire);else wire();window.TSSProduction={hydrate,persistLatestScreening,saveCandidateWithCallDetails,applyBrand};
 })();
 
 /* ===== candidate-resume-hydration.js ===== */
@@ -1717,18 +1737,29 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
     if(!r){toastSafe('Select a requirement first');return;}ensureMatchDialog();activeMatchReq=r;activeMatches=computeMatches(r);$('dbMatchTitle').textContent=`${r.requirementId||r.id} · ${r.title} — Existing Candidate Match`;$('dbMatchSearch').value='';renderMatchResults();$('dbMatchDialog').showModal();
   }
 
+  function submitRequest(operation,label){
+    let timer;
+    return Promise.race([Promise.resolve(operation),new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error(`${label} timed out. Please retry.`)),12000)})]).finally(()=>clearTimeout(timer));
+  }
+
   async function submitCandidate(){
     const r=selectedReq();const email=norm($('candidateEmail')?.value).toLowerCase();
     if(!r){toastSafe('Select a requirement first');return;}if(!email){toastSafe('Candidate email is required before submitting');return;}
     const b=backend();if(!b?.enabled){toastSafe('Backend is not ready');return;}
-    const btn=$('submitCandidateBtn');if(btn){btn.disabled=true;btn.textContent='Submitting…'}
+    const btn=$('submitCandidateBtn');if(btn?.disabled)return;if(btn){btn.disabled=true;btn.textContent='Submitting…'}
     try{
-      const user=await b.currentUser();if(!user)throw new Error('Please sign in again');
+      const user=await submitRequest(b.currentUser(),'Session check');if(!user)throw new Error('Please sign in again');
       const c=b.client;
-      const cand=await c.from('candidates').select('id,candidate_name,email').ilike('email',email).limit(1).maybeSingle();if(cand.error)throw cand.error;if(!cand.data?.id)throw new Error('Screen and save this candidate first');
+      const latest=(store()?.screenings||[]).at(-1),localCandidate=(store()?.candidates||[]).find(x=>x.id===latest?.candidateId);
+      if(latest&&!latest.serverId&&norm(localCandidate?.email).toLowerCase()===email&&[r.id,r.serverId].includes(latest.requirementId)){
+        if(!await window.TSSProduction?.persistLatestScreening?.())throw new Error('Save the candidate before submitting');
+      }
+      const cand=await submitRequest(c.from('candidates').select('id,candidate_name,email').ilike('email',email).limit(1).maybeSingle(),'Candidate lookup');if(cand.error)throw cand.error;if(!cand.data?.id)throw new Error('Screen and save this candidate first');
       const reqId=r.serverId||r.id;
-      const sc=await c.from('screenings').select('id').eq('candidate_id',cand.data.id).eq('requirement_id',reqId).order('screened_at',{ascending:false}).limit(1).maybeSingle();if(sc.error)throw sc.error;if(!sc.data?.id)throw new Error('No screening found for this candidate and requirement');
-      const up=await c.from('screenings').update({submitted_at:new Date().toISOString(),submitted_by:user.id}).eq('id',sc.data.id);if(up.error)throw up.error;
+      const sc=await submitRequest(c.from('screenings').select('id').eq('candidate_id',cand.data.id).eq('requirement_id',reqId).order('screened_at',{ascending:false}).limit(1).maybeSingle(),'Screening lookup');if(sc.error)throw sc.error;if(!sc.data?.id)throw new Error('No screening found for this candidate and requirement');
+      if(!window.TSSCallTracker?.promptForCandidate)throw new Error('Calling Tracker is still loading. Please retry shortly.');
+      if(!await window.TSSCallTracker.promptForCandidate({candidateId:cand.data.id,requirementId:reqId,screeningId:sc.data.id,name:cand.data.candidate_name}))return;
+      const up=await submitRequest(c.from('screenings').update({submitted_at:new Date().toISOString(),submitted_by:user.id}).eq('id',sc.data.id),'Candidate submission');if(up.error)throw up.error;
       toastSafe(`${cand.data.candidate_name||'Candidate'} submitted for ${r.title}`);
     }catch(e){console.error(e);toastSafe('Submit failed: '+(e?.message||e));}
     finally{if(btn){btn.disabled=false;btn.textContent='Submit Candidate'}}
@@ -2480,28 +2511,30 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
         <button id="quickOpenDetailed">Open Detailed Result</button>
       </div>`;
     const saveButton=byId('quickSaveCandidate');
-    if(s.serverId&&!s.resumeSavePending){saveButton.disabled=true;saveButton.textContent='✓ Candidate Saved'}
+    if(s.serverId&&!s.resumeSavePending){saveButton.disabled=false;saveButton.textContent='Saved · Update Call Details'}
     saveButton?.addEventListener('click',()=>saveCandidate(s));
     node.querySelectorAll('[data-qdecision]').forEach(btn=>btn.addEventListener('click',()=>applyDecision(btn.dataset.qdecision,s)));
     byId('quickScheduleInterview')?.addEventListener('click',async()=>{if(await ensureSaved(s))byId('scheduleInterview')?.click()});
     byId('quickOpenDetailed')?.addEventListener('click',()=>document.querySelector('.nav-item[data-view="screening"]')?.click());
   }
-  async function saveCandidate(s){
+  async function saveCandidate(s,withCallDetails=true){
     const button=byId('quickSaveCandidate');
-    if(s?.serverId&&!s.resumeSavePending){if(button){button.disabled=true;button.textContent='✓ Candidate Saved'}return true}
-    if(!window.TSSProduction?.persistLatestScreening){setStatus('Secure save is unavailable. Refresh once and retry.','bad');return false}
+    const production=window.TSSProduction;
+    if(!production?.persistLatestScreening){setStatus('Secure save is unavailable. Refresh once and retry.','bad');return false}
     if(button){button.disabled=true;button.textContent='Saving…'}
-    setStatus('Saving candidate, CV and screening to Todo…','busy');
-    const saved=await window.TSSProduction.persistLatestScreening();
-    if(saved){if(button){button.disabled=true;button.textContent='✓ Candidate Saved'}setStatus('Candidate saved — now available in Calling Tracker','ok');return true}
-    if(button){button.disabled=false;button.textContent='Retry Save Candidate'}
-    setStatus('Save did not finish. Retry here; the candidate details will be reused safely.','bad');
-    return false;
+    setStatus('Saving candidate and updating calling details…','busy');
+    try{
+      const saved=withCallDetails?await production.saveCandidateWithCallDetails(s):await production.persistLatestScreening();
+      if(saved){setStatus(withCallDetails?'Candidate saved — calling details updated':'Candidate saved securely','ok');return true}
+      setStatus(s?.serverId&&!s.resumeSavePending?'Candidate saved. Calling details can be updated when ready.':'Save did not finish. Retry here; candidate details will be reused safely.',s?.serverId?'':'bad');
+      return false;
+    }catch(error){setStatus(error.message||'Save failed. Please retry.','bad');return false}
+    finally{if(button){button.disabled=false;button.textContent=s?.serverId&&!s.resumeSavePending?'Saved · Update Call Details':'Retry Save Candidate'}}
   }
   async function ensureSaved(s){
     if(s?.serverId&&!s.resumeSavePending)return true;
     setStatus('Save the candidate before adding a decision or interview.','busy');
-    return saveCandidate(s);
+    return saveCandidate(s,false);
   }
   async function applyDecision(decision,s){
     if(!await ensureSaved(s))return;

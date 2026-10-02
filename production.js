@@ -44,8 +44,8 @@
   function setScreeningSaveState(state,message=''){
     const btn=$('saveScreenedCandidate'),hint=$('screeningSaveHint');
     if(btn){
-      btn.disabled=state==='saving'||state==='saved';
-      btn.textContent=state==='saving'?'Saving…':state==='saved'?'✓ Candidate Saved':state==='failed'?'Retry Save Candidate':'Save Candidate';
+      btn.disabled=state==='saving';
+      btn.textContent=state==='saving'?'Saving…':state==='saved'?'Saved · Update Call Details':state==='failed'?'Retry Save Candidate':'Save Candidate';
     }
     if(hint&&message)hint.textContent=message;
   }
@@ -53,6 +53,26 @@
     if(screeningSavePromise)return screeningSavePromise;
     screeningSavePromise=performLatestScreeningSave().finally(()=>{screeningSavePromise=null});
     return screeningSavePromise;
+  }
+  let explicitSavePromise=null;
+  function saveCandidateWithCallDetails(screening=(db.screenings||[]).at(-1)){
+    if(explicitSavePromise)return explicitSavePromise;
+    explicitSavePromise=(async()=>{
+      try{
+        if(!screening)throw new Error('Screen a candidate first');
+        // Background saves remain independent; only an explicit save requests call details.
+        if(!screening.serverId||screening.resumeSavePending){
+          if(screening!==(db.screenings||[]).at(-1))throw new Error('Open the latest screening before saving');
+          if(!await persistLatestScreening())return false;
+        }
+        const candidate=(db.candidates||[]).find(c=>c.id===screening.candidateId||c.serverId===screening.candidateId);
+        const requirement=(db.requirements||[]).find(r=>r.id===screening.requirementId||r.serverId===screening.requirementId);
+        if(!candidate||!requirement)throw new Error('Candidate or requirement details are missing');
+        if(!window.TSSCallTracker?.promptForCandidate)throw new Error('Calling Tracker is still loading. Please retry shortly.');
+        return await window.TSSCallTracker.promptForCandidate({candidateId:candidate.serverId||candidate.id,requirementId:requirement.serverId||requirement.id,screeningId:screening.serverId,name:candidate.name,screening});
+      }catch(error){toast(error.message||'Could not update calling details');return false}
+    })().finally(()=>{explicitSavePromise=null});
+    return explicitSavePromise;
   }
   async function performLatestScreeningSave(){
     if(!backend()?.enabled){setScreeningSaveState('failed','Secure database is unavailable. Please reconnect and retry.');toast('Supabase is not connected');return false}
@@ -182,6 +202,6 @@
   }
   function validDecision(d){if(d==='Request Updated Resume')return'Updated Resume Requested';if(['Pending','Shortlisted','Rejected','Keep for Future','Updated Resume Requested'].includes(d))return d;return'Pending'}
   async function persistDecision(){const s=(db.screenings||[]).at(-1);if(!s?.serverId||!backend()?.enabled)return;const{error}=await backend().client.from('screenings').update({overall_score:s.score,final_recommendation:s.recommendation,recruiter_decision:validDecision(s.recruiterDecision),recruiter_notes:s.notes||'',manually_overridden:Boolean(s.manualOverride)}).eq('id',s.serverId);if(error){console.warn(error);toast('Decision saved locally; backend update needs review')}else if(!window.TSSRealtimePerformance)status('Decision saved','on')}
-  function wire(){applyBrand();document.addEventListener('click',e=>{if(!e.target.closest('#screenBtn'))return;const previous=(db.screenings||[]).at(-1)?.id;setTimeout(()=>{const latest=(db.screenings||[]).at(-1);if(latest&&latest.id!==previous&&!latest.serverId)persistLatestScreening()},0)},true);document.addEventListener('click',e=>{const save=e.target.closest('#saveScreenedCandidate');if(save){e.preventDefault();persistLatestScreening();return}if(e.target.closest('.decision,#approveAi,#editScore'))setTimeout(persistDecision,180)});const ws=$('workspace');if(ws){new MutationObserver(()=>{if(!ws.classList.contains('hidden')&&!hydrated)setTimeout(hydrate,150)}).observe(ws,{attributes:true,attributeFilter:['class']})}if(!ws?.classList.contains('hidden'))setTimeout(hydrate,150);status(backend()?.enabled?'Supabase ready':'Local mode',backend()?.enabled?'on':'off')}
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',wire);else wire();window.TSSProduction={hydrate,persistLatestScreening,applyBrand};
+  function wire(){applyBrand();document.addEventListener('click',e=>{if(!e.target.closest('#screenBtn'))return;const previous=(db.screenings||[]).at(-1)?.id;setTimeout(()=>{const latest=(db.screenings||[]).at(-1);if(latest&&latest.id!==previous&&!latest.serverId)persistLatestScreening()},0)},true);document.addEventListener('click',e=>{const save=e.target.closest('#saveScreenedCandidate');if(save){e.preventDefault();saveCandidateWithCallDetails();return}if(e.target.closest('.decision,#approveAi,#editScore'))setTimeout(persistDecision,180)});const ws=$('workspace');if(ws){new MutationObserver(()=>{if(!ws.classList.contains('hidden')&&!hydrated)setTimeout(hydrate,150)}).observe(ws,{attributes:true,attributeFilter:['class']})}if(!ws?.classList.contains('hidden'))setTimeout(hydrate,150);status(backend()?.enabled?'Supabase ready':'Local mode',backend()?.enabled?'on':'off')}
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',wire);else wire();window.TSSProduction={hydrate,persistLatestScreening,saveCandidateWithCallDetails,applyBrand};
 })();
