@@ -75,6 +75,7 @@
     if(!date||!time)return alert('Please select interview date and time.');
     if(!emailOf(c))return alert('This candidate has no email saved. Add the candidate email first so confirmation can be sent.');
     const store=DB(); if(!store)return;
+    const nameIssue=window.TSSDocumentParser?.candidateNameIssue?.(nameOf(c));if(nameIssue){try{toast(nameIssue+' Edit the candidate profile before scheduling.')}catch{}return;}
     const item={candidate:nameOf(c),email:emailOf(c),candidateId:c.serverId||c.id||null,date,time:localTimeLabel(time),position:r.title||'',client:r.client||'',requirementId:r.id||'',requirementServerId:r.serverId||null,mode:$('tssIsMode').value||'Client Interview',interviewer:$('tssIsInterviewer').value.trim(),locationOrLink:$('tssIsLocation').value.trim(),notes:$('tssIsNotes').value.trim()};
     const submissionKey=JSON.stringify([item.candidateId,item.requirementServerId,item.date,item.time,item.mode,item.interviewer,item.locationOrLink,item.notes]);
     if(pendingSubmission?.submissionKey===submissionKey)item.clientRequestId=pendingSubmission.item.clientRequestId;

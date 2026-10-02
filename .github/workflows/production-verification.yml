@@ -58,6 +58,7 @@ jobs:
           node --check app-runtime.js
           node resume-save.test.cjs
           node interview-name-sync.test.cjs
+          node --test candidate-identity.test.cjs extraction-skills.test.cjs
           node calling-tracker-save.browser.test.cjs
       - name: Verify authenticated application boot
         run: |
