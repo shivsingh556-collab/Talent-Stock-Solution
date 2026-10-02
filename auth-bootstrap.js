@@ -4,7 +4,7 @@
   'use strict';
 
   const DOMAIN='talent-stock.com';
-  const BUILD='20261003-storage-alerts-1';
+  const BUILD='20261003-storage-info-only-1';
   const gate=document.getElementById('loginGate');
   const mount=document.getElementById('workspaceMount');
   const form=document.getElementById('loginForm');
@@ -216,7 +216,7 @@
     loadStyle(`recruitment-trackers.css?v=${BUILD}`,'tssRecruitmentTrackers');
     await loadScript(`recruitment-trackers.js?v=${BUILD}`);
     enforceRoleAccess(identity);
-    if(identity.role==='admin')await loadScript(`storage-capacity-alerts.js?v=${BUILD}`);
+    if(identity.role==='admin'&&identity.email==='info@talent-stock.com')await loadScript(`storage-capacity-alerts.js?v=${BUILD}`);
 
     appLoaded=true;
     gate?.classList.add('hidden');

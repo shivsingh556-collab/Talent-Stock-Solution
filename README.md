@@ -62,7 +62,7 @@ Vercel serves the repository as a static application; no server-side build comma
 
 ## Capacity alerts
 
-Active admins see database and file usage above the workspace, with warnings at 70%, 85% and 95%. The internal cron job refreshes one RLS-protected snapshot hourly; the admin UI reads that row at most once every five minutes. Recruiter sessions do not load the monitor or issue capacity queries. No checks run on candidate saves or screening. Stale snapshots and unavailable monitoring are shown explicitly.
+Only the active `info@talent-stock.com` admin account sees database and file usage above the workspace, with warnings at 70%, 85% and 95%. The internal cron job refreshes one RLS-protected snapshot hourly; the info account UI reads that row at most once every five minutes. Other admin and recruiter sessions do not load the monitor or issue capacity queries. No checks run on candidate saves or screening. Stale snapshots and unavailable monitoring are shown explicitly.
 
 The snapshot uses live bytes for this project (file sizes from Storage metadata), not billing-period averages or organization-wide usage. The configured quotas match the current Free plan: 500 MB database and 1 GB files. After a plan change, update `database_limit_bytes`, `storage_limit_bytes` and `plan_label` in `public.storage_usage_snapshot` through trusted administration. No emails are sent.
 

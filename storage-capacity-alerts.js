@@ -3,7 +3,7 @@
   'use strict';
   const id='tssStorageCapacity';
   let inflight=null, lastRead=0;
-  const isAdmin=()=>window.TSS_AUTH_CONTEXT?.profile?.is_active===true && window.TSS_AUTH_CONTEXT?.role==='admin';
+  const isAdmin=()=>window.TSS_AUTH_CONTEXT?.profile?.is_active===true && window.TSS_AUTH_CONTEXT?.role==='admin' && window.TSS_AUTH_CONTEXT?.email==='info@talent-stock.com';
   function level(percent){return percent>=95?'Critical':percent>=85?'High':percent>=70?'Warning':'Healthy';}
   function metric(bytes,limit){
     const used=Number(bytes), maximum=Number(limit);

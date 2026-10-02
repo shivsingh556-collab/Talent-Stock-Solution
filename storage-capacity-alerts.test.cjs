@@ -9,7 +9,7 @@ test('warnings, stale/error states, deduplication and recruiter isolation',async
  function node(){return {children:[],dataset:{},style:{},setAttribute(){},appendChild(el){this.children.push(el)},prepend(el){nodes.set(el.id,el)},replaceChildren(){this.children=[]},remove(){nodes.delete(this.id)}};}
  const parent=node();
  const document={hidden:false,querySelector:()=>parent,getElementById:id=>nodes.get(id),createElement:node,addEventListener(){}};
- const window={TSS_AUTH_CONTEXT:{role:'admin',profile:{is_active:true}},addEventListener(){},TSSBackend:{client:{from(){calls++;return {select(){return this},eq(){return this},abortSignal(){return this},async maybeSingle(){return {data:row,error}}}}}}};
+ const window={TSS_AUTH_CONTEXT:{role:'admin',email:'info@talent-stock.com',profile:{is_active:true}},addEventListener(){},TSSBackend:{client:{from(){calls++;return {select(){return this},eq(){return this},abortSignal(){return this},async maybeSingle(){return {data:row,error}}}}}}};
  class Clock extends Date {constructor(...args){super(...(args.length?args:[now]))}static now(){return now}}
  vm.runInNewContext(fs.readFileSync(__dirname+'/storage-capacity-alerts.js','utf8'),{window,document,Date:Clock,AbortSignal,setInterval(){}});
  const api=window.TSSStorageCapacity;
@@ -22,6 +22,7 @@ test('warnings, stale/error states, deduplication and recruiter isolation',async
  assert.equal(nodes.size,1);
  now+=300001;row.checked_at='2020-01-01';await api.refresh();assert.equal(panel().dataset.level,'Stale');
  now+=300001;error={message:'offline'};await api.refresh();assert.match(panel().children[0].textContent,/unavailable/);
- const before=calls;now+=300001;window.TSS_AUTH_CONTEXT={role:'recruiter',profile:{is_active:true}};await api.refresh();assert.equal(calls,before);assert.equal(nodes.size,0);
+ const before=calls;now+=300001;window.TSS_AUTH_CONTEXT={role:'admin',email:'other@talent-stock.com',profile:{is_active:true}};await api.refresh();assert.equal(calls,before);assert.equal(nodes.size,0);
+now+=300001;window.TSS_AUTH_CONTEXT={role:'recruiter',profile:{is_active:true}};await api.refresh();assert.equal(calls,before);assert.equal(nodes.size,0);
  now+=300001;window.TSS_AUTH_CONTEXT={role:'admin',profile:{is_active:false}};await api.refresh();assert.equal(calls,before);
 });
