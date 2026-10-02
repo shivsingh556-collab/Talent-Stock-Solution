@@ -59,3 +59,11 @@ SQL migrations are stored in `supabase/`. Apply them in chronological order thro
 ## Deployment
 
 Vercel serves the repository as a static application; no server-side build command is required. Run the production build script and tests before deployment, deploy a preview, verify the full auth story, then promote the verified commit.
+
+## Capacity alerts
+
+Active admins see database and file usage above the workspace, with warnings at 70%, 85% and 95%. The internal cron job refreshes one RLS-protected snapshot hourly; the admin UI reads that row at most once every five minutes. Recruiter sessions do not load the monitor or issue capacity queries. No checks run on candidate saves or screening. Stale snapshots and unavailable monitoring are shown explicitly.
+
+The snapshot uses live bytes for this project (file sizes from Storage metadata), not billing-period averages or organization-wide usage. The configured quotas match the current Free plan: 500 MB database and 1 GB files. After a plan change, update `database_limit_bytes`, `storage_limit_bytes` and `plan_label` in `public.storage_usage_snapshot` through trusted administration. No emails are sent.
+
+Migration: `supabase/migrations/20261002212000_storage_capacity_alerts.sql`. Verify with `node --test storage-capacity-alerts.test.cjs`.
