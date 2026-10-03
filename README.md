@@ -2,6 +2,15 @@
 
 Todo AI is TalentStock's authenticated recruitment workspace for job profiles, candidate records, evidence-based resume screening, interviews, recruiter activity and reports. Production is hosted on Vercel and uses Supabase Auth, Postgres, Row Level Security and private Storage.
 
+
+## Recruitment automation and HR technology
+
+Todo AI supports talent acquisition workflows: job description (JD) parsing, candidate management, resume screening, skill matching, interview scheduling and recruitment analytics. Explainable screening scores help recruiters review candidate evidence and identify matching or missing skills.
+
+**Technology:** JavaScript, Supabase Auth, PostgreSQL, SQL, Row Level Security (RLS), private file storage and Vercel.
+
+**Project keywords:** recruitment automation, HR technology, HR tech, talent acquisition, applicant tracking, candidate management, resume parsing, resume screening, JD matching, explainable scoring, interview scheduling, recruiter activity reporting, recruitment analytics.
+
 ## Security model
 
 - The public document contains only the sign-in screen. Workspace markup, option lists, feature JavaScript and application styles are fetched only after Supabase `auth.getUser()` verifies the session with the Auth server.
