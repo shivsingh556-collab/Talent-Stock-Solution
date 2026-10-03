@@ -208,9 +208,10 @@
     ['dragleave','drop'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.remove('drag')}));
     drop.addEventListener('drop',e=>{quickFile=e.dataTransfer?.files?.[0]||null;if(quickFile){byId('quickFileName').textContent=quickFile.name;setStatus('CV ready to analyse','ok')}});
     document.querySelectorAll('[data-qprompt]').forEach(b=>b.addEventListener('click',()=>{if(!byId('quickResult').classList.contains('hidden'))byId('quickResult').scrollIntoView({behavior:'smooth',block:'nearest'});else setStatus('Add a CV and analyse once — the answer will appear here.','busy')}));
+    window.TSSRequirementSearch?.refresh();
     return true;
   }
-  function refresh(){populateQuickRequirements()}
+  function refresh(){populateQuickRequirements();window.TSSRequirementSearch?.refresh()}
   const timer=setInterval(()=>{if(mount()){clearInterval(timer);setTimeout(refresh,800)}},250);
   window.addEventListener('tss:hydrated',refresh);
   window.addEventListener('focus',refresh);

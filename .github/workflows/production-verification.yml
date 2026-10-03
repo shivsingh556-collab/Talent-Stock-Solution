@@ -4,7 +4,7 @@ on:
   pull_request:
     branches: [main]
   push:
-    branches: [production-hardening-v2]
+    branches: [main, production-hardening-v2]
 
 permissions:
   contents: read
@@ -27,6 +27,7 @@ jobs:
           node --check auth-bootstrap.js
           node --check app-core.js
           node --check app-runtime.js
+          node --check requirement-search.js
           node screening-counts.test.cjs
           node --test evidence-screening.test.cjs candidate-records.test.cjs realtime-performance.test.cjs
       - name: Verify signed-out and authenticated boot
@@ -62,6 +63,7 @@ jobs:
           node --test candidate-identity.test.cjs extraction-skills.test.cjs
           node calling-tracker-save.browser.test.cjs
           node interview-candidate-search.browser.test.cjs
+          node requirement-search.browser.test.cjs
       - name: Verify authenticated application boot
         run: |
           python3 -m http.server 4173 --bind 127.0.0.1 >/tmp/todo-ai-http.log 2>&1 &
