@@ -538,8 +538,8 @@ dialog form{padding:20px}
 
 /* ===== requirement-search.css ===== */
 .tss-requirement-search{position:relative;min-width:0;width:100%;max-width:100%}
-.topbar>.tss-requirement-search,.top-header>.tss-requirement-search{width:292px;flex:0 1 292px}
-@media(max-width:900px){.topbar>.tss-requirement-search{width:auto;flex:1 1 220px}}
+.topbar>.tss-requirement-search{width:auto;min-width:180px;max-width:260px;flex:1 1 220px}
+@media(max-width:900px){.topbar>.tss-requirement-search{max-width:none}}
 .tss-requirement-search-native{display:none!important}
 .tss-requirement-search>input{box-sizing:border-box;width:100%;min-width:0;border:1px solid #adc8df;border-radius:10px;padding:12px 32px 12px 12px;background:#fff;color:#17354b;font:inherit;text-overflow:ellipsis}
 .tss-requirement-search>input:focus{outline:2px solid #35a8ff;outline-offset:1px}
