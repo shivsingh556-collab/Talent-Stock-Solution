@@ -1,0 +1,16 @@
+.tss-requirement-search{position:relative;min-width:0;width:100%;max-width:100%}
+.topbar>.tss-requirement-search,.top-header>.tss-requirement-search{width:292px;flex:0 1 292px}
+@media(max-width:900px){.topbar>.tss-requirement-search{width:auto;flex:1 1 220px}}
+.tss-requirement-search-native{display:none!important}
+.tss-requirement-search>input{box-sizing:border-box;width:100%;min-width:0;border:1px solid #adc8df;border-radius:10px;padding:12px 32px 12px 12px;background:#fff;color:#17354b;font:inherit;text-overflow:ellipsis}
+.tss-requirement-search>input:focus{outline:2px solid #35a8ff;outline-offset:1px}
+.tss-requirement-search>input:disabled{opacity:.6;cursor:not-allowed}
+.tss-requirement-search [role=listbox]{position:absolute;top:calc(100% + 4px);left:0;right:0;z-index:120;max-height:280px;overflow:auto;overscroll-behavior:contain;background:#fff;color:#17354b;border:1px solid #adc8df;border-radius:10px;box-shadow:0 12px 28px rgba(0,0,0,.2)}
+.tss-requirement-search [role=listbox][hidden]{display:none!important}
+.tss-requirement-search [role=option]{padding:10px 12px;cursor:pointer;overflow-wrap:anywhere}
+.tss-requirement-search [role=option]:hover,.tss-requirement-search [role=option].active{background:#e6f3ff}
+.tss-requirement-search [role=option][aria-selected=true]{box-shadow:inset 3px 0 #35a8ff}
+.tss-requirement-search [role=option] strong{display:block;font-size:13px}
+.tss-requirement-search [role=option] small{display:block;font-size:11px;color:#526a7c;margin-top:3px}
+.tss-requirement-search-empty{padding:12px;font-size:12px}
+.tss-requirement-search-status{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}

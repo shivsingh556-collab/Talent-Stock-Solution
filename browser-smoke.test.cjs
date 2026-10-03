@@ -99,6 +99,26 @@ const signedInBackend=`
   check(await page.locator('link[data-tss-runtime]').count()===1,'runtime stylesheet loads exactly once');
   check((await page.locator('#profileName').innerText()).includes('Test Recruiter'),'verified profile identity reaches the workspace');
   check(errors.length===0,`authenticated bootstrap has no page errors: ${errors.join(' | ')}`);
+  await page.waitForSelector('#quickRequirementSearch',{timeout:5000});
+  check(await page.locator('#topRequirementSelectSearch').count()===1,'top requirement search loads from production runtime');
+  check(await page.locator('#screenRequirementSearch').count()===0,'hidden screening support does not create a duplicate field');
+  check(await page.locator('#tssIsRequirementSearch').count()===1,'interview requirement search mounts with scheduler');
+  await page.evaluate(()=>{
+    db.requirements=[
+      {id:'TSS116',serverId:'req-116',title:'Guidewire Developer',client:'Neosoft',status:'Active',skills:[]},
+      {id:'TSS117',serverId:'req-117',title:'Angular Developer',client:'Kyzer Software',status:'Active',skills:[]}
+    ];
+    renderAll();
+    renderOldSite();
+    document.querySelector('.nav-item[data-view="screening"]').click();
+  });
+  const requirementSearch=page.locator('#topRequirementSelectSearch');
+  await requirementSearch.fill('TSS117');
+  await requirementSearch.press('ArrowDown');
+  await requirementSearch.press('Enter');
+  check(await page.locator('#screenRequirement').inputValue()==='TSS117','search selection updates exact core screening requirement');
+  check((await page.locator('#selectedRoleTitle').innerText()).includes('Kyzer Software'),'search selection updates the selected JD summary');
+  check(errors.length===0,`production requirement selection has no page errors: ${errors.join(' | ')}`);
   await page.reload({waitUntil:'networkidle'});
   check(await page.locator('script[src*="app-core.js"]').count()===1,'reload still has one core bundle');
   check(await page.locator('script[src*="evidence-screening.js"]').count()===1,'reload still has one accuracy engine');

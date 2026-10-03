@@ -11,7 +11,7 @@ const cssFiles=[
   'styles.css','production-polish.css','requirements-perfect-fix.css',
   'todo-ai-branding.css','reports-activity.css','professional-ui.css',
   'quick-screening.css','quick-screening-next.css','light-theme.css',
-  'minimal-content-theme.css','ui-overrides.css','todoai-brand.css'
+  'minimal-content-theme.css','ui-overrides.css','todoai-brand.css','requirement-search.css'
 ];
 
 const coreFiles=['screening-counts.js','app.js','master-data.js','old-site.js'];
@@ -28,7 +28,7 @@ const runtimeFiles=[
   'screening-cleanup.js','quick-screening.js','quick-screening-next.js',
   'todo-chatbot-upgrade.js','role-access-visibility.js','realtime-performance.js',
   'workflow-finalization.js','requirement-screening-selection-fix.js',
-  'reports-activity.js','reports-daily-activity.js'
+  'reports-activity.js','reports-daily-activity.js','requirement-search.js'
 ];
 
 const joinFiles=async files=>(await Promise.all(files.map(async name=>banner(name,await read(name))))).join('');
