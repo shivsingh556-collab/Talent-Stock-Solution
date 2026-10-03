@@ -1,0 +1,15 @@
+const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
+const ctx={window:{}};vm.createContext(ctx);vm.runInContext(fs.readFileSync('screening-counts.js','utf8'),ctx);
+const unique=ctx.window.TSSScreeningCounts.unique;
+const first={id:'a',candidateId:'c',requirementId:'r',date:'2026-10-01T06:00:00Z',countsForPerformance:true};
+assert.equal(unique([first,...Array.from({length:100},(_,i)=>({...first,id:'repeat'+i,date:'2026-10-03T06:00:00Z',countsForPerformance:false}))]).length,1);
+assert.equal(unique([first,{...first,id:'b',requirementId:'other'}]).length,2);
+assert.equal(unique([first,{...first,id:'b',candidateId:'other'}]).length,2);
+assert.equal(unique([{id:'unknown'}]).length,0);
+assert.equal(unique([{...first,id:'later',date:'2026-10-03T06:00:00Z'},first])[0].id,'a');
+const source=fs.readFileSync('reports-activity.js','utf8');
+const functions=source.slice(source.indexOf('function performanceScreens'),source.indexOf('function renderTab'));
+const report={document:{querySelector:()=>null},lastAdmin:{performanceScreenings:[{screened_by:'one',final_recommendation:'Strong Match'},{screened_by:'two',final_recommendation:'Not Suitable'}],requirements:[]}};
+vm.createContext(report);vm.runInContext("const $=s=>document.querySelector(s);"+functions+";globalThis.metrics=summaryMetrics([{metrics:{screened:9999,shortlisted:9999}}]);globalThis.map=applyUniqueMetrics({one:{screened:9999,shortlisted:9999}});",report);
+assert.equal(report.metrics.screened,2);assert.equal(report.metrics.shortlisted,1);assert.equal(report.map.one.screened,1);assert.equal(report.map.two.screened,1);
+console.log('Unique screening counts and authoritative report tests passed');
