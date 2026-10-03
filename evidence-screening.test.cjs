@@ -51,3 +51,34 @@ test('matches manually added skills even when they are not in the alias catalogu
   const result=engine.scoreCandidate(resume,jd,{designation:'Technical Lead'});
   assert.deepStrictEqual([...result.missingRequired],[]);assert.deepStrictEqual([...result.missingPreferred],[]);assert.strictEqual(result.mandatoryPct,100);
 });
+
+test('matches skill synonyms across technical and business JDs',()=>{
+  const cases=[['MS SQL','Microsoft SQL Server (MS SQL)'],['Retrieval-Augmented Generation','RAG'],['Oracle PLSQL','PL/SQL'],['SQL query optimisation','SQL Query Optimization'],['Object oriented programming','OOP'],['user acceptance testing','UAT'],['human resources management system','HRMS'],['admissions counseling','Admission Counselling'],['GW data model','Guidewire Data Model']];
+  for(const [resume,skill] of cases){const match=engine.matchRequirement('SKILLS\n'+resume,skill);assert(match,`${resume} must match ${skill}`);assert.strictEqual(match.confidence,1)}
+});
+
+test('keeps versions and related technology families distinct',()=>{
+  for(const [resume,skill] of [['Angular JS','Angular'],['Angular 1.x','Angular'],['AngularJS','Angular'],['.NET Framework','.NET Core'],['.NET Core','.NET Framework'],['Containers','Docker'],['RHEL','Linux'],['Continuous integration','CI/CD'],['CD pipelines','CI/CD'],['Angular 18','Angular 19+'],['React Native','React']])assert.strictEqual(engine.matchRequirement(resume,skill),null,`${resume} is not equivalent to ${skill}`);
+});
+
+test('finds valid evidence after protected or negated mentions on one line',()=>{
+  for(const [resume,skill] of [['React Native and React','React'],['PL/SQL and SQL','SQL'],['T-SQL and SQL','SQL'],['No Python experience; later developed Python applications','Python']])assert(engine.matchRequirement(resume,skill),`${skill} must find later valid evidence`);
+});
+
+test('preserves compound AND conditions and accepts explicit alternatives',()=>{
+  assert.strictEqual(engine.matchRequirement('PLSQL','SQL/PLSQL'),null);
+  assert.strictEqual(engine.matchRequirement('SQL','SQL/PLSQL'),null);
+  assert(engine.matchRequirement('PL/SQL and SQL','SQL/PLSQL'));
+  assert(engine.matchRequirement('Analytical and Communication Skills','Analytical and Communication Skills'));
+  assert.strictEqual(engine.matchRequirement('Communication skills','Analytical and Communication Skills'),null);
+  assert(engine.matchRequirement('Amazon Web Services','Cloud Platform (AWS / Azure / GCP)'));
+});
+
+test('canonicalizes genuine aliases without adding skills or inflating weight',()=>{
+  assert.deepStrictEqual([...engine.canonicalizeSkills(['MS SQL','MSSQL','JavaScript','JS','Angular 19+','Unknown domain skill'])],['SQL Server','JavaScript','Angular 19+','Unknown domain skill']);
+  const result=engine.scoreCandidate('MSSQL',{skills:['MS SQL','SQL Server','Python'],preferred:['MSSQL','Docker']});
+  assert.strictEqual(result.mandatoryPct,50);assert.strictEqual(result.missingRequired.length,1);assert.deepStrictEqual([...result.missingPreferred],['Docker']);
+  for(const label of ['HTML','CSS','Tailwind CSS','Generative AI','Azure DevOps','PL/SQL'])assert.strictEqual(engine.canonicalLabel(label),label);
+  for(const key of Object.keys(engine.skillGroups))assert.strictEqual(engine.canonicalFor(engine.canonicalLabel(key)),key,key+' recognized display label');
+  for(const key of Object.keys(engine.skillGroups))assert.strictEqual(engine.canonicalLabel(engine.canonicalLabel(key)),engine.canonicalLabel(key),key+' stable label');
+});
