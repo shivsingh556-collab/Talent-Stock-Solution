@@ -13,3 +13,6 @@ const report={document:{querySelector:()=>null},lastAdmin:{performanceScreenings
 vm.createContext(report);vm.runInContext("const $=s=>document.querySelector(s);"+functions+";globalThis.metrics=summaryMetrics([{metrics:{screened:9999,shortlisted:9999}}]);globalThis.map=applyUniqueMetrics({one:{screened:9999,shortlisted:9999}});",report);
 assert.equal(report.metrics.screened,2);assert.equal(report.metrics.shortlisted,1);assert.equal(report.map.one.screened,1);assert.equal(report.map.two.screened,1);
 console.log('Unique screening counts and authoritative report tests passed');
+
+
+assert.equal(ctx.window.TSSScreeningCounts.latest([first,{...first,id:'latest',date:'2026-10-03T06:00:00Z',countsForPerformance:false}])[0].id,'latest');
