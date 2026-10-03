@@ -327,17 +327,17 @@
     return null;
   }
   function splitAlternative(skill){return String(skill).split(/\s+(?:or|\/)\s+/i).map(x=>x.trim()).filter(Boolean)}
-  function matchRequirement(textOrLines,skill){
+  function matchRequirement(textOrLines,skill,{allowFuzzy=true}={}){
     const lines=Array.isArray(textOrLines)?textOrLines:meaningfulLines(textOrLines);
     const rule=compoundRules.get(normalize(skill));
     if(rule){
       const literal=exactEvidence(lines,skill);if(literal)return {label:skill,evidence:literal.matchedTerm,...literal};
-      const matches=(rule.any||rule.all).map(part=>matchRequirement(lines,part));
+      const matches=(rule.any||rule.all).map(part=>matchRequirement(lines,part,{allowFuzzy}));
       if(rule.any)return matches.find(Boolean)||null;
       if(matches.some(match=>!match))return null;
       return {label:skill,requestedSkill:skill,canonical:normalize(skill),matchedTerm:matches.map(m=>m.matchedTerm).join(' + '),evidence:matches.map(m=>m.evidence).join(' + '),method:'group',confidence:Math.min(...matches.map(m=>m.confidence)),evidenceLine:matches.map(m=>m.evidenceLine).join(' | ').slice(0,480),context:'combined',needsVerification:matches.some(m=>m.needsVerification),components:matches};
     }
-    for(const option of splitAlternative(skill)){const match=exactEvidence(lines,option)||fuzzyEvidence(lines,option);if(match)return {label:option,evidence:match.matchedTerm,...match}}
+    for(const option of splitAlternative(skill)){const match=exactEvidence(lines,option)||(allowFuzzy?fuzzyEvidence(lines,option):null);if(match)return {label:option,evidence:match.matchedTerm,...match}}
     return null;
   }
   function mergeMonths(ranges){const merged=[];ranges.sort((a,b)=>a[0]-b[0]).forEach(([start,end])=>{const last=merged.at(-1);if(!last||start>last[1]+1)merged.push([start,end]);else last[1]=Math.max(last[1],end)});return merged.reduce((sum,[start,end])=>sum+end-start+1,0)}

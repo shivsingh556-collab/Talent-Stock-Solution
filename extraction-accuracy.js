@@ -34,7 +34,7 @@ const reEsc=s=>String(s).replace(/[-/\\^$*+?.()|[\]{}]/g,'\\$&');
 function catalogSkills(t){
   const engine=window.tssEvidenceScreening,l=(' '+String(t).toLowerCase()+' '),out=[];
   for(const [name,aliases] of Object.entries(catalog)){
-    if(engine){const match=engine.matchRequirement(t,name);if(match&&!match.needsVerification)out.push(engine.canonicalLabel(name))}
+    if(engine){const match=engine.matchRequirement(t,name,{allowFuzzy:false});if(match&&!match.needsVerification)out.push(engine.canonicalLabel(name))}
     else if(aliases.some(alias=>new RegExp('(^|[^a-z0-9+#.])'+reEsc(alias)+'([^a-z0-9+#.]|$)','i').test(l)))out.push(name);
   }
   return out;
