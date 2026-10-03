@@ -233,7 +233,9 @@
     const { data, error } = await client.from('screenings').insert(payload).select().single();
     if(error) throw error;
     await client.from('candidates').update({last_screened_at:new Date().toISOString()}).eq('id',screening.candidate_id);
-    return data;
+    const credit=await client.from('screening_work_credits').select('screening_id').eq('screening_id',data.id).maybeSingle();
+    // Failed confirmation must never optimistically award another count. Hydration will reconcile it.
+    return {...data,counts_for_performance:!credit.error&&Boolean(credit.data)};
   }
 
   async function candidateHistory(candidateId){
