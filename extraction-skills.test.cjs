@@ -40,3 +40,23 @@ Jan 2023 - Present`);
 test('manual custom skills are preserved by the shared splitter',()=>{
   assert.deepEqual([...parser.splitSkillBlock('Hazelcast, Groovy/Grails, Fortinet SD-WAN')],['Hazelcast','Groovy','Grails','Fortinet SD-WAN']);
 });
+
+test('production parser canonicalizes aliases and keeps preferred synonyms separate',()=>{
+  const document={readyState:'complete',scripts:[],getElementById(){return null},addEventListener(){},head:{appendChild(){}}};
+  const context={console,Date,document,setTimeout,clearTimeout,URL};context.window=context;vm.createContext(context);
+  vm.runInContext(fs.readFileSync('evidence-screening.js','utf8'),context);
+  vm.runInContext(fs.readFileSync('extraction-accuracy.js','utf8'),context);
+  const jd=context.TSSDocumentParser.extractJD('Job Title: Analyst\nMandatory Skills:\nRAG, Retrieval-Augmented Generation\nPreferred Skills:\nMS Excel, Microsoft Excel\nExperience: 3 years');
+  assert.deepEqual([...jd.skills],['RAG']);assert.deepEqual([...jd.preferred],['Excel']);
+  const resume=context.TSSDocumentParser.extractResume('ANITA SHARMA\nSKILLS\nMS SQL, MSSQL, ReactJS\nEXPERIENCE\nJan 2023 - Present');
+  assert(resume.skills.includes('SQL Server'));assert.equal(resume.skills.filter(s=>s==='SQL Server').length,1);assert(resume.skills.includes('React'));
+});
+
+test('production JD extraction does not invent related skills or split PL/SQL',()=>{
+  const document={readyState:'complete',scripts:[],getElementById(){return null},addEventListener(){},head:{appendChild(){}}},context={console,Date,document,setTimeout,clearTimeout,URL};context.window=context;vm.createContext(context);
+  for(const file of ['evidence-screening.js','extraction-accuracy.js'])vm.runInContext(fs.readFileSync(file,'utf8'),context);
+  for(const [wording,expected] of [['Angular JS','AngularJS'],['Angular 1.x','AngularJS'],['PL/SQL','PL/SQL'],['React Native','React Native']]){
+    const jd=context.TSSDocumentParser.extractJD('Job Title: Developer\nRequired Skills:\n'+wording+'\nExperience: 3 years');
+    assert.deepEqual([...jd.skills],[expected],wording+' must remain one genuine skill');
+  }
+});
