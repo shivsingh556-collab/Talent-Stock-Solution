@@ -27,6 +27,7 @@ jobs:
           node --check auth-bootstrap.js
           node --check app-core.js
           node --check app-runtime.js
+          node screening-counts.test.cjs
           node --test evidence-screening.test.cjs candidate-records.test.cjs realtime-performance.test.cjs
       - name: Verify signed-out and authenticated boot
         run: |
