@@ -60,6 +60,7 @@ jobs:
           node interview-name-sync.test.cjs
           node --test candidate-identity.test.cjs extraction-skills.test.cjs
           node calling-tracker-save.browser.test.cjs
+          node interview-candidate-search.browser.test.cjs
       - name: Verify authenticated application boot
         run: |
           python3 -m http.server 4173 --bind 127.0.0.1 >/tmp/todo-ai-http.log 2>&1 &
