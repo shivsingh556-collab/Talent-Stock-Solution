@@ -37,7 +37,7 @@ const context={
   console,document,navigator:{onLine:true},CustomEvent:class{constructor(type){this.type=type}},
   setTimeout,clearTimeout,setInterval:()=>0,queueMicrotask,
   addEventListener(name,fn){(listeners[name]??=[]).push(fn)},
-  TSSBackend:{enabled:true,client},TSSProduction:{hydrate:async()=>{hydrateCalls++}},
+  TSSBackend:{enabled:true,client},TSSProduction:{hydrate:async()=>{hydrateCalls++;return true}},
   renderAll(){},renderOldSite(){}
 };
 context.window=context;
@@ -74,5 +74,11 @@ vm.runInNewContext(fs.readFileSync('realtime-performance.js','utf8'),context);
   await new Promise(resolve=>setTimeout(resolve,250));
   assert.equal(labelText,'Live updates on','short reconnects do not flicker the badge');
   assert(!transitions.includes('Reconnecting…'),'reconnecting is only displayed for a sustained outage');
+  context.TSSProduction.hydrate=async()=>false;
+  assert.equal(await context.TSSRealtimePerformance.refresh('failed-query',true),false);
+  assert.equal(labelText,'Data refresh failed · retrying','connected channel cannot hide failed hydration');
+  context.TSSProduction.hydrate=async()=>true;
+  assert.equal(await context.TSSRealtimePerformance.refresh('recovered-query',true),true);
+  assert.equal(labelText,'Live updates on','successful hydration clears failure state');
   console.log('realtime coordinator test passed');
 })().catch(error=>{console.error(error);process.exitCode=1});

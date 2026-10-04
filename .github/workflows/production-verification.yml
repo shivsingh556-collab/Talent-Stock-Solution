@@ -24,6 +24,8 @@ jobs:
           npx playwright install --with-deps chromium
       - name: Verify source and logic
         run: |
+          node scripts/build-production.mjs
+          node --test workspace-shell.test.cjs report-export.test.cjs
           node --check auth-bootstrap.js
           node --check app-core.js
           node --check app-runtime.js

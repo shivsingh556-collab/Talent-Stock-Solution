@@ -6,18 +6,18 @@
   const backend=()=>window.TSSBackend;
   let channel=null,refreshTimer=null,reconnectTimer=null,stateTimer=null,subscribePromise=null;
   let refreshing=false,refreshAgain=false,lastRefresh=0,reconnectAttempt=0,booted=false,channelReady=false,pausedUntil=0;
-  let online=navigator.onLine;
+  let online=navigator.onLine,syncFailed=false;
 
   function paintState(state){
     document.documentElement.dataset.tssLive=state;
     const indicator=document.querySelector('#backendIndicator');
     if(indicator)indicator.className='backend-indicator '+(state==='on'?'':'off');
     const label=document.querySelector('#backendIndicator span');
-    if(label)label.textContent=state==='on'?'Live updates on':state==='offline'?'Offline · changes saved locally':'Reconnecting…';
+    if(label)label.textContent=state==='on'?'Live updates on':state==='offline'?'Offline · changes saved locally':state==='sync-error'?'Data refresh failed · retrying':'Reconnecting…';
   }
   function setState(state){
     clearTimeout(stateTimer);stateTimer=null;
-    if(state==='on'||state==='offline'){paintState(state);return}
+    if(state==='on'||state==='offline'||state==='sync-error'){paintState(state);return}
     // Brief reconnects are normal during auth refreshes and tab wake-up.
     stateTimer=setTimeout(()=>{if(!channelReady&&online)paintState('degraded')},1500);
   }
@@ -44,10 +44,12 @@
     if(!force&&Date.now()-lastRefresh<5000)return false;
     refreshing=true;setSyncing(true);
     try{
-      await window.TSSProduction?.hydrate?.();
+      const synced=await window.TSSProduction?.hydrate?.();
+      if(synced!==true)throw new Error('Workspace data refresh did not complete');
+      syncFailed=false;
       lastRefresh=Date.now();if(channelReady)setState('on');
       console.info('TODO AI sync complete',reason);return true;
-    }catch(e){setState('degraded');console.warn('TODO AI sync failed',reason,e?.message||e);return false}
+    }catch(e){syncFailed=true;setState('sync-error');console.warn('TODO AI sync failed',reason,e?.message||e);return false}
     finally{refreshing=false;setSyncing(false);if(refreshAgain){refreshAgain=false;scheduleRefresh('queued',250,true)}}
   }
   function scheduleRefresh(reason='change',delay=180,force=false){
@@ -74,7 +76,7 @@
       if(channel!==next)return;
       if(status==='SUBSCRIBED'){
         channelReady=true;reconnectAttempt=0;clearTimeout(reconnectTimer);reconnectTimer=null;
-        setState('on');scheduleRefresh('reconnected',250,true);
+        setState(syncFailed?'sync-error':'on');scheduleRefresh('reconnected',250,true);
       }else if(status==='CHANNEL_ERROR'||status==='TIMED_OUT'||status==='CLOSED'){
         channelReady=false;console.warn('TODO AI realtime connection',status,error||'');setState('degraded');scheduleReconnect();
       }
