@@ -230,12 +230,12 @@
   }
 
   async function verifyAndBoot(){
-    if(appLoaded)return true;
     if(bootPromise)return bootPromise;
     bootPromise=(async()=>{
       const identity=await verifiedIdentity();
       if(!identity){lock();return false;}
-      await loadApplication(identity);
+      if(appLoaded){window.TSS_AUTH_CONTEXT=identity;enforceRoleAccess(identity);}
+      else await loadApplication(identity);
       return true;
     })().catch(async error=>{
       console.error('Authentication bootstrap failed',error);

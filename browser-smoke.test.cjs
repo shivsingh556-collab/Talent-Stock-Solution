@@ -14,6 +14,7 @@ window.supabase={createClient(){return{
 const signedInBackend=`
 (()=>{
   const profile={id:'user-1',full_name:'Test Recruiter',email:'test@talent-stock.com',role:'recruiter',is_active:true,is_super_admin:false};
+  window.__testProfile=profile;
   const terminal={data:[],error:null};
   function query(){return new Proxy({}, {get(_t,key){if(key==='then')return resolve=>resolve(terminal);if(key==='maybeSingle'||key==='single')return async()=>({data:profile,error:null});return()=>query()}})}
   const channel={on(){return this},subscribe(callback){callback?.('SUBSCRIBED');return this}};
@@ -135,6 +136,9 @@ const signedInBackend=`
   check(await page.locator('script[src*="evidence-screening.js"]').count()===1,'reload still has one accuracy engine');
   check(await page.locator('.login-todo-photo').count()===1,'reload keeps one mascot renderer');
 
+  await page.evaluate(()=>{window.__testProfile.is_active=false});
+  check(await page.evaluate(()=>window.TSSAuth.verify())===false,'mounted workspace rechecks active account status');
+  check(await page.locator('#workspace').count()===0,'deactivated account loses mounted workspace');
   await browser.close();
   console.log(`browser hardening checks passed (${checks} checks)`);
 })().catch(error=>{console.error(error);process.exit(1)});
