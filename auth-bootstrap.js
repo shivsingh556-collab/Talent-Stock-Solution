@@ -4,7 +4,7 @@
   'use strict';
 
   const DOMAIN='talent-stock.com';
-  const BUILD='20261003-jd-skill-aliases-1';
+  const BUILD='20261004-secure-shell-1';
   const gate=document.getElementById('loginGate');
   const mount=document.getElementById('workspaceMount');
   const form=document.getElementById('loginForm');
@@ -192,7 +192,10 @@
 
   async function loadApplication(identity){
     if(appLoaded)return;
-    const response=await fetch(`workspace-shell.html?v=${BUILD}`,{credentials:'same-origin',cache:'no-store'});
+    const {data:sessionData,error:sessionError}=await window.TSSBackend.client.auth.getSession();
+    const token=sessionData?.session?.access_token;
+    if(sessionError||!token)throw new Error('Your session has expired. Please sign in again.');
+    const response=await fetch(`/api/workspace-shell?v=${BUILD}`,{headers:{Authorization:`Bearer ${token}`},cache:'no-store'});
     if(!response.ok)throw new Error('Secure workspace could not be loaded.');
     const shell=await response.text();
     if(!shell.includes('id="workspace"'))throw new Error('Secure workspace response is invalid.');

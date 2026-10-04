@@ -1,4 +1,4 @@
-import { readFile, writeFile, mkdir } from 'node:fs/promises';
+import { readFile, writeFile, mkdir, readdir, cp, rm } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import vm from 'node:vm';
@@ -42,13 +42,13 @@ const scriptsStart=workspaceStart>=0?html.indexOf('  <script src=',workspaceStar
 let workspace;
 if(workspaceStart>=0&&scriptsStart>=0){
   workspace=html.slice(workspaceStart,scriptsStart).trim();
-  await writeFile(join(root,'workspace-shell.html'),`${workspace}\n`);
+  await writeFile(join(root,'private/workspace-shell.html'),`${workspace}\n`);
   let publicShell=html.slice(0,workspaceStart);
   publicShell=publicShell.replace(/(?:\s*<link rel="stylesheet"[^>]*>\s*)+/m,'\n  <link rel="stylesheet" href="login-shell.css?v=20260922-forgot-password-1" />\n');
   publicShell+=`  <main id="workspaceMount"></main>\n\n  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.109.0"></script>\n  <script src="backend/config.js?v=20260913-hardening-1"></script>\n  <script src="backend/supabase-client.js?v=20260922-forgot-password-1"></script>\n  <script src="auth-bootstrap.js?v=20260922-forgot-password-1"></script>\n</body>\n</html>\n`;
   await writeFile(join(root,'index.html'),publicShell);
 }else{
-  workspace=(await read('workspace-shell.html')).trim();
+  workspace=(await read('private/workspace-shell.html')).trim();
 }
 
 const context={window:{}};
@@ -61,3 +61,14 @@ await mkdir(join(root,'assets'),{recursive:true});
 await writeFile(join(root,'assets/talentstock-logo.webp'),Buffer.from(match[2],'base64'));
 
 console.log(JSON.stringify({workspaceBytes:Buffer.byteLength(workspace),coreFiles:coreFiles.length,runtimeFiles:runtimeFiles.length,cssFiles:cssFiles.length},null,2));
+
+// Publish only browser assets. Private templates and tests never become static routes.
+const dist=join(root,'dist');
+await rm(dist,{recursive:true,force:true});
+await mkdir(dist,{recursive:true});
+for(const name of await readdir(root)){
+  if(/\.(?:html|css|js)$/.test(name)&&name!=='workspace-shell.html')await cp(join(root,name),join(dist,name));
+}
+await cp(join(root,'assets'),join(dist,'assets'),{recursive:true});
+await mkdir(join(dist,'backend'),{recursive:true});
+for(const name of ['config.js','supabase-client.js'])await cp(join(root,'backend',name),join(dist,'backend',name));

@@ -18,7 +18,7 @@ const signedInBackend=`
   function query(){return new Proxy({}, {get(_t,key){if(key==='then')return resolve=>resolve(terminal);if(key==='maybeSingle'||key==='single')return async()=>({data:profile,error:null});return()=>query()}})}
   const channel={on(){return this},subscribe(callback){callback?.('SUBSCRIBED');return this}};
   const authUser={id:'user-1',email:profile.email};
-  const client={auth:{getSession:async()=>({data:{session:{user:authUser}},error:null}),onAuthStateChange:()=>({data:{subscription:{unsubscribe(){}}}})},from:()=>query(),channel:()=>channel,removeChannel:async()=>{}};
+  const client={auth:{getSession:async()=>({data:{session:{user:authUser,access_token:'verified-test-token'}},error:null}),onAuthStateChange:()=>({data:{subscription:{unsubscribe(){}}}})},from:()=>query(),channel:()=>channel,removeChannel:async()=>{}};
   window.TSSBackend={enabled:true,client,currentUser:async()=>({id:'user-1',email:profile.email}),signIn:async()=>({}),signOut:async()=>{},getActiveRequirements:async()=>[],syncMasterRequirements:async()=>({synced:0,skipped:0}),createOrUpdateCandidate:async()=>({}),updateCandidate:async()=>({}),uploadResume:async()=>({}),saveScreening:async()=>({}),candidateHistory:async()=>[],existingMatches:async()=>[]};
 })();`;
 
@@ -44,9 +44,19 @@ const signedInBackend=`
     const mascot=await page.locator('.login-todo-photo').boundingBox();
     const panel=await page.locator('.login-right').boundingBox();
     check(Boolean(mascot&&panel&&mascot.x>=panel.x-1&&mascot.x+mascot.width<=panel.x+panel.width+1&&mascot.y>=panel.y-1&&mascot.y+mascot.height<=panel.y+panel.height+1),`${width}px mascot is fully visible inside its panel`);
+    const welcome=await page.locator('.welcome-card').boundingBox();
+    check(welcome.y+welcome.height<=mascot.y,`${width}px welcome card does not cover the mascot`);
     check(await page.locator('body').evaluate(el=>el.scrollWidth<=el.clientWidth+1),`${width}px has no horizontal overflow`);
     check(!(await page.locator('body').innerText()).toLowerCase().includes('private by design'),`${width}px private-design card is absent`);
     check(errors.length===0,`${width}px has no page errors`);
+    await page.click('#showLoginForm');
+    check(await page.locator('#loginForm').isVisible(),`${width}px sign-in form opens`);
+    check(await page.locator('body').evaluate(el=>el.scrollWidth<=el.clientWidth+1),`${width}px sign-in form has no overflow`);
+    await page.click('#forgotPasswordButton');
+    check(await page.locator('#forgotPasswordForm').isVisible(),`${width}px reset form opens`);
+    check(await page.locator('body').evaluate(el=>el.scrollWidth<=el.clientWidth+1),`${width}px reset form has no overflow`);
+    await page.click('#backToLoginButton');
+    check(await page.locator('#loginForm').isVisible(),`${width}px returns to sign in`);
     await page.close();
   }
 
@@ -89,6 +99,7 @@ const signedInBackend=`
   page.on('pageerror',error=>errors.push(String(error)));
   await page.route('https://cdn.jsdelivr.net/**',route=>route.fulfill({status:200,contentType:'application/javascript',body:'window.supabase={createClient(){return {}}};'}));
   await page.route('**/backend/supabase-client.js*',route=>route.fulfill({status:200,contentType:'application/javascript',body:signedInBackend}));
+  await page.route('**/api/workspace-shell*',route=>{assert.equal(route.request().headers().authorization,'Bearer verified-test-token');return route.fulfill({status:200,contentType:'text/html',body:require('node:fs').readFileSync(require('node:path').join(__dirname,'private/workspace-shell.html'),'utf8')})});
   const response=await page.goto(baseUrl,{waitUntil:'networkidle',timeout:30000});
   check(response.status()===200,'verified-session fixture returns HTTP 200');
   await page.waitForSelector('#workspace:not(.hidden)',{timeout:15000});
