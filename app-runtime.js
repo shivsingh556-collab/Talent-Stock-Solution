@@ -195,7 +195,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
   function mapCandidate(c,resume){return{id:c.id,serverId:c.id,name:c.candidate_name,email:c.email||'',phone:c.phone||'',location:c.current_location||'',preferredLocation:c.preferred_location||'',totalExperience:c.total_experience??'',relevantExperience:c.relevant_experience??'',currentCompany:c.current_company||'',designation:c.current_designation||'',skills:c.skills||[],education:c.education||'',noticePeriod:c.notice_period||'',currentCTC:c.current_ctc||'',expectedCTC:c.expected_ctc||'',uploadDate:c.created_at,lastScreenedDate:c.last_screened_at,uploadedBy:'Supabase',resumeAvailable:Boolean(resume?.storage_path),resumeVersionId:resume?.id||null,resumePath:resume?.storage_path||'',resumeFilename:resume?.original_filename||'',resumeMimeType:resume?.mime_type||'',resumeUploadedAt:resume?.uploaded_at||null}}
   function mapScreening(s){const req=s.requirements||{};return{id:s.id,serverId:s.id,candidateId:s.candidate_id,requirementId:req.profile_key||req.tss_id||s.requirement_id,date:s.screened_at,score:Number(s.overall_score||0),recommendation:s.final_recommendation||s.ai_recommendation||'Review Recommended',matched:s.matching_skills||[],missing:s.missing_skills||[],metrics:{mandatoryPct:Number(s.mandatory_skill_score||0),prefPct:Number(s.preferred_skill_score||0),expPct:Number(s.experience_score||0),domainPct:Number(s.domain_score||0),locPct:Number(s.location_score||0)},recruiterDecision:s.recruiter_decision||'Pending',notes:s.recruiter_notes||'',manualOverride:Boolean(s.manually_overridden),screenedBy:s.screened_by,countsForPerformance:s.counts_for_performance!==false}}
   function recruiterLabel(profile){const raw=String(profile?.full_name||profile?.email||'').split('@')[0].trim();return raw.replace(/[._-]+/g,' ').replace(/\b\w/g,char=>char.toUpperCase())}
-  function mapInterview(i){const d=i.scheduled_at?new Date(i.scheduled_at):null;return{id:i.id,serverId:i.id,scheduledAt:i.scheduled_at||null,date:d&&!isNaN(d)?new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Kolkata',year:'numeric',month:'2-digit',day:'2-digit'}).format(d):'',time:d&&!isNaN(d)?new Intl.DateTimeFormat('en-IN',{timeZone:'Asia/Kolkata',hour:'2-digit',minute:'2-digit',hour12:true}).format(d):'',candidate:i.candidates?.candidate_name||i.candidate_name_snapshot||'Candidate',position:i.job_title_snapshot||i.requirements?.job_title||'',client:i.client_name_snapshot||i.requirements?.clients?.name||'',mode:i.interview_type||'Client Interview',status:i.status||'Scheduled',candidateResponse:i.candidate_response||'Pending',outcome:i.outcome||'Pending',outcomeNotes:i.outcome_notes||'',outcomeUpdatedAt:i.outcome_updated_at||null,interviewStage:i.interview_stage||'Scheduled',notes:i.notes||'',archivedAt:i.archived_at||null,createdBy:i.created_by||null,scheduledBy:recruiterLabel(i.scheduled_by_profile),candidateId:i.candidate_id,requirementServerId:i.requirement_id}}
+  function mapInterview(i){const d=i.scheduled_at?new Date(i.scheduled_at):null;return{id:i.id,serverId:i.id,scheduledAt:i.scheduled_at||null,date:d&&!isNaN(d)?new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Kolkata',year:'numeric',month:'2-digit',day:'2-digit'}).format(d):'',time:d&&!isNaN(d)?new Intl.DateTimeFormat('en-IN',{timeZone:'Asia/Kolkata',hour:'2-digit',minute:'2-digit',hour12:true}).format(d):'',candidate:i.candidates?.candidate_name||i.candidate_name_snapshot||'Candidate',position:i.job_title_snapshot||i.requirements?.job_title||'',client:i.client_name_snapshot||i.requirements?.clients?.name||'',mode:i.interview_type||'Client Interview',schedulingSource:i.scheduling_source||'tss',interviewRound:i.interview_round||1,locationOrLink:i.location_or_link||'',interviewer:i.interviewer||'',status:i.status||'Scheduled',candidateResponse:i.candidate_response||'Pending',outcome:i.outcome||'Pending',outcomeNotes:i.outcome_notes||'',outcomeUpdatedAt:i.outcome_updated_at||null,interviewStage:i.interview_stage||'Scheduled',notes:i.notes||'',archivedAt:i.archived_at||null,createdBy:i.created_by||null,scheduledBy:recruiterLabel(i.scheduled_by_profile),candidateId:i.candidate_id,requirementServerId:i.requirement_id}}
   async function hydrate(){if(hydrating||!backend()?.enabled)return false;hydrating=true;const done=hydrated?()=>{}:busy('Loading secure workspace…');try{const user=await backend().currentUser();if(!user){status('Secure backend ready','off');return false}const c=backend().client;const [{data:reqs,error:re},{data:cands,error:ce},{data:resumes,error:rve},{data:screens,error:se},{data:ints,error:ie},{data:credits,error:creditError}]=await Promise.all([c.from('requirements').select('*,clients(name)').neq('status','Closed').order('created_at',{ascending:false}).order('tss_id',{ascending:false}),c.from('candidates').select('*').order('created_at',{ascending:false}),c.from('resume_versions').select('id,candidate_id,storage_path,original_filename,mime_type,file_size,uploaded_at,is_current').order('uploaded_at',{ascending:true}),c.from('screenings').select('*,requirements(profile_key,tss_id,job_title)').order('screened_at',{ascending:true}),c.from('interviews').select('*,candidates(candidate_name),requirements(job_title,clients(name)),scheduled_by_profile:profiles!interviews_created_by_fkey(full_name,email)').order('scheduled_at',{ascending:true}),c.from('screening_work_credits').select('screening_id')]);if(creditError)throw creditError;if(re)throw re;if(ce)throw ce;if(rve)throw rve;if(se)throw se;if(ie)throw ie;const latestResume=new Map();for(const resume of resumes||[])if(resume?.candidate_id&&resume.storage_path)latestResume.set(resume.candidate_id,resume);if(Array.isArray(reqs)){const custom=(db.requirements||[]).filter(r=>String(r.id).startsWith('CUSTOM-'));db.requirements=[...reqs.map(mapReq),...custom]}db.candidates=(cands||[]).map(row=>mapCandidate(row,latestResume.get(row.id)));const creditIds=new Set((credits||[]).map(x=>x.screening_id));db.screenings=(screens||[]).map(s=>mapScreening({...s,counts_for_performance:creditIds.has(s.id)}));db.interviews=(ints||[]).map(mapInterview);localStorage.setItem('tss_talent_buddy_v1',JSON.stringify(db));try{renderAll()}catch{}try{renderOldSite()}catch{}hydrated=true;if(!window.TSSRealtimePerformance)status('Supabase connected','on');return true}catch(err){console.error(err);status('Backend issue','error');try{toast('Backend sync issue: '+(err.message||err))}catch{}return false}finally{hydrating=false;done()}}
   async function fileHash(file){if(!file||!crypto?.subtle)return null;const buf=await file.arrayBuffer();const h=await crypto.subtle.digest('SHA-256',buf);return[...new Uint8Array(h)].map(b=>b.toString(16).padStart(2,'0')).join('')}
   const pendingResumeFiles=new WeakMap();
@@ -460,7 +460,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
     let h=m?Number(m[1]):11,mm=m?Number(m[2]):0,ap=m?.[3]?.toUpperCase();
     if(ap==='PM'&&h<12)h+=12;
     if(ap==='AM'&&h===12)h=0;
-    const d=new Date(`${date}T${String(h).padStart(2,'0')}:${String(mm).padStart(2,'0')}:00`);
+    const d=new Date(`${date}T${String(h).padStart(2,'0')}:${String(mm).padStart(2,'0')}:00+05:30`);
     return isNaN(d)?null:d.toISOString();
   }
 
@@ -505,7 +505,17 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
       const exactPosition=item.position||req?.title||'',exactClient=item.client||req?.client||'';
       if(!exactPosition)throw new Error('Interview position is required.');
 
-      const payload={id:item.clientRequestId,candidate_id:candId,requirement_id:reqId,scheduled_at:scheduled,status:'Scheduled',interview_type:item.mode||'Client Interview',interviewer:item.interviewer||null,location_or_link:item.locationOrLink||item.link||item.location||null,notes:item.notes||null,created_by:user.id,candidate_name_snapshot:cand?.name||item.candidate||'Candidate',candidate_email_snapshot:item.email||cand?.email||null,job_title_snapshot:exactPosition,client_name_snapshot:exactClient,timezone:'Asia/Kolkata',candidate_response:'Pending',reminder_status:'Pending'};
+      const source=item.schedulingSource==='client'?'client':'tss';
+      if(source==='client'){
+        const {data:profile,error:profileError}=await b.client.from('profiles').select('role,is_active,is_super_admin').eq('id',user.id).maybeSingle();
+        if(profileError||profile?.is_active!==true||profile?.role!=='admin')throw new Error('Only admins and super admins can record client-scheduled interviews.');
+      }
+      const round=Number(item.interviewRound)||1;
+      const {data:duplicates,error:duplicateError}=await b.client.from('interviews').select('id,interview_round').eq('candidate_id',candId).eq('requirement_id',reqId).in('status',['Scheduled','Confirmed','Reschedule Requested']).is('archived_at',null).is('cancelled_at',null);
+      if(duplicateError)throw duplicateError;
+      if((duplicates||[]).some(entry=>entry.id!==item.clientRequestId&&(entry.interview_round||1)===round))throw new Error('An active interview already exists for this candidate, requirement and round. Use Edit / Reschedule on that record.');
+
+      const payload={scheduling_source:source,interview_round:round,reminder_morning_enabled:source!=='client',reminder_pre_enabled:source!=='client',id:item.clientRequestId,candidate_id:candId,requirement_id:reqId,scheduled_at:scheduled,status:'Scheduled',interview_type:item.mode||'Client Interview',interviewer:item.interviewer||null,location_or_link:item.locationOrLink||item.link||item.location||null,notes:item.notes||null,created_by:user.id,candidate_name_snapshot:cand?.name||item.candidate||'Candidate',candidate_email_snapshot:item.email||cand?.email||null,job_title_snapshot:exactPosition,client_name_snapshot:exactClient,timezone:'Asia/Kolkata',candidate_response:'Pending',reminder_status:source==='client'?'Disabled - Client Scheduled':'Pending'};
       let {data,error}=await b.client.from('interviews').insert(payload).select().single();
       if(error?.code==='23505'){
         const existing=await b.client.from('interviews').select('*').eq('id',item.clientRequestId).maybeSingle();
@@ -513,7 +523,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
         data=existing.data;error=null;
       }
       if(error)throw error;
-      item.serverId=data.id;item.id=data.id;item.candidateId=candId;item.requirementServerId=reqId;item.email=payload.candidate_email_snapshot;item.reminderStatus='Pending';item.candidateResponse='Pending';item.status='Scheduled';item.syncState='synced';delete item.syncError;
+      item.serverId=data.id;item.id=data.id;item.candidateId=candId;item.requirementServerId=reqId;item.email=payload.candidate_email_snapshot;item.schedulingSource=data.scheduling_source||source;item.interviewRound=data.interview_round||round;item.reminderStatus=data.reminder_status||payload.reminder_status;item.candidateResponse='Pending';item.status='Scheduled';item.syncState='synced';delete item.syncError;
       if((store.interviews||[]).includes(item))localStorage.setItem('tss_talent_buddy_v1',JSON.stringify(store));
       return item;
     })();
@@ -571,6 +581,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
     return `<span class="ia-status ${cls}">${esc(s)}</span>`;
   }
   function responseBadge(server,item){
+    if((server?.scheduling_source||item?.schedulingSource)==='client')return '<span class="ia-response ia-pending">Client manages invitation · no Todo emails</span>';
     const r=server?.candidate_response||item?.candidateResponse||'Pending';
     if(r==='Confirmed')return '<span class="ia-response ia-available">✓ Candidate available</span>';
     if(r==='Reschedule Requested')return '<span class="ia-response ia-requested">↻ Reschedule requested</span>';
@@ -579,7 +590,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
   function scheduledBy(server,item){return server?.scheduled_by||item?.scheduledBy||item?.scheduled_by_name||'—'}
 
   function signature(items){
-    return JSON.stringify(items.map(i=>{const id=String(i.serverId||i.id||'');const s=statusMap.get(id)||{};return [id,i.date,i.time,i.candidate,i.position,i.client,i.mode,s.candidate_response||i.candidateResponse,s.scheduled_by||i.scheduledBy,s.status||i.status,i.archivedAt]}));
+    return JSON.stringify(items.map(i=>{const id=String(i.serverId||i.id||'');const s=statusMap.get(id)||{};return [id,i.date,i.time,i.candidate,i.position,i.client,i.mode,s.candidate_response||i.candidateResponse,s.scheduled_by||i.scheduledBy,s.status||i.status,i.archivedAt,s.scheduling_source||i.schedulingSource,i.interviewRound]}));
   }
 
   function renderStable(force=false){
@@ -588,7 +599,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
     const sig=signature(items);
     if(!force&&sig===lastSignature&&b.querySelector('[data-tss-stable-interview-table]'))return;
     lastSignature=sig;
-    const html=items.length?`<table class="jobs-table" data-tss-stable-interview-table="1"><thead><tr><th>Date</th><th>Time</th><th>Candidate</th><th>Position</th><th>Client</th><th>Mode</th><th>Candidate Response</th><th>Scheduled By</th><th>Status</th><th>Actions</th></tr></thead><tbody>${items.map(item=>{const id=String(item.serverId||item.id||'');const server=statusMap.get(id)||{};const st=server.status||item.status||item.localStatus||'Scheduled';return `<tr data-interview-id="${esc(id)}"><td>${esc(item.date||'—')}</td><td>${esc(item.time||'—')}</td><td><strong>${esc(item.candidate||'Candidate')}</strong></td><td>${esc(item.position||'')}</td><td>${esc(item.client||'')}</td><td>${esc(item.mode||'Client Interview')}</td><td class="ia-response-cell">${responseBadge(server,item)}</td><td>${esc(scheduledBy(server,item))}</td><td>${statusBadge(st)}</td><td class="ia-actions"><button type="button" class="ia-btn ia-outcome" data-ia-outcome="${esc(id)}">Update Interview</button><button type="button" class="ia-btn ia-edit" data-ia-edit="${esc(id)}">Edit / Reschedule</button><button type="button" class="ia-btn ia-cancel" data-ia-cancel="${esc(id)}" ${st==='Cancelled'?'disabled':''}>Cancel</button><button type="button" class="ia-btn ia-delete" data-ia-delete="${esc(id)}">Remove</button></td></tr>`}).join('')}</tbody></table>`:'<div class="empty-state">No interviews scheduled yet.</div>';
+    const html=items.length?`<table class="jobs-table" data-tss-stable-interview-table="1"><thead><tr><th>Date</th><th>Time</th><th>Candidate</th><th>Position</th><th>Client</th><th>Mode</th><th>Candidate Response</th><th>Scheduled By</th><th>Status</th><th>Actions</th></tr></thead><tbody>${items.map(item=>{const id=String(item.serverId||item.id||'');const server=statusMap.get(id)||{};const st=server.status||item.status||item.localStatus||'Scheduled';return `<tr data-interview-id="${esc(id)}"><td>${esc(item.date||'—')}</td><td>${esc(item.time||'—')}</td><td><strong>${esc(item.candidate||'Candidate')}</strong></td><td>${esc(item.position||'')}</td><td>${esc(item.client||'')}</td><td>${esc(item.mode||'Client Interview')}<small style="display:block">${(server.scheduling_source||item.schedulingSource)==='client'?'Client-scheduled':'TSS-scheduled'} · ${item.interviewRound===6?'Final round':'Round '+(item.interviewRound||1)}</small></td><td class="ia-response-cell">${responseBadge(server,item)}</td><td>${esc(scheduledBy(server,item))}</td><td>${statusBadge(st)}</td><td class="ia-actions"><button type="button" class="ia-btn ia-outcome" data-ia-outcome="${esc(id)}">Update Interview</button><button type="button" class="ia-btn ia-edit" data-ia-edit="${esc(id)}">Edit / Reschedule</button><button type="button" class="ia-btn ia-cancel" data-ia-cancel="${esc(id)}" ${st==='Cancelled'?'disabled':''}>Cancel</button><button type="button" class="ia-btn ia-delete" data-ia-delete="${esc(id)}">Remove</button></td></tr>`}).join('')}</tbody></table>`:'<div class="empty-state">No interviews scheduled yet.</div>';
     if(b.innerHTML!==html)b.innerHTML=html;
     const count=document.getElementById('navInterviewCount');if(count)count.textContent=String(items.length);
   }
@@ -608,7 +619,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
     try{
       const {data:{session}}=await backend().client.auth.getSession();
       if(!session?.user)return renderStable(false);
-      const {data,error}=await backend().client.from('interviews').select('id,status,candidate_response,archived_at');
+      const {data,error}=await backend().client.from('interviews').select('id,status,candidate_response,archived_at,scheduling_source,interview_round');
       if(error)throw error;
       let changed=false;
       (data||[]).forEach(x=>{
@@ -616,7 +627,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
         const next={...x,scheduled_by:scheduled};
         if(JSON.stringify(statusMap.get(id)||{})!==JSON.stringify(next))changed=true;
         statusMap.set(id,next);
-        const item=localItem(id);if(item){item.status=x.status||item.status;item.candidateResponse=x.candidate_response||item.candidateResponse;item.archivedAt=x.archived_at||null;item.scheduledBy=scheduled;}
+        const item=localItem(id);if(item){item.schedulingSource=x.scheduling_source||'tss';item.interviewRound=x.interview_round||1;item.status=x.status||item.status;item.candidateResponse=x.candidate_response||item.candidateResponse;item.archivedAt=x.archived_at||null;item.scheduledBy=scheduled;}
       });
       if(changed)saveLocal();
       renderStable(changed);
@@ -625,13 +636,14 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 
   async function reschedule(id){
     const item=localItem(id);if(!item)return toastSafe('Interview record not found');
+    const clientScheduled=item.schedulingSource==='client';
     const date=prompt('New interview date (YYYY-MM-DD)',item.date||new Date().toISOString().slice(0,10));if(!date)return;
     const time=prompt('New interview time',item.time||'11:00 AM');if(!time)return;
     const scheduled=toIso(date,time);if(!scheduled)return toastSafe('Invalid date or time');
-    if(!confirm(`Reschedule ${item.candidate||'this candidate'} to ${date} at ${time}?\n\nA fresh confirmation email and new reminders will be created.`))return;
+    if(!confirm(`Reschedule ${item.candidate||'this candidate'} to ${date} at ${time}?\n\n${clientScheduled?'This updates the saved client schedule. No candidate emails will be sent.':'A fresh confirmation email and new reminders will be created.'}`))return;
     try{
-      if(backend()?.enabled){const {error}=await backend().client.from('interviews').update({scheduled_at:scheduled,status:'Scheduled',cancelled_at:null,candidate_response:'Pending',confirmed_at:null,reschedule_requested_at:null,reschedule_preferred_date:null,reschedule_preferred_time:null,confirmation_sent_at:null,reminder_10am_sent_at:null,reminder_1h_sent_at:null,reminder_30m_sent_at:null,reminder_5m_sent_at:null,reminder_status:'Pending',archived_at:null}).eq('id',id);if(error)throw error}
-      item.date=date;item.time=fmtTime(scheduled);item.status='Scheduled';item.candidateResponse='Pending';item.archivedAt=null;saveLocal();lastSignature='';renderStable(true);toastSafe('Interview rescheduled · new confirmation and reminders queued');setTimeout(syncStatuses,120);
+      if(backend()?.enabled){const {error}=await backend().client.from('interviews').update({scheduled_at:scheduled,status:'Scheduled',cancelled_at:null,candidate_response:'Pending',confirmed_at:null,reschedule_requested_at:null,reschedule_preferred_date:null,reschedule_preferred_time:null,confirmation_sent_at:null,reminder_10am_sent_at:null,reminder_1h_sent_at:null,reminder_30m_sent_at:null,reminder_5m_sent_at:null,reminder_status:clientScheduled?'Disabled - Client Scheduled':'Pending',archived_at:null}).eq('id',id);if(error)throw error}
+      item.date=date;item.time=fmtTime(scheduled);item.status='Scheduled';item.candidateResponse='Pending';item.archivedAt=null;saveLocal();lastSignature='';renderStable(true);toastSafe(clientScheduled?'Client interview updated · no candidate emails':'Interview rescheduled · new confirmation and reminders queued');setTimeout(syncStatuses,120);
     }catch(e){console.error(e);toastSafe('Could not reschedule: '+(e.message||e))}
   }
 
@@ -751,6 +763,17 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
   function emailOf(c){return c?.email||c?.candidate_email||''}
   function nameOf(c){return c?.name||c?.candidate_name||'Candidate'}
 
+  function isAdmin(){const ctx=window.TSS_AUTH_CONTEXT;return ctx?.role==='admin'||ctx?.isSuperAdmin===true;}
+  function clientScheduled(){return isAdmin()&&$('tssIsSource')?.value==='client';}
+  function updateSourceUI(){
+    const client=clientScheduled();
+    $('tssIsSourceField').classList.toggle('hidden',!isAdmin());
+    if(!isAdmin())$('tssIsSource').value='tss';
+    $('tssIsTitle').textContent=client?'Record Client-Scheduled Interview':'Schedule Interview';
+    $('tssIsSubmit').textContent=client?'Save Interview — No Candidate Email':'Schedule & Send Confirmation';
+    $('tssIsWarning').textContent=client?'The client sends the candidate invitation. Todo saves this interview for tracking and reports without sending candidate confirmations or reminders.':'The confirmation email will use the exact candidate and requirement selected here. Please verify both before scheduling.';
+  }
+
   function ensureModal(){
     if($('tssInterviewSchedulerModal'))return;
     const wrap=document.createElement('div');
@@ -759,6 +782,8 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
     wrap.innerHTML=`<div class="tss-is-card" role="dialog" aria-modal="true" aria-labelledby="tssIsTitle">
       <div class="tss-is-head"><div><small>TODO AI · INTERVIEW OPERATIONS</small><h2 id="tssIsTitle">Schedule Interview</h2></div><button type="button" data-is-close aria-label="Close">×</button></div>
       <div class="tss-is-grid">
+        <label id="tssIsSourceField" class="tss-is-full hidden"><span>Interview managed by</span><select id="tssIsSource"><option value="tss">TSS — Schedule and send invitation</option><option value="client">Client — Record only, no candidate emails</option></select></label>
+        <label><span>Interview round</span><select id="tssIsRound"><option value="1">Round 1</option><option value="2">Round 2</option><option value="3">Round 3</option><option value="4">Round 4</option><option value="5">Round 5</option><option value="6">Final round</option></select></label>
         <div class="tss-is-full tss-is-candidate-field"><label for="tssIsCandidate"><span>Candidate <b>*</b></span></label><div class="tss-is-combobox"><input id="tssIsCandidate" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="tssIsCandidateOptions" aria-describedby="tssIsCandidateMeta" autocomplete="off" placeholder="Select or type to search candidate…"><div id="tssIsCandidateOptions" role="listbox" aria-label="Saved candidates" hidden></div></div><small id="tssIsCandidateMeta"></small></div>
         <label class="tss-is-full"><span>Position / Requirement <b>*</b></span><select id="tssIsRequirement"></select><small id="tssIsReqMeta"></small></label>
         <label><span>Date <b>*</b></span><input id="tssIsDate" type="date"></label>
@@ -768,7 +793,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
         <label class="tss-is-full"><span>Interview Link / Location</span><input id="tssIsLocation" placeholder="Teams/Meet link or office location"></label>
         <label class="tss-is-full"><span>Notes</span><textarea id="tssIsNotes" rows="3" placeholder="Optional instructions"></textarea></label>
       </div>
-      <div class="tss-is-warning">The confirmation email will use the exact candidate and requirement selected here. Please verify both before scheduling.</div>
+      <div id="tssIsWarning" class="tss-is-warning">The confirmation email will use the exact candidate and requirement selected here. Please verify both before scheduling.</div>
       <div class="tss-is-actions"><button type="button" data-is-close class="secondary">Cancel</button><button type="button" id="tssIsSubmit">Schedule & Send Confirmation</button></div>
     </div>`;
     document.body.appendChild(wrap);
@@ -788,6 +813,8 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
     options.addEventListener('pointerdown',e=>{if(e.target.closest('[role=option]'))e.preventDefault()});
     options.addEventListener('click',e=>{const option=e.target.closest('[role=option]');if(option)chooseCandidate(Number(option.dataset.index))});
     $('tssIsRequirement')?.addEventListener('change',updateReqMeta);
+    $('tssIsSource')?.addEventListener('change',()=>{pendingSubmission=null;updateSourceUI();});
+    $('tssIsRound')?.addEventListener('change',()=>{pendingSubmission=null;});
     $('tssIsSubmit')?.addEventListener('click',submit);
   }
 
@@ -832,7 +859,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
   function selectedRequirement(){const key=$('tssIsRequirement')?.value;return requirements().find(r=>reqKey(r)===key)}
   function updateCandidateMeta(){const c=selectedCandidate();$('tssIsCandidateMeta').textContent=c?`${emailOf(c)||'No email saved'}${c.phone?` · ${c.phone}`:''}`:'Choose a candidate already saved in Candidate Records.'}
   function updateReqMeta(){const r=selectedRequirement();$('tssIsReqMeta').textContent=r?`${r.status||''}${r.location?` · ${r.location}`:''}${r.positionsCount||r.positions_count?` · ${r.positionsCount||r.positions_count} position(s)`:''}`:'The selected requirement controls the role/client shown in the email.'}
-  function openModal(){ensureModal();populate();pendingSubmission=null;$('tssInterviewSchedulerModal').classList.remove('hidden');open=true}
+  function openModal(){ensureModal();populate();['tssIsInterviewer','tssIsLocation','tssIsNotes'].forEach(id=>{$(id).value='';});$('tssIsSource').value='tss';$('tssIsRound').value='1';updateSourceUI();pendingSubmission=null;$('tssInterviewSchedulerModal').classList.remove('hidden');open=true}
   function closeModal(){$('tssInterviewSchedulerModal')?.classList.add('hidden');hideCandidates();open=false}
   function localTimeLabel(value){if(!value)return'';const [h0,m='00']=value.split(':');let h=Number(h0),ap=h>=12?'PM':'AM';h=h%12||12;return `${h}:${m} ${ap}`}
   async function submit(){
@@ -842,18 +869,18 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
     if(!c)return alert('Please select a saved candidate.');
     if(!r)return alert('Please select the exact position / requirement.');
     if(!date||!time)return alert('Please select interview date and time.');
-    if(!emailOf(c))return alert('This candidate has no email saved. Add the candidate email first so confirmation can be sent.');
+    if(!clientScheduled()&&!emailOf(c))return alert('This candidate has no email saved. Add the candidate email first so confirmation can be sent.');
     const store=DB(); if(!store)return;
     const nameIssue=window.TSSDocumentParser?.candidateNameIssue?.(nameOf(c));if(nameIssue){try{toast(nameIssue+' Edit the candidate profile before scheduling.')}catch{}return;}
-    const item={candidate:nameOf(c),email:emailOf(c),candidateId:c.serverId||c.id||null,date,time:localTimeLabel(time),position:r.title||'',client:r.client||'',requirementId:r.id||'',requirementServerId:r.serverId||null,mode:$('tssIsMode').value||'Client Interview',interviewer:$('tssIsInterviewer').value.trim(),locationOrLink:$('tssIsLocation').value.trim(),notes:$('tssIsNotes').value.trim()};
-    const submissionKey=JSON.stringify([item.candidateId,item.requirementServerId,item.date,item.time,item.mode,item.interviewer,item.locationOrLink,item.notes]);
+    const item={schedulingSource:clientScheduled()?'client':'tss',interviewRound:Number($('tssIsRound').value)||1,candidate:nameOf(c),email:emailOf(c),candidateId:c.serverId||c.id||null,date,time:localTimeLabel(time),position:r.title||'',client:r.client||'',requirementId:r.id||'',requirementServerId:r.serverId||null,mode:$('tssIsMode').value||'Client Interview',interviewer:$('tssIsInterviewer').value.trim(),locationOrLink:$('tssIsLocation').value.trim(),notes:$('tssIsNotes').value.trim()};
+    const submissionKey=JSON.stringify([item.candidateId,item.requirementServerId,item.date,item.time,item.mode,item.interviewer,item.locationOrLink,item.notes,item.schedulingSource,item.interviewRound]);
     if(pendingSubmission?.submissionKey===submissionKey)item.clientRequestId=pendingSubmission.item.clientRequestId;
     else item.clientRequestId=window.TSSInterviewSync?.newRequestId?.();
-    const confirmation=`Schedule interview?\n\nCandidate: ${item.candidate}\nPosition: ${item.position}\nClient: ${item.client}\nDate: ${item.date}\nTime: ${item.time}\n\nThe email will be sent using THIS exact position.`;
+    const confirmation=`${clientScheduled()?'Record client-scheduled interview?':'Schedule interview?'}\n\nCandidate: ${item.candidate}\nPosition: ${item.position}\nClient: ${item.client}\nDate: ${item.date}\nTime: ${item.time}\n\n${clientScheduled()?'No candidate confirmation or reminder email will be sent.':'The email will be sent using THIS exact position.'}`;
     if(!confirm(confirmation))return;
     const button=$('tssIsSubmit'),originalText=button?.textContent||'Schedule & Send Confirmation';
     submitting=true;pendingSubmission={submissionKey,item};
-    if(button){button.disabled=true;button.textContent='Scheduling…'}
+    if(button){button.disabled=true;button.textContent=clientScheduled()?'Saving…':'Scheduling…'}
     try{
       if(!window.TSSInterviewSync?.persistItem)throw new Error('Interview sync is not ready. Please refresh and try again.');
       await window.TSSInterviewSync.persistItem(item);
@@ -862,7 +889,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
       localStorage.setItem('tss_talent_buddy_v1',JSON.stringify(store));
       pendingSubmission=null;closeModal();
       try{window.TSSInterviewActions?.renderStable?.(true)}catch{}
-      try{toast(`Interview scheduled for ${item.position} · confirmation + reminders queued`)}catch{}
+      try{toast(item.schedulingSource==='client'?`Client interview saved for ${item.position} · no candidate emails`:`Interview scheduled for ${item.position} · confirmation + reminders queued`)}catch{}
     }catch(error){
       item.syncState='failed';item.syncError=error?.message||String(error);console.warn(error);
       try{toast('Interview was not scheduled: '+item.syncError)}catch{}

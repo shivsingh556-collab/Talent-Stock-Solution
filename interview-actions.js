@@ -35,6 +35,7 @@
     return `<span class="ia-status ${cls}">${esc(s)}</span>`;
   }
   function responseBadge(server,item){
+    if((server?.scheduling_source||item?.schedulingSource)==='client')return '<span class="ia-response ia-pending">Client manages invitation · no Todo emails</span>';
     const r=server?.candidate_response||item?.candidateResponse||'Pending';
     if(r==='Confirmed')return '<span class="ia-response ia-available">✓ Candidate available</span>';
     if(r==='Reschedule Requested')return '<span class="ia-response ia-requested">↻ Reschedule requested</span>';
@@ -43,7 +44,7 @@
   function scheduledBy(server,item){return server?.scheduled_by||item?.scheduledBy||item?.scheduled_by_name||'—'}
 
   function signature(items){
-    return JSON.stringify(items.map(i=>{const id=String(i.serverId||i.id||'');const s=statusMap.get(id)||{};return [id,i.date,i.time,i.candidate,i.position,i.client,i.mode,s.candidate_response||i.candidateResponse,s.scheduled_by||i.scheduledBy,s.status||i.status,i.archivedAt]}));
+    return JSON.stringify(items.map(i=>{const id=String(i.serverId||i.id||'');const s=statusMap.get(id)||{};return [id,i.date,i.time,i.candidate,i.position,i.client,i.mode,s.candidate_response||i.candidateResponse,s.scheduled_by||i.scheduledBy,s.status||i.status,i.archivedAt,s.scheduling_source||i.schedulingSource,i.interviewRound]}));
   }
 
   function renderStable(force=false){
@@ -52,7 +53,7 @@
     const sig=signature(items);
     if(!force&&sig===lastSignature&&b.querySelector('[data-tss-stable-interview-table]'))return;
     lastSignature=sig;
-    const html=items.length?`<table class="jobs-table" data-tss-stable-interview-table="1"><thead><tr><th>Date</th><th>Time</th><th>Candidate</th><th>Position</th><th>Client</th><th>Mode</th><th>Candidate Response</th><th>Scheduled By</th><th>Status</th><th>Actions</th></tr></thead><tbody>${items.map(item=>{const id=String(item.serverId||item.id||'');const server=statusMap.get(id)||{};const st=server.status||item.status||item.localStatus||'Scheduled';return `<tr data-interview-id="${esc(id)}"><td>${esc(item.date||'—')}</td><td>${esc(item.time||'—')}</td><td><strong>${esc(item.candidate||'Candidate')}</strong></td><td>${esc(item.position||'')}</td><td>${esc(item.client||'')}</td><td>${esc(item.mode||'Client Interview')}</td><td class="ia-response-cell">${responseBadge(server,item)}</td><td>${esc(scheduledBy(server,item))}</td><td>${statusBadge(st)}</td><td class="ia-actions"><button type="button" class="ia-btn ia-outcome" data-ia-outcome="${esc(id)}">Update Interview</button><button type="button" class="ia-btn ia-edit" data-ia-edit="${esc(id)}">Edit / Reschedule</button><button type="button" class="ia-btn ia-cancel" data-ia-cancel="${esc(id)}" ${st==='Cancelled'?'disabled':''}>Cancel</button><button type="button" class="ia-btn ia-delete" data-ia-delete="${esc(id)}">Remove</button></td></tr>`}).join('')}</tbody></table>`:'<div class="empty-state">No interviews scheduled yet.</div>';
+    const html=items.length?`<table class="jobs-table" data-tss-stable-interview-table="1"><thead><tr><th>Date</th><th>Time</th><th>Candidate</th><th>Position</th><th>Client</th><th>Mode</th><th>Candidate Response</th><th>Scheduled By</th><th>Status</th><th>Actions</th></tr></thead><tbody>${items.map(item=>{const id=String(item.serverId||item.id||'');const server=statusMap.get(id)||{};const st=server.status||item.status||item.localStatus||'Scheduled';return `<tr data-interview-id="${esc(id)}"><td>${esc(item.date||'—')}</td><td>${esc(item.time||'—')}</td><td><strong>${esc(item.candidate||'Candidate')}</strong></td><td>${esc(item.position||'')}</td><td>${esc(item.client||'')}</td><td>${esc(item.mode||'Client Interview')}<small style="display:block">${(server.scheduling_source||item.schedulingSource)==='client'?'Client-scheduled':'TSS-scheduled'} · ${item.interviewRound===6?'Final round':'Round '+(item.interviewRound||1)}</small></td><td class="ia-response-cell">${responseBadge(server,item)}</td><td>${esc(scheduledBy(server,item))}</td><td>${statusBadge(st)}</td><td class="ia-actions"><button type="button" class="ia-btn ia-outcome" data-ia-outcome="${esc(id)}">Update Interview</button><button type="button" class="ia-btn ia-edit" data-ia-edit="${esc(id)}">Edit / Reschedule</button><button type="button" class="ia-btn ia-cancel" data-ia-cancel="${esc(id)}" ${st==='Cancelled'?'disabled':''}>Cancel</button><button type="button" class="ia-btn ia-delete" data-ia-delete="${esc(id)}">Remove</button></td></tr>`}).join('')}</tbody></table>`:'<div class="empty-state">No interviews scheduled yet.</div>';
     if(b.innerHTML!==html)b.innerHTML=html;
     const count=document.getElementById('navInterviewCount');if(count)count.textContent=String(items.length);
   }
@@ -72,7 +73,7 @@
     try{
       const {data:{session}}=await backend().client.auth.getSession();
       if(!session?.user)return renderStable(false);
-      const {data,error}=await backend().client.from('interviews').select('id,status,candidate_response,archived_at');
+      const {data,error}=await backend().client.from('interviews').select('id,status,candidate_response,archived_at,scheduling_source,interview_round');
       if(error)throw error;
       let changed=false;
       (data||[]).forEach(x=>{
@@ -80,7 +81,7 @@
         const next={...x,scheduled_by:scheduled};
         if(JSON.stringify(statusMap.get(id)||{})!==JSON.stringify(next))changed=true;
         statusMap.set(id,next);
-        const item=localItem(id);if(item){item.status=x.status||item.status;item.candidateResponse=x.candidate_response||item.candidateResponse;item.archivedAt=x.archived_at||null;item.scheduledBy=scheduled;}
+        const item=localItem(id);if(item){item.schedulingSource=x.scheduling_source||'tss';item.interviewRound=x.interview_round||1;item.status=x.status||item.status;item.candidateResponse=x.candidate_response||item.candidateResponse;item.archivedAt=x.archived_at||null;item.scheduledBy=scheduled;}
       });
       if(changed)saveLocal();
       renderStable(changed);
@@ -89,13 +90,14 @@
 
   async function reschedule(id){
     const item=localItem(id);if(!item)return toastSafe('Interview record not found');
+    const clientScheduled=item.schedulingSource==='client';
     const date=prompt('New interview date (YYYY-MM-DD)',item.date||new Date().toISOString().slice(0,10));if(!date)return;
     const time=prompt('New interview time',item.time||'11:00 AM');if(!time)return;
     const scheduled=toIso(date,time);if(!scheduled)return toastSafe('Invalid date or time');
-    if(!confirm(`Reschedule ${item.candidate||'this candidate'} to ${date} at ${time}?\n\nA fresh confirmation email and new reminders will be created.`))return;
+    if(!confirm(`Reschedule ${item.candidate||'this candidate'} to ${date} at ${time}?\n\n${clientScheduled?'This updates the saved client schedule. No candidate emails will be sent.':'A fresh confirmation email and new reminders will be created.'}`))return;
     try{
-      if(backend()?.enabled){const {error}=await backend().client.from('interviews').update({scheduled_at:scheduled,status:'Scheduled',cancelled_at:null,candidate_response:'Pending',confirmed_at:null,reschedule_requested_at:null,reschedule_preferred_date:null,reschedule_preferred_time:null,confirmation_sent_at:null,reminder_10am_sent_at:null,reminder_1h_sent_at:null,reminder_30m_sent_at:null,reminder_5m_sent_at:null,reminder_status:'Pending',archived_at:null}).eq('id',id);if(error)throw error}
-      item.date=date;item.time=fmtTime(scheduled);item.status='Scheduled';item.candidateResponse='Pending';item.archivedAt=null;saveLocal();lastSignature='';renderStable(true);toastSafe('Interview rescheduled · new confirmation and reminders queued');setTimeout(syncStatuses,120);
+      if(backend()?.enabled){const {error}=await backend().client.from('interviews').update({scheduled_at:scheduled,status:'Scheduled',cancelled_at:null,candidate_response:'Pending',confirmed_at:null,reschedule_requested_at:null,reschedule_preferred_date:null,reschedule_preferred_time:null,confirmation_sent_at:null,reminder_10am_sent_at:null,reminder_1h_sent_at:null,reminder_30m_sent_at:null,reminder_5m_sent_at:null,reminder_status:clientScheduled?'Disabled - Client Scheduled':'Pending',archived_at:null}).eq('id',id);if(error)throw error}
+      item.date=date;item.time=fmtTime(scheduled);item.status='Scheduled';item.candidateResponse='Pending';item.archivedAt=null;saveLocal();lastSignature='';renderStable(true);toastSafe(clientScheduled?'Client interview updated · no candidate emails':'Interview rescheduled · new confirmation and reminders queued');setTimeout(syncStatuses,120);
     }catch(e){console.error(e);toastSafe('Could not reschedule: '+(e.message||e))}
   }
 

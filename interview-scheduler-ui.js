@@ -20,6 +20,17 @@
   function emailOf(c){return c?.email||c?.candidate_email||''}
   function nameOf(c){return c?.name||c?.candidate_name||'Candidate'}
 
+  function isAdmin(){const ctx=window.TSS_AUTH_CONTEXT;return ctx?.role==='admin'||ctx?.isSuperAdmin===true;}
+  function clientScheduled(){return isAdmin()&&$('tssIsSource')?.value==='client';}
+  function updateSourceUI(){
+    const client=clientScheduled();
+    $('tssIsSourceField').classList.toggle('hidden',!isAdmin());
+    if(!isAdmin())$('tssIsSource').value='tss';
+    $('tssIsTitle').textContent=client?'Record Client-Scheduled Interview':'Schedule Interview';
+    $('tssIsSubmit').textContent=client?'Save Interview — No Candidate Email':'Schedule & Send Confirmation';
+    $('tssIsWarning').textContent=client?'The client sends the candidate invitation. Todo saves this interview for tracking and reports without sending candidate confirmations or reminders.':'The confirmation email will use the exact candidate and requirement selected here. Please verify both before scheduling.';
+  }
+
   function ensureModal(){
     if($('tssInterviewSchedulerModal'))return;
     const wrap=document.createElement('div');
@@ -28,6 +39,8 @@
     wrap.innerHTML=`<div class="tss-is-card" role="dialog" aria-modal="true" aria-labelledby="tssIsTitle">
       <div class="tss-is-head"><div><small>TODO AI · INTERVIEW OPERATIONS</small><h2 id="tssIsTitle">Schedule Interview</h2></div><button type="button" data-is-close aria-label="Close">×</button></div>
       <div class="tss-is-grid">
+        <label id="tssIsSourceField" class="tss-is-full hidden"><span>Interview managed by</span><select id="tssIsSource"><option value="tss">TSS — Schedule and send invitation</option><option value="client">Client — Record only, no candidate emails</option></select></label>
+        <label><span>Interview round</span><select id="tssIsRound"><option value="1">Round 1</option><option value="2">Round 2</option><option value="3">Round 3</option><option value="4">Round 4</option><option value="5">Round 5</option><option value="6">Final round</option></select></label>
         <div class="tss-is-full tss-is-candidate-field"><label for="tssIsCandidate"><span>Candidate <b>*</b></span></label><div class="tss-is-combobox"><input id="tssIsCandidate" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="tssIsCandidateOptions" aria-describedby="tssIsCandidateMeta" autocomplete="off" placeholder="Select or type to search candidate…"><div id="tssIsCandidateOptions" role="listbox" aria-label="Saved candidates" hidden></div></div><small id="tssIsCandidateMeta"></small></div>
         <label class="tss-is-full"><span>Position / Requirement <b>*</b></span><select id="tssIsRequirement"></select><small id="tssIsReqMeta"></small></label>
         <label><span>Date <b>*</b></span><input id="tssIsDate" type="date"></label>
@@ -37,7 +50,7 @@
         <label class="tss-is-full"><span>Interview Link / Location</span><input id="tssIsLocation" placeholder="Teams/Meet link or office location"></label>
         <label class="tss-is-full"><span>Notes</span><textarea id="tssIsNotes" rows="3" placeholder="Optional instructions"></textarea></label>
       </div>
-      <div class="tss-is-warning">The confirmation email will use the exact candidate and requirement selected here. Please verify both before scheduling.</div>
+      <div id="tssIsWarning" class="tss-is-warning">The confirmation email will use the exact candidate and requirement selected here. Please verify both before scheduling.</div>
       <div class="tss-is-actions"><button type="button" data-is-close class="secondary">Cancel</button><button type="button" id="tssIsSubmit">Schedule & Send Confirmation</button></div>
     </div>`;
     document.body.appendChild(wrap);
@@ -57,6 +70,8 @@
     options.addEventListener('pointerdown',e=>{if(e.target.closest('[role=option]'))e.preventDefault()});
     options.addEventListener('click',e=>{const option=e.target.closest('[role=option]');if(option)chooseCandidate(Number(option.dataset.index))});
     $('tssIsRequirement')?.addEventListener('change',updateReqMeta);
+    $('tssIsSource')?.addEventListener('change',()=>{pendingSubmission=null;updateSourceUI();});
+    $('tssIsRound')?.addEventListener('change',()=>{pendingSubmission=null;});
     $('tssIsSubmit')?.addEventListener('click',submit);
   }
 
@@ -101,7 +116,7 @@
   function selectedRequirement(){const key=$('tssIsRequirement')?.value;return requirements().find(r=>reqKey(r)===key)}
   function updateCandidateMeta(){const c=selectedCandidate();$('tssIsCandidateMeta').textContent=c?`${emailOf(c)||'No email saved'}${c.phone?` · ${c.phone}`:''}`:'Choose a candidate already saved in Candidate Records.'}
   function updateReqMeta(){const r=selectedRequirement();$('tssIsReqMeta').textContent=r?`${r.status||''}${r.location?` · ${r.location}`:''}${r.positionsCount||r.positions_count?` · ${r.positionsCount||r.positions_count} position(s)`:''}`:'The selected requirement controls the role/client shown in the email.'}
-  function openModal(){ensureModal();populate();pendingSubmission=null;$('tssInterviewSchedulerModal').classList.remove('hidden');open=true}
+  function openModal(){ensureModal();populate();['tssIsInterviewer','tssIsLocation','tssIsNotes'].forEach(id=>{$(id).value='';});$('tssIsSource').value='tss';$('tssIsRound').value='1';updateSourceUI();pendingSubmission=null;$('tssInterviewSchedulerModal').classList.remove('hidden');open=true}
   function closeModal(){$('tssInterviewSchedulerModal')?.classList.add('hidden');hideCandidates();open=false}
   function localTimeLabel(value){if(!value)return'';const [h0,m='00']=value.split(':');let h=Number(h0),ap=h>=12?'PM':'AM';h=h%12||12;return `${h}:${m} ${ap}`}
   async function submit(){
@@ -111,18 +126,18 @@
     if(!c)return alert('Please select a saved candidate.');
     if(!r)return alert('Please select the exact position / requirement.');
     if(!date||!time)return alert('Please select interview date and time.');
-    if(!emailOf(c))return alert('This candidate has no email saved. Add the candidate email first so confirmation can be sent.');
+    if(!clientScheduled()&&!emailOf(c))return alert('This candidate has no email saved. Add the candidate email first so confirmation can be sent.');
     const store=DB(); if(!store)return;
     const nameIssue=window.TSSDocumentParser?.candidateNameIssue?.(nameOf(c));if(nameIssue){try{toast(nameIssue+' Edit the candidate profile before scheduling.')}catch{}return;}
-    const item={candidate:nameOf(c),email:emailOf(c),candidateId:c.serverId||c.id||null,date,time:localTimeLabel(time),position:r.title||'',client:r.client||'',requirementId:r.id||'',requirementServerId:r.serverId||null,mode:$('tssIsMode').value||'Client Interview',interviewer:$('tssIsInterviewer').value.trim(),locationOrLink:$('tssIsLocation').value.trim(),notes:$('tssIsNotes').value.trim()};
-    const submissionKey=JSON.stringify([item.candidateId,item.requirementServerId,item.date,item.time,item.mode,item.interviewer,item.locationOrLink,item.notes]);
+    const item={schedulingSource:clientScheduled()?'client':'tss',interviewRound:Number($('tssIsRound').value)||1,candidate:nameOf(c),email:emailOf(c),candidateId:c.serverId||c.id||null,date,time:localTimeLabel(time),position:r.title||'',client:r.client||'',requirementId:r.id||'',requirementServerId:r.serverId||null,mode:$('tssIsMode').value||'Client Interview',interviewer:$('tssIsInterviewer').value.trim(),locationOrLink:$('tssIsLocation').value.trim(),notes:$('tssIsNotes').value.trim()};
+    const submissionKey=JSON.stringify([item.candidateId,item.requirementServerId,item.date,item.time,item.mode,item.interviewer,item.locationOrLink,item.notes,item.schedulingSource,item.interviewRound]);
     if(pendingSubmission?.submissionKey===submissionKey)item.clientRequestId=pendingSubmission.item.clientRequestId;
     else item.clientRequestId=window.TSSInterviewSync?.newRequestId?.();
-    const confirmation=`Schedule interview?\n\nCandidate: ${item.candidate}\nPosition: ${item.position}\nClient: ${item.client}\nDate: ${item.date}\nTime: ${item.time}\n\nThe email will be sent using THIS exact position.`;
+    const confirmation=`${clientScheduled()?'Record client-scheduled interview?':'Schedule interview?'}\n\nCandidate: ${item.candidate}\nPosition: ${item.position}\nClient: ${item.client}\nDate: ${item.date}\nTime: ${item.time}\n\n${clientScheduled()?'No candidate confirmation or reminder email will be sent.':'The email will be sent using THIS exact position.'}`;
     if(!confirm(confirmation))return;
     const button=$('tssIsSubmit'),originalText=button?.textContent||'Schedule & Send Confirmation';
     submitting=true;pendingSubmission={submissionKey,item};
-    if(button){button.disabled=true;button.textContent='Scheduling…'}
+    if(button){button.disabled=true;button.textContent=clientScheduled()?'Saving…':'Scheduling…'}
     try{
       if(!window.TSSInterviewSync?.persistItem)throw new Error('Interview sync is not ready. Please refresh and try again.');
       await window.TSSInterviewSync.persistItem(item);
@@ -131,7 +146,7 @@
       localStorage.setItem('tss_talent_buddy_v1',JSON.stringify(store));
       pendingSubmission=null;closeModal();
       try{window.TSSInterviewActions?.renderStable?.(true)}catch{}
-      try{toast(`Interview scheduled for ${item.position} · confirmation + reminders queued`)}catch{}
+      try{toast(item.schedulingSource==='client'?`Client interview saved for ${item.position} · no candidate emails`:`Interview scheduled for ${item.position} · confirmation + reminders queued`)}catch{}
     }catch(error){
       item.syncState='failed';item.syncError=error?.message||String(error);console.warn(error);
       try{toast('Interview was not scheduled: '+item.syncError)}catch{}

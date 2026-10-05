@@ -8,7 +8,7 @@
     let h=m?Number(m[1]):11,mm=m?Number(m[2]):0,ap=m?.[3]?.toUpperCase();
     if(ap==='PM'&&h<12)h+=12;
     if(ap==='AM'&&h===12)h=0;
-    const d=new Date(`${date}T${String(h).padStart(2,'0')}:${String(mm).padStart(2,'0')}:00`);
+    const d=new Date(`${date}T${String(h).padStart(2,'0')}:${String(mm).padStart(2,'0')}:00+05:30`);
     return isNaN(d)?null:d.toISOString();
   }
 
@@ -53,7 +53,17 @@
       const exactPosition=item.position||req?.title||'',exactClient=item.client||req?.client||'';
       if(!exactPosition)throw new Error('Interview position is required.');
 
-      const payload={id:item.clientRequestId,candidate_id:candId,requirement_id:reqId,scheduled_at:scheduled,status:'Scheduled',interview_type:item.mode||'Client Interview',interviewer:item.interviewer||null,location_or_link:item.locationOrLink||item.link||item.location||null,notes:item.notes||null,created_by:user.id,candidate_name_snapshot:cand?.name||item.candidate||'Candidate',candidate_email_snapshot:item.email||cand?.email||null,job_title_snapshot:exactPosition,client_name_snapshot:exactClient,timezone:'Asia/Kolkata',candidate_response:'Pending',reminder_status:'Pending'};
+      const source=item.schedulingSource==='client'?'client':'tss';
+      if(source==='client'){
+        const {data:profile,error:profileError}=await b.client.from('profiles').select('role,is_active,is_super_admin').eq('id',user.id).maybeSingle();
+        if(profileError||profile?.is_active!==true||profile?.role!=='admin')throw new Error('Only admins and super admins can record client-scheduled interviews.');
+      }
+      const round=Number(item.interviewRound)||1;
+      const {data:duplicates,error:duplicateError}=await b.client.from('interviews').select('id,interview_round').eq('candidate_id',candId).eq('requirement_id',reqId).in('status',['Scheduled','Confirmed','Reschedule Requested']).is('archived_at',null).is('cancelled_at',null);
+      if(duplicateError)throw duplicateError;
+      if((duplicates||[]).some(entry=>entry.id!==item.clientRequestId&&(entry.interview_round||1)===round))throw new Error('An active interview already exists for this candidate, requirement and round. Use Edit / Reschedule on that record.');
+
+      const payload={scheduling_source:source,interview_round:round,reminder_morning_enabled:source!=='client',reminder_pre_enabled:source!=='client',id:item.clientRequestId,candidate_id:candId,requirement_id:reqId,scheduled_at:scheduled,status:'Scheduled',interview_type:item.mode||'Client Interview',interviewer:item.interviewer||null,location_or_link:item.locationOrLink||item.link||item.location||null,notes:item.notes||null,created_by:user.id,candidate_name_snapshot:cand?.name||item.candidate||'Candidate',candidate_email_snapshot:item.email||cand?.email||null,job_title_snapshot:exactPosition,client_name_snapshot:exactClient,timezone:'Asia/Kolkata',candidate_response:'Pending',reminder_status:source==='client'?'Disabled - Client Scheduled':'Pending'};
       let {data,error}=await b.client.from('interviews').insert(payload).select().single();
       if(error?.code==='23505'){
         const existing=await b.client.from('interviews').select('*').eq('id',item.clientRequestId).maybeSingle();
@@ -61,7 +71,7 @@
         data=existing.data;error=null;
       }
       if(error)throw error;
-      item.serverId=data.id;item.id=data.id;item.candidateId=candId;item.requirementServerId=reqId;item.email=payload.candidate_email_snapshot;item.reminderStatus='Pending';item.candidateResponse='Pending';item.status='Scheduled';item.syncState='synced';delete item.syncError;
+      item.serverId=data.id;item.id=data.id;item.candidateId=candId;item.requirementServerId=reqId;item.email=payload.candidate_email_snapshot;item.schedulingSource=data.scheduling_source||source;item.interviewRound=data.interview_round||round;item.reminderStatus=data.reminder_status||payload.reminder_status;item.candidateResponse='Pending';item.status='Scheduled';item.syncState='synced';delete item.syncError;
       if((store.interviews||[]).includes(item))localStorage.setItem('tss_talent_buddy_v1',JSON.stringify(store));
       return item;
     })();
