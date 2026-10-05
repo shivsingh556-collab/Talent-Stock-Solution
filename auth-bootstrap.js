@@ -124,7 +124,7 @@
   }
 
   function loadRuntimeStyles(){
-    loadStyle(`app-runtime.css?v=${BUILD}`,'tssRuntime');
+    loadStyle(`app-runtime.css?v=${BUILD}-sidebar-logo-1`,'tssRuntime');
   }
 
   function enforceRoleAccess(identity){
