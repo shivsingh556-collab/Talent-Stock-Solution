@@ -508,7 +508,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
       const source=item.schedulingSource==='client'?'client':'tss';
       if(source==='client'){
         const {data:profile,error:profileError}=await b.client.from('profiles').select('role,is_active,is_super_admin').eq('id',user.id).maybeSingle();
-        if(profileError||profile?.is_active!==true||profile?.role!=='admin')throw new Error('Only admins and super admins can record client-scheduled interviews.');
+        if(profileError||profile?.is_active!==true||!['admin','recruiter'].includes(profile?.role))throw new Error('Only active TSS team members can record client-scheduled interviews.');
       }
       const round=Number(item.interviewRound)||1;
       const {data:duplicates,error:duplicateError}=await b.client.from('interviews').select('id,interview_round').eq('candidate_id',candId).eq('requirement_id',reqId).in('status',['Scheduled','Confirmed','Reschedule Requested']).is('archived_at',null).is('cancelled_at',null);
@@ -763,12 +763,12 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
   function emailOf(c){return c?.email||c?.candidate_email||''}
   function nameOf(c){return c?.name||c?.candidate_name||'Candidate'}
 
-  function isAdmin(){const ctx=window.TSS_AUTH_CONTEXT;return ctx?.role==='admin'||ctx?.isSuperAdmin===true;}
-  function clientScheduled(){return isAdmin()&&$('tssIsSource')?.value==='client';}
+  function canRecordClient(){const ctx=window.TSS_AUTH_CONTEXT;return ['admin','recruiter'].includes(ctx?.role)||ctx?.isSuperAdmin===true;}
+  function clientScheduled(){return canRecordClient()&&$('tssIsSource')?.value==='client';}
   function updateSourceUI(){
     const client=clientScheduled();
-    $('tssIsSourceField').classList.toggle('hidden',!isAdmin());
-    if(!isAdmin())$('tssIsSource').value='tss';
+    $('tssIsSourceField').classList.toggle('hidden',!canRecordClient());
+    if(!canRecordClient())$('tssIsSource').value='tss';
     $('tssIsTitle').textContent=client?'Record Client-Scheduled Interview':'Schedule Interview';
     $('tssIsSubmit').textContent=client?'Save Interview — No Candidate Email':'Schedule & Send Confirmation';
     $('tssIsWarning').textContent=client?'The client sends the candidate invitation. Todo saves this interview for tracking and reports without sending candidate confirmations or reminders.':'The confirmation email will use the exact candidate and requirement selected here. Please verify both before scheduling.';

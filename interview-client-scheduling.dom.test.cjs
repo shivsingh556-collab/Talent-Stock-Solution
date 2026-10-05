@@ -14,7 +14,7 @@ async function run(role,superAdmin=false){
   w.TSSInterviewScheduler.open();
   const doc=w.document;
   const field=doc.getElementById('tssIsSourceField');
-  assert.equal(field.classList.contains('hidden'),role!=='admin');
+  assert.equal(field.classList.contains('hidden'),!['admin','recruiter'].includes(role));
   const source=doc.getElementById('tssIsSource');source.value='client';source.dispatchEvent(new w.Event('change'));
   const candidate=doc.getElementById('tssIsCandidate');candidate.value='Test';candidate.dispatchEvent(new w.Event('input'));
   doc.querySelector('#tssIsCandidateOptions [role=option]').click();
@@ -22,7 +22,7 @@ async function run(role,superAdmin=false){
   doc.getElementById('tssIsDate').value='2026-10-10';
   doc.getElementById('tssIsTime').value='11:00';
   doc.getElementById('tssIsLocation').value='https://meet.example.com/test';
-  if(role==='admin'){
+  if(['admin','recruiter'].includes(role)){
     assert.equal(doc.getElementById('tssIsTitle').textContent,'Record Client-Scheduled Interview');
     assert.match(doc.getElementById('tssIsSubmit').textContent,/No Candidate Email/);
     doc.getElementById('tssIsSubmit').click();
@@ -43,4 +43,4 @@ async function run(role,superAdmin=false){
   }
   dom.window.close();
 }
-(async()=>{await run('admin');await run('admin',true);await run('recruiter');console.log('Client interview DOM tests passed: admin-only mode, labels, link, save, no-email candidate and recruiter flow.');})().catch(e=>{console.error(e);process.exitCode=1});
+(async()=>{await run('admin');await run('admin',true);await run('recruiter');await run('unknown');console.log('Client interview DOM tests passed: all-team mode, labels, link, save, no-email candidate and unknown-role denial.');})().catch(e=>{console.error(e);process.exitCode=1});

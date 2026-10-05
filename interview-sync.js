@@ -56,7 +56,7 @@
       const source=item.schedulingSource==='client'?'client':'tss';
       if(source==='client'){
         const {data:profile,error:profileError}=await b.client.from('profiles').select('role,is_active,is_super_admin').eq('id',user.id).maybeSingle();
-        if(profileError||profile?.is_active!==true||profile?.role!=='admin')throw new Error('Only admins and super admins can record client-scheduled interviews.');
+        if(profileError||profile?.is_active!==true||!['admin','recruiter'].includes(profile?.role))throw new Error('Only active TSS team members can record client-scheduled interviews.');
       }
       const round=Number(item.interviewRound)||1;
       const {data:duplicates,error:duplicateError}=await b.client.from('interviews').select('id,interview_round').eq('candidate_id',candId).eq('requirement_id',reqId).in('status',['Scheduled','Confirmed','Reschedule Requested']).is('archived_at',null).is('cancelled_at',null);

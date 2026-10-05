@@ -37,10 +37,11 @@ function setup({role='admin',isActive=true,duplicates=[]}={}){
   assert.equal(s.writes[0].scheduled_at,'2026-10-10T05:30:00.000Z','schedule is IST regardless of browser timezone');
   assert.equal(item.schedulingSource,'client');
   s=setup({role:'recruiter'});
-  await assert.rejects(()=>s.sync.persistItem(s.item()),/Only admins/);
-  assert.equal(s.writes.length,0);
+  await s.sync.persistItem(s.item());
+  assert.equal(s.writes[0].scheduling_source,'client','recruiters can record a client interview');
+  assert.equal(s.writes[0].reminder_status,'Disabled - Client Scheduled');
   s=setup({isActive:false});
-  await assert.rejects(()=>s.sync.persistItem(s.item()),/Only admins/);
+  await assert.rejects(()=>s.sync.persistItem(s.item()),/Only active TSS/);
   s=setup({duplicates:[{id:'existing',interview_round:1}]});
   await assert.rejects(()=>s.sync.persistItem(s.item()),/Edit \/ Reschedule/);
   assert.equal(s.writes.length,0);
@@ -53,5 +54,5 @@ function setup({role='admin',isActive=true,duplicates=[]}={}){
   assert.equal(s.writes[0].scheduling_source,'tss');
   assert.equal(s.writes[0].reminder_morning_enabled,true);
   assert.equal(s.writes[0].reminder_status,'Pending');
-  console.log('Client interview tests passed: admin authorization, inactive/recruiter denial, silent records, IST, duplicate rounds, legacy duplicates and rapid-click idempotency.');
+  console.log('Client interview tests passed: admin/recruiter authorization, inactive denial, silent records, IST, duplicate rounds, legacy duplicates and rapid-click idempotency.');
 })().catch(error=>{console.error(error);process.exitCode=1;});

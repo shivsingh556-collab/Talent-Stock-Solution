@@ -20,12 +20,12 @@
   function emailOf(c){return c?.email||c?.candidate_email||''}
   function nameOf(c){return c?.name||c?.candidate_name||'Candidate'}
 
-  function isAdmin(){const ctx=window.TSS_AUTH_CONTEXT;return ctx?.role==='admin'||ctx?.isSuperAdmin===true;}
-  function clientScheduled(){return isAdmin()&&$('tssIsSource')?.value==='client';}
+  function canRecordClient(){const ctx=window.TSS_AUTH_CONTEXT;return ['admin','recruiter'].includes(ctx?.role)||ctx?.isSuperAdmin===true;}
+  function clientScheduled(){return canRecordClient()&&$('tssIsSource')?.value==='client';}
   function updateSourceUI(){
     const client=clientScheduled();
-    $('tssIsSourceField').classList.toggle('hidden',!isAdmin());
-    if(!isAdmin())$('tssIsSource').value='tss';
+    $('tssIsSourceField').classList.toggle('hidden',!canRecordClient());
+    if(!canRecordClient())$('tssIsSource').value='tss';
     $('tssIsTitle').textContent=client?'Record Client-Scheduled Interview':'Schedule Interview';
     $('tssIsSubmit').textContent=client?'Save Interview — No Candidate Email':'Schedule & Send Confirmation';
     $('tssIsWarning').textContent=client?'The client sends the candidate invitation. Todo saves this interview for tracking and reports without sending candidate confirmations or reminders.':'The confirmation email will use the exact candidate and requirement selected here. Please verify both before scheduling.';
