@@ -56,3 +56,43 @@
   .login-left .talent-logo{height:110px;width:100%}
   .login-left .talent-logo .brand-image,.login-logo-image{max-height:92px!important}
 }
+
+/* Sidebar TalentStock logo: one frame, no inherited login padding. */
+.sidebar .sidebar-logo {
+  flex:0 0 auto;
+  width:100%;
+  max-width:100%;
+  min-height:76px;
+  padding:10px 12px !important;
+  background:#fff !important;
+  border:0 !important;
+  border-radius:10px;
+  overflow:hidden;
+}
+.sidebar .sidebar-logo .talent-logo {
+  display:flex !important;
+  align-items:center;
+  justify-content:center;
+  width:100% !important;
+  height:auto !important;
+  min-height:0 !important;
+  max-height:none !important;
+  margin:0 !important;
+  padding:0 !important;
+  border:0 !important;
+  border-radius:0;
+  background:transparent !important;
+  font-size:0;
+  line-height:0;
+}
+.sidebar .sidebar-logo .brand-image {
+  display:block !important;
+  width:100% !important;
+  height:auto !important;
+  max-height:58px !important;
+  margin:0 !important;
+  padding:0 !important;
+  object-fit:contain !important;
+  object-position:center;
+  border-radius:0;
+}
