@@ -1,4 +1,5 @@
 -- Interview results are internal. Never include the candidate's email in update notifications.
+-- Always include Shweta T, Shraddha S and the active team member who made the update.
 create or replace function public.claim_due_interview_update_email_events_with_key(
   p_key text,
   p_limit integer default 20
@@ -77,6 +78,24 @@ begin
   left join lateral (
     select array_agg(distinct x.email order by x.email) as emails
     from (
+      select updating_recruiter.email
+      from public.profiles updating_recruiter
+      where updating_recruiter.id=c.changed_by
+        and updating_recruiter.is_active=true
+        and updating_recruiter.email is not null
+
+      union all
+
+      select notification_admin.email
+      from public.profiles notification_admin
+      where notification_admin.is_active=true
+        and lower(trim(notification_admin.email)) in (
+          'shweta.t@talent-stock.com',
+          'shraddha.s@talent-stock.com'
+        )
+
+      union all
+
       select scheduler.email
       from public.profiles scheduler
       where scheduler.id=i.created_by
