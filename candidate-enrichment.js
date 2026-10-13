@@ -7,13 +7,13 @@
     clearing=true;
     try{
       FIELD_IDS.forEach(id=>{const el=document.getElementById(id);if(el)el.value=''});
-      window.TSS_PARSED_RESUME=null;
+      window.TSS_PARSED_RESUME=null;window.TSS_PARSED_RESUME_TEXT=null;
     }finally{clearing=false}
   }
 
   function enrichLatest(){
     const p=window.TSS_PARSED_RESUME;if(!p||!window.db?.candidates?.length)return;
-    const c=window.db.candidates.at(-1);if(!c)return;
+    const latest=window.db.screenings?.at(-1);const c=window.db.candidates.find(c=>c.id===latest?.candidateId);if(!c)return;
     if(p.skills?.length)c.skills=p.skills;
     if(p.education)c.education=p.education;
     if(p.currentCompany)c.currentCompany=p.currentCompany;
@@ -31,7 +31,8 @@
     // Capture phase runs before the legacy/parser handlers, ensuring a genuinely new resume
     // never inherits the previous candidate's identity/contact values.
     resumeFile?.addEventListener('change',e=>{if(e.target.files?.[0])clearCandidateIdentity()},true);
-    resumeText?.addEventListener('paste',()=>clearCandidateIdentity(),true);
+    resumeText?.addEventListener('paste',()=>{clearCandidateIdentity();if(resumeFile)resumeFile.value=''},true);
+    resumeText?.addEventListener('input',()=>{if(resumeFile)resumeFile.value='';window.TSSDocumentParser?.applyResume?.(window.TSSDocumentParser.extractResume(resumeText.value))});
     document.getElementById('screenBtn')?.addEventListener('click',()=>setTimeout(enrichLatest,30));
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',wire);else wire();

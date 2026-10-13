@@ -58,3 +58,17 @@ test('other scheduling entry points reject a job title before writing an intervi
   await assert.rejects(sandbox.window.TSSInterviewSync.persistItem({candidateId:'candidate-uuid',candidate:'Sales Executive'}),/real name/);
   assert.equal(writes,0);
 });
+
+test('replacing resume text programmatically clears the previous candidate before screening',()=>{
+  fields.candidateEmail={value:''};fields.candidatePhone={value:''};
+  fields.resumeText.value='ANUBHAV MISHRA\niamanubhavmishra82@gmail.com\n+91 7451987552\nQA Engineer';
+  fields.candidateName.value='';parser.applyResume(parser.extractResume(fields.resumeText.value));
+  fields.resumeText.value='NITIN VILAS SANGLE\n+91 9870217690 | nitin19sangle@gmail.com\nEmbedded Systems Test Engineer';
+  const click=listeners.find(x=>x.type==='click').callback;
+  click({target:{closest:()=>true},preventDefault(){throw Error('Unexpected block')},stopImmediatePropagation(){}});
+  assert.equal(fields.candidateName.value,'Nitin Vilas Sangle');
+  assert.equal(fields.candidateEmail.value,'nitin19sangle@gmail.com');
+  assert.equal(fields.candidatePhone.value,'9870217690');
+  fields.candidateName.value='Nitin V. Sangle';parser.applyResume(parser.extractResume(fields.resumeText.value));
+  assert.equal(fields.candidateName.value,'Nitin V. Sangle','same-resume manual edits are preserved');
+});

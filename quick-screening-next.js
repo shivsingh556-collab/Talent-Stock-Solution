@@ -24,6 +24,7 @@
   function resetQuick(){
     const file=$('quickResumeFile'),paste=$('quickResumeText'),result=$('quickResult'),name=$('candidateName');
     if(file)file.value='';if(paste)paste.value='';if(result){result.innerHTML='';result.classList.add('hidden')}if(name)name.value='';
+    ['resumeFile','resumeText','candidateEmail','candidatePhone','candidateExp','candidateLocation','candidateDesignation','candidateNotice','candidateCTC','candidateExpectedCTC'].forEach(id=>{const el=$(id);if(el)el.value=''});window.TSS_PARSED_RESUME=null;window.TSS_PARSED_RESUME_TEXT=null;
     const fn=$('quickFileName');if(fn)fn.textContent='';
     const st=$('quickScreenStatus');if(st){st.textContent='Ready for next candidate';st.className='quick-screen-status ok'}
     $('quickScreenCard')?.scrollIntoView({behavior:'smooth',block:'start'});

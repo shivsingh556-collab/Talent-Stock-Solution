@@ -46,7 +46,7 @@
       if(text && text!==previousText)return text;
       await sleep(250);
     }
-    return byId('resumeText')?.value?.trim()||'';
+    return '';
   }
   async function waitForScreening(beforeCount){
     const started=Date.now();
@@ -156,7 +156,8 @@
     if(quickFile){
       await feedFileToCore(quickFile);
       setStatus('Extracting CV details…','busy');
-      await waitForExtraction(previous);
+      const extracted=await waitForExtraction(previous);
+      if(!extracted){button.disabled=false;button.textContent='Analyse Candidate';setStatus('CV extraction did not finish. Please retry or paste the resume text.','bad');return}
     }
     const text=byId('resumeText')?.value?.trim()||'';
     if(!text){button.disabled=false;button.textContent='Analyse Candidate';setStatus('Resume text could not be extracted. Paste the resume text once and try again.','bad');return}
