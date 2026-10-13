@@ -30,7 +30,7 @@
     const resumeText=document.getElementById('resumeText');
     // Capture phase runs before the legacy/parser handlers, ensuring a genuinely new resume
     // never inherits the previous candidate's identity/contact values.
-    resumeFile?.addEventListener('change',e=>{if(e.target.files?.[0])clearCandidateIdentity()},true);
+    resumeFile?.addEventListener('change',e=>{if(e.target.files?.[0]){clearCandidateIdentity();if(resumeText)resumeText.value=''}},true);
     resumeText?.addEventListener('paste',()=>{clearCandidateIdentity();if(resumeFile)resumeFile.value=''},true);
     resumeText?.addEventListener('input',()=>{if(resumeFile)resumeFile.value='';window.TSSDocumentParser?.applyResume?.(window.TSSDocumentParser.extractResume(resumeText.value))});
     document.getElementById('screenBtn')?.addEventListener('click',()=>setTimeout(enrichLatest,30));

@@ -40,6 +40,7 @@
     }catch(e){console.warn('Quick screening file handoff failed',e);return false}
   }
   async function waitForExtraction(previousText=''){
+    if(window.TSS_RESUME_PARSE_PROMISE)return await Promise.race([window.TSS_RESUME_PARSE_PROMISE,sleep(10000).then(()=> '')]);
     const started=Date.now();
     while(Date.now()-started<10000){
       const text=byId('resumeText')?.value?.trim()||'';
