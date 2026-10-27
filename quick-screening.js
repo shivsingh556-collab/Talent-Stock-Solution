@@ -55,7 +55,7 @@
       try{if((db.screenings||[]).length>beforeCount)return (db.screenings||[]).at(-1)}catch{}
       await sleep(200);
     }
-    try{return (db.screenings||[]).at(-1)||null}catch{return null}
+    return null;
   }
   function summaryFor(s,c,r){
     const m=s?.metrics||{};
@@ -119,7 +119,7 @@
     if(button){button.disabled=true;button.textContent='Saving…'}
     setStatus('Saving candidate and updating calling details…','busy');
     try{
-      const saved=withCallDetails?await production.saveCandidateWithCallDetails(s):await production.persistLatestScreening();
+      const saved=withCallDetails?await production.saveCandidateWithCallDetails(s):await production.persistLatestScreening(s);
       if(saved){setStatus(withCallDetails?'Candidate saved — calling details updated':'Candidate saved securely','ok');return true}
       setStatus(s?.serverId&&!s.resumeSavePending?'Candidate saved. Calling details can be updated when ready.':'Save did not finish. Retry here; candidate details will be reused safely.',s?.serverId?'':'bad');
       return false;
@@ -153,7 +153,7 @@
     button.disabled=true;button.textContent='Analysing…';setStatus('Reading candidate profile…','busy');
     syncRequirementToCore();
     const previous=byId('resumeText')?.value||'';
-    if(pasted){byId('resumeText').value=pasted}
+    if(pasted&&!quickFile){window.TSSDocumentParser?.cancelResume?.();byId('resumeText').value=pasted}
     if(quickFile){
       await feedFileToCore(quickFile);
       setStatus('Extracting CV details…','busy');

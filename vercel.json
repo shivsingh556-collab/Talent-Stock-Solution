@@ -76,7 +76,7 @@
       ]
     }
   ],
-  "buildCommand": "node scripts/build-production.mjs",
+  "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "functions": {
     "api/workspace-shell.js": {

@@ -4,13 +4,19 @@ on:
   pull_request:
     branches: [main]
   push:
-    branches: [main, production-hardening-v2]
+    branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: read
 
+concurrency:
+  group: production-verification-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   verify:
+    name: Source and logic
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -18,63 +24,64 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - name: Install browser test runtime
-        run: |
-          npm install --no-save playwright@1.55.0 jsdom@26.1.0
-          npx playwright install --with-deps chromium
-      - name: Verify source and logic
-        run: |
-          node scripts/build-production.mjs
-          node --test workspace-shell.test.cjs report-export.test.cjs
-          node --check auth-bootstrap.js
-          node --check app-core.js
-          node --check app-runtime.js
-          node --check requirement-search.js
-          node screening-counts.test.cjs
-          node interview-client-scheduling.test.cjs
-          node interview-client-scheduling.dom.test.cjs
-          node --test evidence-screening.test.cjs candidate-records.test.cjs realtime-performance.test.cjs
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - run: npx playwright install --with-deps chromium
       - name: Verify signed-out and authenticated boot
         run: |
           python3 -m http.server 4173 --bind 127.0.0.1 >/tmp/todo-ai-http.log 2>&1 &
           server_pid=$!
           trap 'kill "$server_pid"' EXIT
-          for attempt in 1 2 3 4 5; do
-            curl --fail --silent http://127.0.0.1:4173/ >/dev/null && break
-            sleep 1
-          done
           TSS_BASE_URL=http://127.0.0.1:4173/ node browser-smoke.test.cjs
 
   call-tracker:
+    name: Recruiter workflows
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - name: Install browser test runtime
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Verify calling and interview workflows
         run: |
-          npm install --no-save playwright@1.55.0
-          npx playwright install --with-deps chromium
-      - name: Verify call tracker save workflow
-        run: |
-          node --check recruitment-trackers.js
-          node --check app-core.js
-          node --check app-runtime.js
-          node resume-save.test.cjs
-          node interview-name-sync.test.cjs
-          node --test candidate-identity.test.cjs extraction-skills.test.cjs
           node calling-tracker-save.browser.test.cjs
           node interview-candidate-search.browser.test.cjs
           node requirement-search.browser.test.cjs
-      - name: Verify authenticated application boot
+
+  candidate-and-mobile:
+    name: Candidate isolation and mobile
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:browser
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mobile-verification
+          path: test-results/
+          if-no-files-found: ignore
+
+  release-checks:
+    name: Release checks
+    if: always()
+    needs: [verify, call-tracker, candidate-and-mobile]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require every verification job
+        env:
+          RESULTS: ${{ toJSON(needs) }}
         run: |
-          python3 -m http.server 4173 --bind 127.0.0.1 >/tmp/todo-ai-http.log 2>&1 &
-          server_pid=$!
-          trap 'kill "$server_pid"' EXIT
-          for attempt in 1 2 3 4 5; do
-            curl --fail --silent http://127.0.0.1:4173/ >/dev/null && break
-            sleep 1
-          done
-          TSS_BASE_URL=http://127.0.0.1:4173/ node browser-smoke.test.cjs
+          node -e 'const jobs=JSON.parse(process.env.RESULTS); if(Object.values(jobs).some(job=>job.result!=="success")) process.exit(1)'

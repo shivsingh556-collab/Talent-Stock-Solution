@@ -22,6 +22,7 @@
     try{await navigator.clipboard.writeText(value);const old=button.textContent;button.textContent=label;button.classList.add('quick-copy-ok');setTimeout(()=>{button.textContent=old;button.classList.remove('quick-copy-ok')},1400)}catch{button.textContent='Copy failed'}
   }
   function resetQuick(){
+    window.TSSDocumentParser?.cancelResume?.();
     const file=$('quickResumeFile'),paste=$('quickResumeText'),result=$('quickResult'),name=$('candidateName');
     if(file)file.value='';if(paste)paste.value='';if(result){result.innerHTML='';result.classList.add('hidden')}if(name)name.value='';
     ['resumeFile','resumeText','candidateEmail','candidatePhone','candidateExp','candidateLocation','candidateDesignation','candidateNotice','candidateCTC','candidateExpectedCTC'].forEach(id=>{const el=$(id);if(el)el.value=''});window.TSS_PARSED_RESUME=null;window.TSS_PARSED_RESUME_TEXT=null;

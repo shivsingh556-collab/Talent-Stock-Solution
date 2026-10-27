@@ -1,0 +1,14 @@
+{
+  "name": "todo-recruitment-workspace",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "build": "node scripts/build-production.mjs && node scripts/verify-release.mjs",
+    "test": "node scripts/verify-release.mjs",
+    "test:browser": "node candidate-isolation.browser.test.cjs && node authenticated-mobile.browser.test.cjs"
+  },
+  "devDependencies": {
+    "jsdom": "26.1.0",
+    "playwright": "1.55.0"
+  }
+}
