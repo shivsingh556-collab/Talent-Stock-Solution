@@ -17,7 +17,7 @@ concurrency:
 jobs:
   verify:
     name: Source and logic
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
@@ -37,7 +37,7 @@ jobs:
 
   call-tracker:
     name: Recruiter workflows
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
@@ -55,7 +55,7 @@ jobs:
 
   candidate-and-mobile:
     name: Candidate isolation and mobile
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
@@ -78,7 +78,7 @@ jobs:
     name: Release checks
     if: always()
     needs: [verify, call-tracker, candidate-and-mobile]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Require every verification job
         env:
