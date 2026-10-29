@@ -1,6 +1,6 @@
 (function(){
 'use strict';
-let pdf,mammoth,xlsx,ocr;
+let pdf,mammoth,xlsx,ocr,assessmentZip;
 const load=(s,i)=>new Promise((r,j)=>{if([...document.scripts].some(x=>x.src===s))return r();const e=document.createElement('script');e.src=s;if(i){e.integrity=i;e.crossOrigin='anonymous'}e.referrerPolicy='no-referrer';e.onload=r;e.onerror=j;document.head.appendChild(e)});
 const clean=s=>String(s||'').replace(/\u00a0/g,' ').replace(/\b0ct\b/gi,'Oct').replace(/[\t ]+/g,' ').replace(/\s*\n\s*/g,'\n').trim();
 const line=s=>String(s||'').replace(/\s+/g,' ').trim();
@@ -19,6 +19,48 @@ function emailAddress(t){
   return match?match[0].toLowerCase():'';
 }
 const toast=m=>{try{window.toast&&window.toast(m)}catch{}};
+async function parseAssessment(file){
+  const name=file.name.toLowerCase();
+  if(/\.(txt|csv|md|json|xml|log)$/.test(name))return (await file.text()).trim();
+  if(name.endsWith('.pptx')){
+    if(!window.JSZip){
+      if(!assessmentZip)assessmentZip=load('https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js','sha384-+mbV2IY1Zk/X1p/nWllGySJSUN8uMs+gUAN10Or95UBH0fpj6GfKgPmgC5EXieXG').catch(error=>{assessmentZip=null;throw error});
+      await assessmentZip;
+    }
+    const zip=await window.JSZip.loadAsync(await file.arrayBuffer()),parts=[];
+    const slides=Object.keys(zip.files).filter(n=>/^ppt\/slides\/slide\d+\.xml$/.test(n)).sort((a,b)=>Number(a.match(/slide(\d+)/)[1])-Number(b.match(/slide(\d+)/)[1]));
+    let total=0;
+    if(slides.length>200)throw Error('Presentation exceeds 200 slides. Paste the relevant questions manually.');
+    for(const path of slides){
+      const xml=await zip.file(path).async('string');total+=xml.length;
+      if(total>10000000)throw Error('Presentation text is too large to extract.');
+      const doc=new DOMParser().parseFromString(xml,'application/xml');
+      if(doc.querySelector('parsererror'))throw Error('Presentation contains unreadable slide data.');
+      parts.push('Slide '+path.match(/slide(\d+)/)[1]+'\n'+Array.from(doc.getElementsByTagNameNS('*','p')).map(p=>Array.from(p.getElementsByTagNameNS('*','t')).map(t=>t.textContent).join('')).filter(Boolean).join('\n'));
+    }
+    return parts.join('\n\n');
+  }
+  if(name.endsWith('.pdf')){
+    await ensurePDF();const pdfDoc=await window.pdfjsLib.getDocument({data:new Uint8Array(await file.arrayBuffer())}).promise;
+    try{
+      if(pdfDoc.numPages>100)throw Error('PDF exceeds 100 pages. Paste the relevant questions manually.');
+      const pages=[];
+      for(let n=1;n<=pdfDoc.numPages;n++){
+        const page=await pdfDoc.getPage(n),content=await page.getTextContent();
+        let text=content.items.map(item=>item.str+(item.hasEOL?'\n':' ')).join('').trim();
+        if(text.replace(/\s/g,'').length<40){
+          const view=page.getViewport({scale:1.6}),canvas=document.createElement('canvas');canvas.width=view.width;canvas.height=view.height;
+          await page.render({canvasContext:canvas.getContext('2d'),viewport:view}).promise;
+          const scanned=await ocrCanvas(canvas);if(scanned.length>text.length)text=scanned;
+          canvas.width=canvas.height=0;
+        }
+        pages.push(text);page.cleanup();
+      }
+      return pages.join('\n\n');
+    }finally{await pdfDoc.destroy()}
+  }
+  return parse(file);
+}
 async function ensurePDF(){if(!pdf)pdf=load('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js','sha384-/1qUCSGwTur9vjf/z9lmu/eCUYbpOTgSjmpbMQZ1/CtX2v/WcAIKqRv+U1DUCG6e').then(()=>window.pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js').catch(e=>{pdf=null;throw e});return pdf}
 async function ensureDoc(){if(!mammoth)mammoth=load('https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.8.0/mammoth.browser.min.js','sha384-/cXAMbzovUIKbBERjPmR3SnPTh8siWr5lsvFYj1Uq4XP0yaJUZJmsh0YXyGv5P0y').catch(e=>{mammoth=null;throw e});return mammoth}
 async function ensureXlsx(){if(!xlsx)xlsx=load('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js','sha384-vtjasyidUo0kW94K5MXDXntzOJpQgBKXmE7e2Ga4LG0skTTLeBi97eFAXsqewJjw').catch(e=>{xlsx=null;throw e});return xlsx}
@@ -150,5 +192,5 @@ async function resumeFile(f){
 }
 async function jdFile(f){try{toast('Reading & validating JD…');const t=await parse(f);if(!t)throw Error('No readable text found');const b=document.getElementById('reqJdText');if(b)b.value=t;const d=extractJD(t,ctx());applyJD(d);toast(d.skills.length?`JD extracted · ${d.skills.length} confirmed skills`:`JD extracted · ${d.aiSuggestedSkills.length} AI-suggested skills for approval`)}catch(e){console.error(e);toast(e.message||'JD parsing failed')}}
 function wire(){document.addEventListener('click',e=>{if(!e.target?.closest?.('#screenBtn'))return;if(resumeParsePending){e.preventDefault();e.stopImmediatePropagation();toast('Wait for the current resume to finish extracting.');return;}const field=document.getElementById('candidateName');if(!field)return;const parsed=extractResume(document.getElementById('resumeText')?.value||'');applyResume(parsed);if(candidateNameIssue(field.value)&&parsed.name){field.value=parsed.name;toast('Candidate name corrected from resume: '+parsed.name)}const issue=candidateNameIssue(field.value);if(issue){e.preventDefault();e.stopImmediatePropagation();field.focus();toast(issue+(parsed.nameSuggestion?' Possible name from email: '+parsed.nameSuggestion+'. Verify it first.':''));}},true);const acc='.pdf,.docx,.txt,.csv,.xls,.xlsx,.xlsm,.png,.jpg,.jpeg,.webp,.bmp,.tif,.tiff';['resumeFile','jdQuickFile','jdFile'].forEach(id=>document.getElementById(id)?.setAttribute('accept',acc));document.getElementById('resumeFile')?.addEventListener('change',e=>{window.TSS_RESUME_PARSE_PROMISE=resumeFile(e.target.files?.[0])});document.getElementById('jdQuickFile')?.addEventListener('change',e=>jdFile(e.target.files?.[0]));document.getElementById('jdFile')?.addEventListener('change',e=>jdFile(e.target.files?.[0]));document.getElementById('resumeText')?.addEventListener('paste',()=>setTimeout(()=>{const t=document.getElementById('resumeText').value;if(t.length>20)applyResume(extractResume(t))},0));document.getElementById('reqJdText')?.addEventListener('paste',()=>setTimeout(()=>{const t=document.getElementById('reqJdText').value;if(t.length>20)applyJD(extractJD(t,ctx()))},0))}
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',wire);else wire();window.TSSDocumentParser={parse,extractResume,extractJD,applyResume,cancelResume,isResumePending:()=>resumeParsePending,candidateNameIssue,emailNameSuggestion,nameKey,suggestSkills:suggest,experienceInfo:expInfo,splitSkillBlock,version:'2.2-candidate-identity'};
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',wire);else wire();window.TSSDocumentParser={parse,parseAssessment,extractResume,extractJD,applyResume,cancelResume,isResumePending:()=>resumeParsePending,candidateNameIssue,emailNameSuggestion,nameKey,suggestSkills:suggest,experienceInfo:expInfo,splitSkillBlock,version:'2.2-candidate-identity'};
 })();

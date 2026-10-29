@@ -24,7 +24,7 @@ const runtimeFiles=[
   'dashboard-cleanup.js','dashboard-actions.js','resdex-assistant.js','resdex-final-safe.js',
   'resdex-import-quick.js','recruitment-workflow.js','assignment-clean-layout.js',
   'client-owner-auto.js','requirement-acknowledgement-ui.js','requirement-positions-field.js',
-  'requirement-save-sync.js','requirement-details-owner-sync.js','admin-role-ui.js',
+  'requirement-screening-materials.js','requirement-save-sync.js','requirement-details-owner-sync.js','admin-role-ui.js',
   'screening-cleanup.js','quick-screening.js','quick-screening-next.js',
   'todo-chatbot-upgrade.js','role-access-visibility.js','realtime-performance.js',
   'workflow-finalization.js','requirement-screening-selection-fix.js',

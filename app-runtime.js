@@ -12,7 +12,7 @@ window.TSS_ASSETS.todo = 'data:image/webp;base64,UklGRrpSAABXRUJQVlA4WAoAAAAQAAA
 /* ===== extraction-accuracy.js ===== */
 (function(){
 'use strict';
-let pdf,mammoth,xlsx,ocr;
+let pdf,mammoth,xlsx,ocr,assessmentZip;
 const load=(s,i)=>new Promise((r,j)=>{if([...document.scripts].some(x=>x.src===s))return r();const e=document.createElement('script');e.src=s;if(i){e.integrity=i;e.crossOrigin='anonymous'}e.referrerPolicy='no-referrer';e.onload=r;e.onerror=j;document.head.appendChild(e)});
 const clean=s=>String(s||'').replace(/\u00a0/g,' ').replace(/\b0ct\b/gi,'Oct').replace(/[\t ]+/g,' ').replace(/\s*\n\s*/g,'\n').trim();
 const line=s=>String(s||'').replace(/\s+/g,' ').trim();
@@ -31,6 +31,48 @@ function emailAddress(t){
   return match?match[0].toLowerCase():'';
 }
 const toast=m=>{try{window.toast&&window.toast(m)}catch{}};
+async function parseAssessment(file){
+  const name=file.name.toLowerCase();
+  if(/\.(txt|csv|md|json|xml|log)$/.test(name))return (await file.text()).trim();
+  if(name.endsWith('.pptx')){
+    if(!window.JSZip){
+      if(!assessmentZip)assessmentZip=load('https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js','sha384-+mbV2IY1Zk/X1p/nWllGySJSUN8uMs+gUAN10Or95UBH0fpj6GfKgPmgC5EXieXG').catch(error=>{assessmentZip=null;throw error});
+      await assessmentZip;
+    }
+    const zip=await window.JSZip.loadAsync(await file.arrayBuffer()),parts=[];
+    const slides=Object.keys(zip.files).filter(n=>/^ppt\/slides\/slide\d+\.xml$/.test(n)).sort((a,b)=>Number(a.match(/slide(\d+)/)[1])-Number(b.match(/slide(\d+)/)[1]));
+    let total=0;
+    if(slides.length>200)throw Error('Presentation exceeds 200 slides. Paste the relevant questions manually.');
+    for(const path of slides){
+      const xml=await zip.file(path).async('string');total+=xml.length;
+      if(total>10000000)throw Error('Presentation text is too large to extract.');
+      const doc=new DOMParser().parseFromString(xml,'application/xml');
+      if(doc.querySelector('parsererror'))throw Error('Presentation contains unreadable slide data.');
+      parts.push('Slide '+path.match(/slide(\d+)/)[1]+'\n'+Array.from(doc.getElementsByTagNameNS('*','p')).map(p=>Array.from(p.getElementsByTagNameNS('*','t')).map(t=>t.textContent).join('')).filter(Boolean).join('\n'));
+    }
+    return parts.join('\n\n');
+  }
+  if(name.endsWith('.pdf')){
+    await ensurePDF();const pdfDoc=await window.pdfjsLib.getDocument({data:new Uint8Array(await file.arrayBuffer())}).promise;
+    try{
+      if(pdfDoc.numPages>100)throw Error('PDF exceeds 100 pages. Paste the relevant questions manually.');
+      const pages=[];
+      for(let n=1;n<=pdfDoc.numPages;n++){
+        const page=await pdfDoc.getPage(n),content=await page.getTextContent();
+        let text=content.items.map(item=>item.str+(item.hasEOL?'\n':' ')).join('').trim();
+        if(text.replace(/\s/g,'').length<40){
+          const view=page.getViewport({scale:1.6}),canvas=document.createElement('canvas');canvas.width=view.width;canvas.height=view.height;
+          await page.render({canvasContext:canvas.getContext('2d'),viewport:view}).promise;
+          const scanned=await ocrCanvas(canvas);if(scanned.length>text.length)text=scanned;
+          canvas.width=canvas.height=0;
+        }
+        pages.push(text);page.cleanup();
+      }
+      return pages.join('\n\n');
+    }finally{await pdfDoc.destroy()}
+  }
+  return parse(file);
+}
 async function ensurePDF(){if(!pdf)pdf=load('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js','sha384-/1qUCSGwTur9vjf/z9lmu/eCUYbpOTgSjmpbMQZ1/CtX2v/WcAIKqRv+U1DUCG6e').then(()=>window.pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js').catch(e=>{pdf=null;throw e});return pdf}
 async function ensureDoc(){if(!mammoth)mammoth=load('https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.8.0/mammoth.browser.min.js','sha384-/cXAMbzovUIKbBERjPmR3SnPTh8siWr5lsvFYj1Uq4XP0yaJUZJmsh0YXyGv5P0y').catch(e=>{mammoth=null;throw e});return mammoth}
 async function ensureXlsx(){if(!xlsx)xlsx=load('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js','sha384-vtjasyidUo0kW94K5MXDXntzOJpQgBKXmE7e2Ga4LG0skTTLeBi97eFAXsqewJjw').catch(e=>{xlsx=null;throw e});return xlsx}
@@ -162,7 +204,7 @@ async function resumeFile(f){
 }
 async function jdFile(f){try{toast('Reading & validating JD…');const t=await parse(f);if(!t)throw Error('No readable text found');const b=document.getElementById('reqJdText');if(b)b.value=t;const d=extractJD(t,ctx());applyJD(d);toast(d.skills.length?`JD extracted · ${d.skills.length} confirmed skills`:`JD extracted · ${d.aiSuggestedSkills.length} AI-suggested skills for approval`)}catch(e){console.error(e);toast(e.message||'JD parsing failed')}}
 function wire(){document.addEventListener('click',e=>{if(!e.target?.closest?.('#screenBtn'))return;if(resumeParsePending){e.preventDefault();e.stopImmediatePropagation();toast('Wait for the current resume to finish extracting.');return;}const field=document.getElementById('candidateName');if(!field)return;const parsed=extractResume(document.getElementById('resumeText')?.value||'');applyResume(parsed);if(candidateNameIssue(field.value)&&parsed.name){field.value=parsed.name;toast('Candidate name corrected from resume: '+parsed.name)}const issue=candidateNameIssue(field.value);if(issue){e.preventDefault();e.stopImmediatePropagation();field.focus();toast(issue+(parsed.nameSuggestion?' Possible name from email: '+parsed.nameSuggestion+'. Verify it first.':''));}},true);const acc='.pdf,.docx,.txt,.csv,.xls,.xlsx,.xlsm,.png,.jpg,.jpeg,.webp,.bmp,.tif,.tiff';['resumeFile','jdQuickFile','jdFile'].forEach(id=>document.getElementById(id)?.setAttribute('accept',acc));document.getElementById('resumeFile')?.addEventListener('change',e=>{window.TSS_RESUME_PARSE_PROMISE=resumeFile(e.target.files?.[0])});document.getElementById('jdQuickFile')?.addEventListener('change',e=>jdFile(e.target.files?.[0]));document.getElementById('jdFile')?.addEventListener('change',e=>jdFile(e.target.files?.[0]));document.getElementById('resumeText')?.addEventListener('paste',()=>setTimeout(()=>{const t=document.getElementById('resumeText').value;if(t.length>20)applyResume(extractResume(t))},0));document.getElementById('reqJdText')?.addEventListener('paste',()=>setTimeout(()=>{const t=document.getElementById('reqJdText').value;if(t.length>20)applyJD(extractJD(t,ctx()))},0))}
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',wire);else wire();window.TSSDocumentParser={parse,extractResume,extractJD,applyResume,cancelResume,isResumePending:()=>resumeParsePending,candidateNameIssue,emailNameSuggestion,nameKey,suggestSkills:suggest,experienceInfo:expInfo,splitSkillBlock,version:'2.2-candidate-identity'};
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',wire);else wire();window.TSSDocumentParser={parse,parseAssessment,extractResume,extractJD,applyResume,cancelResume,isResumePending:()=>resumeParsePending,candidateNameIssue,emailNameSuggestion,nameKey,suggestSkills:suggest,experienceInfo:expInfo,splitSkillBlock,version:'2.2-candidate-identity'};
 })();
 
 /* ===== candidate-enrichment.js ===== */
@@ -1022,6 +1064,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
     $('reqDetailTitle').textContent=`${r.requirementId||r.id} · ${r.title}`;
     const chips=a=>(a||[]).length?(a||[]).map(x=>`<span class="skill">${esc(x)}</span>`).join(''):'<span class="muted">Not provided</span>';
     $('reqDetailBody').innerHTML=`<div class="req-detail-grid"><div><span>Client</span><strong>${esc(r.client)}</strong></div><div><span>Client Owner</span><strong>${esc(r.clientOwner||'Not assigned')}</strong></div><div><span>Location</span><strong>${esc(r.location||'Not provided')}</strong></div><div><span>Experience</span><strong>${esc(r.experience||'Not provided')}</strong></div><div><span>Salary / Budget</span><strong>${esc(r.salaryRange||'Not provided')}</strong></div><div><span>Qualification</span><strong>${esc(r.qualification||'Not provided')}</strong></div></div><h4>Mandatory Skills</h4><div class="skill-cloud">${chips(r.skills)}</div><h4>Preferred Skills</h4><div class="skill-cloud">${chips(r.preferred)}</div><h4>Roles & Responsibilities / JD</h4><div class="req-detail-text">${esc(r.responsibilities||r.jdText||'Not provided')}</div>`;
+    window.TSSScreeningMaterials?.renderReadOnly($('reqDetailBody'),r);
     $('reqDetailEdit').onclick=()=>{ $('requirementDetailsDialog').close(); try{openRequirement(r.id)}catch{} };
     $('reqDetailScreen').onclick=()=>{ $('requirementDetailsDialog').close(); if($('screenRequirement'))$('screenRequirement').value=r.id; try{updateSelectedRequirement()}catch{}; try{gotoView('screening')}catch{} };
     $('requirementDetailsDialog').showModal();
@@ -1190,6 +1233,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
     return {...local,
       id:internalId(row,local),requirementId:row.tss_id,profileKey:serverKey(row),serverId:row.id,
       client:row.clients?.name||local.client||'Client',clientOwner:row.client_owner||'',
+      screeningGuide:row.screening_guide||'',screeningMaterials:Array.isArray(row.screening_materials)?row.screening_materials:[],
       requirementHandler:row.requirement_handler||local.requirementHandler||'',
       assignedRecruiters:Array.isArray(row.assigned_recruiters)?row.assigned_recruiters:[],
       createdAt:row.created_at||local.createdAt||null,updatedAt:row.updated_at||local.updatedAt||null,
@@ -2308,6 +2352,138 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
   window.TSSRequirementPositions={ensure,boot};
 })();
 
+/* ===== requirement-screening-materials.js ===== */
+// Client screening guides are reference material, never inputs to resume scoring.
+(function(){
+  'use strict';
+  const $=id=>document.getElementById(id),bucket='requirement-assessments';
+  const maxSize=25*1024*1024,maxFiles=10,maxText=200000;
+  let entries=[],originalPaths=[],generation=0,pending=0,locked=false;
+  const client=()=>window.TSSBackend?.client;
+  const requirements=()=>typeof db!=='undefined'?db.requirements||[]:[];
+  const find=id=>requirements().find(r=>r.id===id);
+  const notice=message=>{if($('reqAssessmentStatus'))$('reqAssessmentStatus').textContent=message};
+  const button=(label,action)=>{const b=document.createElement('button');b.type='button';b.className='btn ghost';b.textContent=label;b.onclick=action;return b};
+  function textNode(tag,text){const el=document.createElement(tag);el.textContent=text;return el}
+  async function download(item,button){
+    button.disabled=true;
+    try{
+      const {data,error}=await client().storage.from(bucket).download(item.path);
+      if(error)throw error;
+      const url=URL.createObjectURL(data),a=document.createElement('a');a.href=url;a.download=item.name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+    }catch(error){button.after(textNode('p','Download failed: '+error.message))}finally{button.disabled=false}
+  }
+  function renderReadOnly(container,requirement){
+    if(!container)return;
+    const section=document.createElement('section');section.className='assessment-guide';
+    section.append(textNode('h4','Screening Questions & Assessment'));
+    section.append(textNode('small','Client screening guide · review with the candidate separately from resume scoring.'));
+    const guide=textNode('div',requirement?.screeningGuide||'No screening instructions added.');guide.className='assessment-text';section.append(guide);
+    for(const item of requirement?.screeningMaterials||[]){
+      const details=document.createElement('details');details.append(textNode('summary',item.name));
+      const preview=textNode('div',item.text||item.message||'Text extraction unavailable. Download the original file.');preview.className='assessment-text';details.append(preview);
+      const b=button('Download original',()=>download(item,b));details.append(b);section.append(details);
+    }
+    container.append(section);
+  }
+  function paint(){
+    const list=$('reqAssessmentFiles');if(!list)return;list.replaceChildren();
+    for(const item of entries){
+      const card=document.createElement('div');card.className='assessment-file';
+      card.append(textNode('strong',item.name),textNode('small',item.message||'Text extracted — review before saving.'));
+      const area=document.createElement('textarea');area.rows=4;area.maxLength=maxText;area.value=item.text||'';area.placeholder='Paste or correct the text from this file';area.setAttribute('aria-label','Extracted text for '+item.name);area.disabled=item.busy||locked;
+      area.oninput=()=>{item.text=area.value};card.append(area);
+      const remove=button('Remove attachment',()=>{if(locked)return;entries=entries.filter(e=>e!==item);paint()});remove.disabled=locked||item.busy;card.append(remove);list.append(card);
+    }
+  }
+  function hydrate(){
+    generation++;pending=0;const r=find($('reqId')?.value);
+    entries=(r?.screeningMaterials||[]).map(item=>({...item}));originalPaths=entries.map(item=>item.path).filter(Boolean);
+    $('reqScreeningGuide').value=r?.screeningGuide||'';notice('');paint();
+  }
+  async function addFiles(files){
+    if(locked)return;
+    const token=generation;
+    for(const file of files){
+      if(token!==generation)return;
+      if(entries.length>=maxFiles){notice('Maximum 10 attachments per requirement.');break}
+      if(file.size>maxSize){notice(file.name+': exceeds the 25 MB per-file limit.');continue}
+      const item={id:crypto.randomUUID(),name:file.name,size:file.size,type:file.type,file,text:'',busy:true,message:'Extracting text…'};
+      entries.push(item);pending++;paint();
+      try{
+        const text=await window.TSSDocumentParser.parseAssessment(file);
+        if(text.length>maxText)throw Error('Text exceeds 200,000 characters. Paste the relevant questions manually.');
+        item.text=text;item.message=text?'Text extracted — review and edit before saving.':'No readable text found. Original file will be attached; paste the questions manually.';
+      }catch(error){item.message='Original file will be attached. '+(error.message||'Text extraction unavailable.')}
+      finally{item.busy=false;if(token===generation){pending--;paint()}}
+    }
+    if(token===generation)$('reqAssessmentUpload').value='';
+  }
+  function lock(value){
+    locked=value;
+    const form=$('requirementForm');
+    if(value){
+      form?.querySelectorAll('input,textarea,select,button').forEach(el=>{if(!el.disabled){el.dataset.assessmentLocked='1';el.disabled=true}});
+    }else form?.querySelectorAll('[data-assessment-locked]').forEach(el=>{el.disabled=false;delete el.dataset.assessmentLocked});
+    paint();
+  }
+  async function prepareSave(userId){
+    if(pending||locked)throw Error('Wait for screening material processing to finish.');
+    const guide=$('reqScreeningGuide')?.value.trim()||'';
+    if(guide.length>maxText)throw Error('Screening guide is too long.');
+    lock(true);
+    let committed=false;
+    const uploaded=[],staged=entries.map(item=>({...item}));
+    const rollback=async()=>{
+      if(committed)return;
+      try{if(uploaded.length){const {error}=await client().storage.from(bucket).remove(uploaded);if(error)console.warn('Assessment upload cleanup failed',error.message)}}finally{lock(false)}
+    };
+    try{
+      for(const item of staged){
+        if(!item.file)continue;
+        // Keep original names in metadata, use opaque paths for any file type.
+        item.path=userId+'/'+crypto.randomUUID()+'/'+crypto.randomUUID();
+        const {error}=await client().storage.from(bucket).upload(item.path,item.file,{contentType:item.type||'application/octet-stream',upsert:false});
+        if(error)throw error;uploaded.push(item.path);
+      }
+      const materials=staged.map(({id,name,size,type,path,text,message})=>({id,name,size,type,path,text,message}));
+      return {payload:{screening_guide:guide,screening_materials:materials},rollback,commit(){
+        committed=true;entries=materials;
+        const removed=originalPaths.filter(path=>!materials.some(item=>item.path===path));originalPaths=materials.map(item=>item.path);
+        if(removed.length)client().storage.from(bucket).remove(removed).then(({error})=>{if(error)console.warn('Removed assessment cleanup failed',error.message)}).catch(error=>console.warn('Removed assessment cleanup failed',error.message));
+        lock(false);
+      }};
+    }catch(error){await rollback();throw error}
+  }
+  function refreshScreening(){
+    const host=$('selectedRequirementSummary');if(!host)return;
+    host.querySelectorAll('.assessment-guide').forEach(el=>el.remove());
+    renderReadOnly(host,find($('screenRequirement')?.value));
+  }
+  function boot(){
+    const form=$('requirementForm');if(!form||$('reqScreeningGuide'))return;
+    const section=document.createElement('section');section.className='assessment-guide';
+    section.innerHTML='<h4>Screening Questions & Assessment</h4><p>Add client questions, assessment instructions or an evaluation guide.</p><label for="reqScreeningGuide">Paste screening questions / instructions</label><textarea id="reqScreeningGuide" rows="5" maxlength="200000" placeholder="Questions to ask, assessment steps, evaluation criteria…"></textarea><label for="reqAssessmentUpload">Upload screening / assessment files</label><input id="reqAssessmentUpload" type="file" multiple /><small>Any file type · up to 10 files, 25 MB each. Text extraction: PDF, DOCX, Excel, PPTX, TXT, CSV and common images. Scans use English OCR. Other formats remain downloadable.</small><p id="reqAssessmentStatus" role="status" aria-live="polite"></p><div id="reqAssessmentFiles"></div>';
+    form.querySelector('.dialog-actions').before(section);
+    $('reqAssessmentUpload').onchange=e=>addFiles(Array.from(e.target.files||[]));
+    const dlg=$('requirementDialog');
+    new MutationObserver(()=>{if(dlg.open&&!locked)hydrate();else if(!dlg.open&&!locked){generation++;pending=0}}).observe(dlg,{attributes:true,attributeFilter:['open']});
+    dlg.addEventListener('cancel',e=>{if(locked)e.preventDefault()});
+    form.addEventListener('submit',e=>{if(locked)e.preventDefault()});
+    document.addEventListener('tss:data-rendered',refreshScreening);
+    window.addEventListener('tss:hydrated',refreshScreening);
+    document.addEventListener('change',e=>{if(['screenRequirement','topRequirementSelect'].includes(e.target.id))setTimeout(refreshScreening,0)});
+    document.addEventListener('click',e=>{if(e.target.closest('.screen-req,#reqDetailScreen,.nav-item'))setTimeout(refreshScreening,0)});
+    // Programmatic selection and existing renderers also replace the summary.
+    if($('selectedRequirementSummary'))new MutationObserver(()=>{
+      if(!$('selectedRequirementSummary').querySelector('.assessment-guide'))refreshScreening();
+    }).observe($('selectedRequirementSummary'),{childList:true});
+    refreshScreening();
+  }
+  window.TSSScreeningMaterials={prepareSave,renderReadOnly,refreshScreening,isBusy:()=>pending>0||locked};
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
+})();
+
 /* ===== requirement-save-sync.js ===== */
 // TODO AI authoritative requirement create/update -> Supabase.
 (function(){
@@ -2347,7 +2523,9 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
     const positionsRaw=clean($('reqPositions')?.value);
     const positions=positionsRaw?Number(positionsRaw):null;
     if(positions!==null&&(!Number.isInteger(positions)||positions<1)){toastSafe('No. of Positions must be 1 or more');return;}
+    if(window.TSSScreeningMaterials?.isBusy()){toastSafe('Please wait for assessment text extraction to finish');return;}
     saving=true;
+    let materialSave;
     const btn=e.currentTarget,old=btn?.textContent;if(btn){btn.disabled=true;btn.textContent=submitMode?'Submitting…':'Saving…'}
     try{
       const user=await b.currentUser();if(!user)throw new Error('Please sign in again');
@@ -2357,7 +2535,9 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
       const clientId=await ensureClient(c,user,client,clean($('reqIndustry')?.value));
       const exp=parseExp($('reqExperience')?.value);
       const assigned=[...($('reqRecruiters')?.selectedOptions||[])].map(o=>o.value).filter(Boolean);
+      materialSave=await window.TSSScreeningMaterials?.prepareSave(user.id);
       const payload={
+        ...(materialSave?.payload||{}),
         client_id:clientId,job_title:title,location:clean($('reqLocation')?.value)||null,
         experience_min:exp.min,experience_max:exp.max,experience_text:clean($('reqExperience')?.value)||null,
         positions_count:positions,
@@ -2379,11 +2559,12 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
         const q=await c.from('requirements').insert({...payload,tss_id:tssId,profile_key:profileKey,created_by:user.id}).select('*,clients(name)').single();
         if(q.error)throw q.error;saved=q.data;toastSafe(submitMode?`${tssId} requirement submitted`:`${tssId} draft saved`);
       }
+      materialSave?.commit();
       $('requirementDialog')?.close();
-      await window.TSSRequirementsLiveSync?.syncNow?.();
+      try{await window.TSSRequirementsLiveSync?.syncNow?.()}catch(error){console.warn('Requirement saved; refresh failed',error);toastSafe('Requirement saved. Refresh to see the latest details.');}
       // Realtime refreshes other workspace data; the saved requirement is already synced.
       return saved;
-    }catch(err){console.error('Requirement save failed',err);toastSafe('Requirement save failed: '+(err?.message||err));}
+    }catch(err){await materialSave?.rollback();console.error('Requirement save failed',err);toastSafe('Requirement save failed: '+(err?.message||err));}
     finally{saving=false;if(btn){btn.disabled=false;btn.textContent=old||(submitMode?'Submit Requirement':'Save Draft')}}
   }
   function wire(){

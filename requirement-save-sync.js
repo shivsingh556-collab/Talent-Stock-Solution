@@ -36,7 +36,9 @@
     const positionsRaw=clean($('reqPositions')?.value);
     const positions=positionsRaw?Number(positionsRaw):null;
     if(positions!==null&&(!Number.isInteger(positions)||positions<1)){toastSafe('No. of Positions must be 1 or more');return;}
+    if(window.TSSScreeningMaterials?.isBusy()){toastSafe('Please wait for assessment text extraction to finish');return;}
     saving=true;
+    let materialSave;
     const btn=e.currentTarget,old=btn?.textContent;if(btn){btn.disabled=true;btn.textContent=submitMode?'Submitting…':'Saving…'}
     try{
       const user=await b.currentUser();if(!user)throw new Error('Please sign in again');
@@ -46,7 +48,9 @@
       const clientId=await ensureClient(c,user,client,clean($('reqIndustry')?.value));
       const exp=parseExp($('reqExperience')?.value);
       const assigned=[...($('reqRecruiters')?.selectedOptions||[])].map(o=>o.value).filter(Boolean);
+      materialSave=await window.TSSScreeningMaterials?.prepareSave(user.id);
       const payload={
+        ...(materialSave?.payload||{}),
         client_id:clientId,job_title:title,location:clean($('reqLocation')?.value)||null,
         experience_min:exp.min,experience_max:exp.max,experience_text:clean($('reqExperience')?.value)||null,
         positions_count:positions,
@@ -68,11 +72,12 @@
         const q=await c.from('requirements').insert({...payload,tss_id:tssId,profile_key:profileKey,created_by:user.id}).select('*,clients(name)').single();
         if(q.error)throw q.error;saved=q.data;toastSafe(submitMode?`${tssId} requirement submitted`:`${tssId} draft saved`);
       }
+      materialSave?.commit();
       $('requirementDialog')?.close();
-      await window.TSSRequirementsLiveSync?.syncNow?.();
+      try{await window.TSSRequirementsLiveSync?.syncNow?.()}catch(error){console.warn('Requirement saved; refresh failed',error);toastSafe('Requirement saved. Refresh to see the latest details.');}
       // Realtime refreshes other workspace data; the saved requirement is already synced.
       return saved;
-    }catch(err){console.error('Requirement save failed',err);toastSafe('Requirement save failed: '+(err?.message||err));}
+    }catch(err){await materialSave?.rollback();console.error('Requirement save failed',err);toastSafe('Requirement save failed: '+(err?.message||err));}
     finally{saving=false;if(btn){btn.disabled=false;btn.textContent=old||(submitMode?'Submit Requirement':'Save Draft')}}
   }
   function wire(){
