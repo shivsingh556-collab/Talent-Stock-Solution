@@ -20,6 +20,7 @@
     return {...local,
       id:internalId(row,local),requirementId:row.tss_id,profileKey:serverKey(row),serverId:row.id,
       client:row.clients?.name||local.client||'Client',clientOwner:row.client_owner||'',
+      screeningGuide:row.screening_guide||'',screeningMaterials:Array.isArray(row.screening_materials)?row.screening_materials:[],
       requirementHandler:row.requirement_handler||local.requirementHandler||'',
       assignedRecruiters:Array.isArray(row.assigned_recruiters)?row.assigned_recruiters:[],
       createdAt:row.created_at||local.createdAt||null,updatedAt:row.updated_at||local.updatedAt||null,

@@ -593,3 +593,10 @@ dialog form{padding:20px}
 .tss-requirement-search [role=option] small{display:block;font-size:11px;color:#526a7c;margin-top:3px}
 .tss-requirement-search-empty{padding:12px;font-size:12px}
 .tss-requirement-search-status{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
+/* Client-provided screening guides, shared with requirements and screening. */
+.assessment-guide{margin:18px 0;padding:16px;border:1px solid #d6dfec;border-radius:12px;min-width:0;background:var(--panel,#fff);color:var(--text,#172b4d)}
+.assessment-guide h4{margin:0 0 8px}.assessment-guide label{display:block;margin:12px 0 6px}.assessment-guide textarea,.assessment-guide input{box-sizing:border-box;width:100%;max-width:100%}.assessment-guide small{display:block;line-height:1.6;color:var(--muted,#556477)}
+.assessment-file{margin-top:12px;padding:12px;border:1px solid #d6dfec;border-radius:8px}.assessment-file strong,.assessment-guide summary{overflow-wrap:anywhere}.assessment-file textarea{margin:8px 0}.assessment-text{white-space:pre-wrap;overflow-wrap:anywhere;max-height:320px;overflow:auto;margin:10px 0;line-height:1.6}.assessment-guide details{margin:12px 0}.assessment-guide summary{cursor:pointer;font-weight:600}
+
+#requirementDialog .assessment-guide,.requirement-details-dialog .assessment-guide{background:transparent;color:inherit;border-color:#28506f}
+#requirementDialog .assessment-guide small,.requirement-details-dialog .assessment-guide small{color:#9bb1c8}

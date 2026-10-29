@@ -72,6 +72,7 @@
     $('reqDetailTitle').textContent=`${r.requirementId||r.id} · ${r.title}`;
     const chips=a=>(a||[]).length?(a||[]).map(x=>`<span class="skill">${esc(x)}</span>`).join(''):'<span class="muted">Not provided</span>';
     $('reqDetailBody').innerHTML=`<div class="req-detail-grid"><div><span>Client</span><strong>${esc(r.client)}</strong></div><div><span>Client Owner</span><strong>${esc(r.clientOwner||'Not assigned')}</strong></div><div><span>Location</span><strong>${esc(r.location||'Not provided')}</strong></div><div><span>Experience</span><strong>${esc(r.experience||'Not provided')}</strong></div><div><span>Salary / Budget</span><strong>${esc(r.salaryRange||'Not provided')}</strong></div><div><span>Qualification</span><strong>${esc(r.qualification||'Not provided')}</strong></div></div><h4>Mandatory Skills</h4><div class="skill-cloud">${chips(r.skills)}</div><h4>Preferred Skills</h4><div class="skill-cloud">${chips(r.preferred)}</div><h4>Roles & Responsibilities / JD</h4><div class="req-detail-text">${esc(r.responsibilities||r.jdText||'Not provided')}</div>`;
+    window.TSSScreeningMaterials?.renderReadOnly($('reqDetailBody'),r);
     $('reqDetailEdit').onclick=()=>{ $('requirementDetailsDialog').close(); try{openRequirement(r.id)}catch{} };
     $('reqDetailScreen').onclick=()=>{ $('requirementDetailsDialog').close(); if($('screenRequirement'))$('screenRequirement').value=r.id; try{updateSelectedRequirement()}catch{}; try{gotoView('screening')}catch{} };
     $('requirementDetailsDialog').showModal();

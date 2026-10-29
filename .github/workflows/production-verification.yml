@@ -52,6 +52,7 @@ jobs:
           node calling-tracker-save.browser.test.cjs
           node interview-candidate-search.browser.test.cjs
           node requirement-search.browser.test.cjs
+          node requirement-screening-materials.browser.test.cjs
 
   candidate-and-mobile:
     name: Candidate isolation and mobile
