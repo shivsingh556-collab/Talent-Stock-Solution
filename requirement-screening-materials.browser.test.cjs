@@ -55,6 +55,19 @@ const {setup}=require('./test-support/browser-fixture.cjs');
     await page.setViewportSize({width:1280,height:900});
     await page.screenshot({path:'test-results/assessment-screening-desktop.png',fullPage:true});
     assert.deepEqual(flow.errors,[]);
+    const cspPage=await flow.browser.newPage();
+    try{
+      const policy=JSON.parse(fs.readFileSync('vercel.json','utf8')).headers[0].headers.find(h=>h.key==='Content-Security-Policy').value;
+      await cspPage.route('http://assessment-csp.test/',route=>route.fulfill({contentType:'text/html',headers:{'Content-Security-Policy':policy},body:'<!doctype html><title>OCR policy test</title>'}));
+      await cspPage.goto('http://assessment-csp.test/');
+      const result=await cspPage.evaluate(async()=>{
+        const worker=new Worker(URL.createObjectURL(new Blob(["WebAssembly.compile(new Uint8Array([0,97,115,109,1,0,0,0])).then(()=>postMessage('ok')).catch(e=>postMessage(e.message))"],{type:'application/javascript'})));
+        const wasm=await new Promise((resolve,reject)=>{worker.onmessage=e=>resolve(e.data);worker.onerror=reject});worker.terminate();
+        let dynamicJS=false;try{eval('1+1');dynamicJS=true}catch{}
+        return {wasm,dynamicJS};
+      });
+      assert.deepEqual(result,{wasm:'ok',dynamicJS:false},'OCR workers may compile WebAssembly while arbitrary JS eval remains blocked');
+    }finally{await cspPage.close()}
     console.log('Assessment browser flow passed: real text extraction, unsupported-file retention, edit, save, reload, original download, requirement details and mobile layout.');
   }finally{await flow.close()}
 })().catch(error=>{console.error(error);process.exitCode=1});
