@@ -30,7 +30,7 @@ test('handles alternatives without requiring every option',()=>{const match=engi
 
 test('calculates dated relevant experience and keeps evidence details',()=>{
   const jd={title:'Backend Python Developer',experience:'3+ years',location:'Pune',skills:['Python','FastAPI or Django','REST APIs','PostgreSQL','Git','Automated testing'],preferred:['Docker','AWS','Redis']};
-  const resume='Asha Mehta | Pune\nJan 2022-Present: Built REST APIs using Python and FastAPI, PostgreSQL, Docker, Git and automated testing with pytest.\nJul 2020-Dec 2021: Maintained Java applications.';
+  const resume='Asha Mehta | Pune\nJan 2022-Oct 2026: Built REST APIs using Python and FastAPI, PostgreSQL, Docker, Git and automated testing with pytest.\nJul 2020-Dec 2021: Maintained Java applications.';
   const result=engine.scoreCandidate(resume,jd,{totalExperience:6.2,location:'Pune',designation:'Python Developer'});
   assert.deepStrictEqual([...result.missingRequired],[]);assert(result.matched.includes('FastAPI or Django'));assert(!result.matched.includes('Django'));assert.deepStrictEqual([...result.missingPreferred],['AWS','Redis']);assert.strictEqual(result.totalExperienceYears,6.3);assert.strictEqual(result.relevantExperienceYears,4.8);assert(result.score>=75);assert(result.evidence['REST APIs'].line.includes('REST APIs'));
 });
