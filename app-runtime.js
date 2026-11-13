@@ -1104,7 +1104,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 })();
 
 /* ===== requirement-status-visibility.js ===== */
-// Remaining requirements include every open status; fulfilled and closed are review-only.
+// Open views retain held requirements; active counts exclude them.
 (function(){
   const $=id=>document.getElementById(id);
   const norm=s=>String(s||'').trim().toLowerCase();
@@ -1181,7 +1181,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
   }
 
   function updateRemainingCount(){
-    const remaining=openRequirements();
+    const remaining=countedReqs(openRequirements());
     const n=remaining.length;
     const positions=remaining.reduce((sum,r)=>sum+(Number(r.positionsCount||r.positions_count)||0),0);
     if($('navReqCount'))$('navReqCount').textContent=String(n);
